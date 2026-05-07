@@ -80,12 +80,12 @@ export const venues = {
     bedComponents: ['smoke-machine-hiss', 'distant-techno', 'brick-wall-thump'],
     mapCoordinates: { x: 50, y: 50 },
   },
-  'caffeine-underground-rat': {
-    id: 'caffeine-underground-rat',
+  'caffeine-underground': {
+    id: 'caffeine-underground',
     displayName: 'Caffeine Underground',
     address: 'Beneath Popeyes via steam grate',
     reviewerId: 'rosemary-rib',
-    photoPath: 'assets/photos/caffeine-underground-rat.jpg',
+    photoPath: 'assets/photos/caffeine-underground.jpg',
     bedComponents: ['pipe-drip', 'foil-crinkle'],
     mapCoordinates: { x: 50, y: 50 },
   },

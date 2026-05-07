@@ -47,31 +47,6 @@ body::after {
   z-index: 9999;
 }
 
-.headphones-tag {
-  position: fixed;
-  top: var(--space-md);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 100;
-  font-family: var(--font-ui);
-  font-size: 0.75rem;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: var(--color-text);
-  padding: var(--space-sm) var(--space-md);
-  background: rgba(10, 10, 10, 0.7);
-  border: 1px solid var(--color-text);
-  white-space: nowrap;
-  animation: headphones-fade 1s linear 5s forwards;
-}
-
-@keyframes headphones-fade {
-  to {
-    opacity: 0;
-    visibility: hidden;
-  }
-}
-
 main {
   padding-top: 4rem;
 }
@@ -291,11 +266,6 @@ footer a:hover {
     padding-top: 3.5rem;
   }
 
-  .headphones-tag {
-    font-size: 0.625rem;
-    padding: 0.375rem 0.75rem;
-  }
-
   .modal {
     padding: var(--space-md);
   }
@@ -313,5 +283,255 @@ footer a:hover {
     width: 18px;
     height: 18px;
     margin: -9px 0 0 -9px;
+  }
+}
+
+.headphones-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-md);
+  background: rgba(10, 10, 10, 0.85);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.headphones-overlay-card {
+  width: 100%;
+  max-width: 480px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-text);
+  padding: var(--space-lg);
+  text-align: center;
+}
+
+.headphones-overlay-title {
+  font-family: var(--font-editorial);
+  font-style: italic;
+  font-weight: normal;
+  font-size: 1.5rem;
+  margin: 0 0 var(--space-md);
+  color: var(--color-text);
+}
+
+.headphones-overlay-text {
+  font-family: var(--font-data);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  margin: 0 0 var(--space-lg);
+  color: var(--color-text);
+  opacity: 0.9;
+}
+
+.headphones-overlay-button {
+  font-family: var(--font-ui);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-size: 0.875rem;
+  background: transparent;
+  color: var(--color-text);
+  border: 1px solid var(--color-accent);
+  padding: var(--space-sm) var(--space-lg);
+  cursor: pointer;
+}
+
+.headphones-overlay-button:hover,
+.headphones-overlay-button:focus-visible {
+  background: var(--color-accent);
+  color: var(--color-bg);
+  outline: none;
+}
+
+.headphones-badge {
+  position: fixed;
+  bottom: var(--space-md);
+  right: var(--space-md);
+  z-index: 100;
+  font-family: var(--font-ui);
+  font-size: 0.6875rem;
+  letter-spacing: 0.12em;
+  color: var(--color-text);
+  padding: 0.4rem 0.75rem;
+  background: rgba(10, 10, 10, 0.7);
+  border: 1px solid var(--color-text);
+  cursor: pointer;
+}
+
+.headphones-badge:hover,
+.headphones-badge:focus-visible {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  outline: none;
+}
+
+.about-page {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.about-header {
+  padding: var(--space-md) var(--space-lg);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--color-bg);
+}
+
+.about-back {
+  display: inline-block;
+  font-family: var(--font-ui);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-size: 0.75rem;
+  color: var(--color-text);
+  text-decoration: none;
+  border-bottom: 1px solid currentColor;
+}
+
+.about-back:hover,
+.about-back:focus-visible {
+  color: var(--color-accent);
+  border-bottom-color: var(--color-accent);
+  outline: none;
+}
+
+.about-back-bottom {
+  margin-top: var(--space-lg);
+}
+
+.about-main {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: var(--space-lg);
+  font-family: var(--font-editorial);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+}
+
+.about-title {
+  font-family: var(--font-editorial);
+  font-style: italic;
+  font-weight: normal;
+  font-size: 2rem;
+  margin: 0 0 var(--space-lg);
+}
+
+.about-epigraph {
+  margin: 0 0 var(--space-lg);
+  padding: var(--space-md) var(--space-lg);
+  border-left: 2px solid var(--color-accent);
+  font-style: italic;
+}
+
+.about-epigraph p {
+  margin: 0 0 var(--space-sm);
+  font-size: 1.125rem;
+}
+
+.about-epigraph cite {
+  display: block;
+  font-family: var(--font-data);
+  font-style: normal;
+  font-size: 0.8125rem;
+  letter-spacing: 0.05em;
+  opacity: 0.8;
+}
+
+.about-section {
+  margin-bottom: var(--space-lg);
+}
+
+.about-section h2 {
+  font-family: var(--font-ui);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 0.8125rem;
+  font-weight: normal;
+  color: var(--color-accent);
+  margin: 0 0 var(--space-md);
+}
+
+.about-section p {
+  margin: 0 0 var(--space-md);
+}
+
+.about-section ul {
+  margin: 0;
+  padding-left: var(--space-lg);
+}
+
+.about-section li {
+  margin-bottom: var(--space-sm);
+}
+
+.about-credits dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-sm) var(--space-lg);
+  font-family: var(--font-data);
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.about-credits dt {
+  font-family: var(--font-ui);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.about-credits dd {
+  margin: 0;
+}
+
+.about-disclaimer {
+  margin-top: var(--space-lg);
+  padding-top: var(--space-md);
+  border-top: 1px solid rgba(197, 191, 174, 0.2);
+  font-family: var(--font-data);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  opacity: 0.6;
+}
+
+@media (max-width: 768px) {
+  .about-main {
+    padding: var(--space-md);
+    font-size: 1rem;
+  }
+
+  .about-title {
+    font-size: 1.625rem;
+  }
+
+  .about-credits dl {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .about-credits dt {
+    margin-top: var(--space-sm);
+  }
+
+  .about-credits dd {
+    margin-bottom: var(--space-sm);
+  }
+
+  .headphones-overlay-card {
+    padding: var(--space-md);
+  }
+
+  .headphones-overlay-title {
+    font-size: 1.25rem;
+  }
+
+  .headphones-badge {
+    font-size: 0.625rem;
+    bottom: var(--space-sm);
+    right: var(--space-sm);
   }
 }

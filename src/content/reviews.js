@@ -49,7 +49,7 @@ export const reviews = {
   },
   'rosemary-rib': {
     reviewerId: 'rosemary-rib',
-    venueId: 'caffeine-underground-rat',
+    venueId: 'caffeine-underground',
     rating: 5,
     text: `Caffeine Underground is OPEN. Yes Ian Ford left in March. Yes the human lease is closed. Yes we (the rats) have inherited the practice. Tuesday open mic still happens, last week we had three stand-up rats getting minimal laughs (taking it well), one performance art piece involving a heated argument with a Gemini chatbot we found in a discarded phone, and a talented singer-songwriter rat. DJ classes taught by Nibblers (her sets are erratic, on theme). Magic: The Gathering pulled twelve rats last week, biggest yet. Maker's markets every Sunday: twigs, foil, bottlecaps, the usual. Marijuana-infused coffee is back (it's CBD, it's actually dumpster runoff, the marketing works). We moved the location underground (literally). Currently held in the foundation of the old Trommer's Brewery, accessed via the steam grate beside the Popeyes dumpster. Open 11pm to whenever the train sounds different. Five stars. Show up and say my name.`,
   },
