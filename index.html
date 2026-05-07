@@ -30,38 +30,7 @@
     </div>
   </main>
 
-  <div class="modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="modal-rat-name">
-    <div class="modal-card">
-      <button class="modal-close" type="button" aria-label="Close review">&times;</button>
-
-      <div class="venue-photo" aria-hidden="true"></div>
-
-      <header class="modal-header">
-        <div class="rat-selfie" aria-hidden="true"></div>
-        <div class="rat-meta">
-          <h2 id="modal-rat-name" class="rat-name"></h2>
-          <p class="rat-handle"></p>
-        </div>
-      </header>
-
-      <div class="venue-meta">
-        <h3 class="venue-name"></h3>
-        <div class="star-rating" aria-label="Star rating">
-          <span class="star"></span>
-          <span class="star"></span>
-          <span class="star"></span>
-          <span class="star"></span>
-          <span class="star"></span>
-        </div>
-      </div>
-
-      <canvas class="oscilloscope" width="640" height="120" aria-hidden="true"></canvas>
-
-      <div class="subtitles" aria-live="polite"></div>
-
-      <button class="play-button" type="button">Play</button>
-    </div>
-  </div>
+  <div id="modal-root" class="modal" role="dialog" aria-modal="true" aria-hidden="true" data-state="closed"></div>
 
   <footer>
     <a href="about.html">About</a>

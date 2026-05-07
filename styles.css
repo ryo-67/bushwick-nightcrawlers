@@ -140,9 +140,9 @@ main {
 
 .modal-card {
   position: relative;
-  background: var(--color-bg);
-  color: var(--color-text);
-  border: 1px solid var(--color-text);
+  background: var(--color-text);
+  color: var(--color-bg);
+  border: 1px solid var(--color-bg);
   width: 100%;
   max-width: 640px;
   max-height: 90vh;
@@ -156,68 +156,80 @@ main {
   right: var(--space-sm);
   background: none;
   border: none;
-  color: var(--color-text);
+  color: var(--color-bg);
   font-size: 1.5rem;
   line-height: 1;
   padding: var(--space-sm);
   cursor: pointer;
 }
 
-.venue-photo,
-.rat-selfie {
-  background: rgba(197, 191, 174, 0.05);
-  border: 1px dashed rgba(197, 191, 174, 0.3);
+.modal-close:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 
-.venue-photo {
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  margin-bottom: var(--space-md);
-}
-
-.modal-header {
+.reviewer-block {
   display: flex;
   gap: var(--space-md);
-  align-items: center;
-  margin-bottom: var(--space-md);
+  align-items: flex-start;
+  margin: 0 var(--space-lg) var(--space-md) 0;
 }
 
-.rat-selfie {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.rat-meta {
+.reviewer-meta {
   min-width: 0;
 }
 
-.rat-name {
-  font-family: var(--font-editorial);
-  font-style: italic;
-  font-size: 1.5rem;
-  margin: 0;
+.rat-selfie {
+  width: 72px;
+  height: 72px;
+  aspect-ratio: 1 / 1;
+  border-radius: 4px;
+  object-fit: cover;
+  object-position: center;
+  flex-shrink: 0;
+  background: rgba(10, 10, 10, 0.05);
+  display: block;
 }
 
-.rat-handle {
-  font-family: var(--font-ui);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  font-size: 0.75rem;
-  margin: 0;
+.reviewer-name {
+  font-family: var(--font-editorial);
+  font-style: italic;
+  font-weight: normal;
+  font-size: 1.375rem;
+  margin: 0 0 0.125rem;
+}
+
+.reviewer-handle {
+  font-family: var(--font-data);
+  font-size: 0.8125rem;
+  margin: 0 0 0.125rem;
   opacity: 0.7;
 }
 
-.venue-meta {
-  margin-bottom: var(--space-md);
+.reviewer-location {
+  font-family: var(--font-data);
+  font-size: 0.75rem;
+  margin: 0;
+  opacity: 0.6;
 }
 
-.venue-name {
-  font-family: var(--font-editorial);
-  font-style: italic;
-  font-size: 1.125rem;
-  margin: 0 0 var(--space-sm);
+.reviewer-elite {
+  display: inline-block;
+  margin-top: 0.4rem;
+  font-family: var(--font-ui);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.6875rem;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--color-bg);
+}
+
+.review-rating {
+  display: flex;
+  gap: var(--space-md);
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: var(--space-sm);
 }
 
 .star-rating {
@@ -234,22 +246,109 @@ main {
   transform: rotate(-3deg);
 }
 
-.oscilloscope {
+.star-empty {
+  opacity: 0.18;
+}
+
+.review-date {
+  font-family: var(--font-data);
+  font-size: 0.75rem;
+  opacity: 0.6;
+}
+
+.review-venue-name {
   display: block;
-  width: 100%;
-  height: 80px;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(197, 191, 174, 0.3);
+  font-family: var(--font-editorial);
+  font-style: italic;
+  font-size: 1rem;
+  margin: 0 0 var(--space-md);
+  text-decoration: underline;
+  text-decoration-color: rgba(10, 10, 10, 0.3);
+  text-underline-offset: 2px;
+}
+
+.review-body {
+  font-family: var(--font-data);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  margin: 0 0 var(--space-sm);
+  white-space: pre-wrap;
+}
+
+.review-squeaks {
+  font-family: var(--font-ui);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.6875rem;
+  margin: 0 0 var(--space-md);
+  opacity: 0.6;
+}
+
+.review-reactions {
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
   margin-bottom: var(--space-md);
 }
 
-.subtitles {
+.review-reaction {
+  font-family: var(--font-ui);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.6875rem;
+  padding: 0.4rem 0.75rem;
+  background: transparent;
+  color: var(--color-bg);
+  border: 1px solid rgba(10, 10, 10, 0.4);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.venue-name-large {
+  font-family: var(--font-editorial);
+  font-style: italic;
+  font-weight: normal;
+  font-size: 1.75rem;
+  margin: 0 var(--space-lg) var(--space-sm) 0;
+  display: block;
+}
+
+.venue-framing {
+  font-family: var(--font-data);
+  font-size: 0.9375rem;
+  margin: 0 0 var(--space-md);
+  opacity: 0.7;
+}
+
+.venue-closed-note {
+  font-family: var(--font-ui);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-size: 0.8125rem;
+  margin: 0;
+  opacity: 0.6;
+}
+
+.modal-card .oscilloscope {
+  display: block;
+  width: 100%;
+  height: 80px;
+  background: rgba(10, 10, 10, 0.06);
+  border: 1px solid rgba(10, 10, 10, 0.2);
+  margin-bottom: var(--space-md);
+}
+
+.modal-card .subtitles {
   font-family: var(--font-editorial);
   font-style: italic;
   font-size: 0.875rem;
+  line-height: 1.5;
   min-height: 4em;
+  max-height: 12em;
+  overflow-y: auto;
   opacity: 0.7;
-  margin-bottom: var(--space-md);
+  margin: 0 0 var(--space-md);
+  padding-right: var(--space-sm);
 }
 
 .play-button {
@@ -263,9 +362,34 @@ main {
   cursor: pointer;
 }
 
-.play-button:hover {
+.play-button:hover:not(:disabled),
+.play-button:focus-visible:not(:disabled) {
   background: var(--color-accent);
   color: var(--color-bg);
+  outline: none;
+}
+
+.play-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.modal-card .play-button {
+  color: var(--color-bg);
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.modal-card .play-button:hover:not(:disabled),
+.modal-card .play-button:focus-visible:not(:disabled) {
+  background: transparent;
+  color: var(--color-bg);
+}
+
+.modal-card .play-button:disabled {
+  background: rgba(10, 10, 10, 0.05);
+  color: var(--color-bg);
+  border-color: rgba(10, 10, 10, 0.2);
 }
 
 footer {
@@ -301,9 +425,13 @@ footer a:hover {
     padding: var(--space-md);
   }
 
-  .modal-header {
+  .reviewer-block {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .reviewer-elite {
+    margin-top: var(--space-sm);
   }
 
   .pin {
