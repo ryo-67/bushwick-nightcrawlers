@@ -41,12 +41,32 @@ For the asset checklist and citations: `docs/ASSETS.md`.
 │   │                       # subtitles.js, headphones-tag.js
 │   └── content/            # rats.js, reviews.js, venues.js
 ├── assets/
-│   ├── map.svg, grain.png
+│   ├── map.mp4             # Animated map background (silent, looping)
+│   ├── pins/               # 10 GIF pin assets, one per venue
+│   ├── grain.png
 │   ├── selfies/, photos/
 │   └── audio/jmz-rumble.wav, audio/usvs/, audio/usvs-cocaine/,
 │       audio/beds/, audio/effects/
 └── docs/                   # STRATEGY.md, ASSETS.md
 ```
+
+## Map and pin layering pattern
+
+The map is a silent looping MP4 background. Pins are separate GIF assets layered on top via absolute positioning.
+
+```html
+<div class="map-wrapper">
+  <video autoplay loop muted playsinline aria-hidden="true" class="map-bg">
+    <source src="assets/map.mp4" type="video/mp4">
+  </video>
+  <div class="pin-layer">
+    <img src="assets/pins/market-hotel.gif" class="pin" data-pin-id="market-hotel" aria-label="Market Hotel">
+    <!-- ...10 pins total, positioned absolutely with percentage-based top/left -->
+  </div>
+</div>
+```
+
+The `muted` attribute is required for autoplay; `playsinline` prevents iOS Safari from launching the video to fullscreen. MP4 has no transparency, so pin overlays must use formats that do (GIF here, or WebM with alpha in Phase 2). Don't try to overlay video on video.
 
 ## Audio rules (load-bearing)
 
