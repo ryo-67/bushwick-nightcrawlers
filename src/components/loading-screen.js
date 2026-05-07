@@ -133,10 +133,18 @@ export class LoadingScreen {
     el.dataset.state = 'returning';
 
     el.appendChild(this.buildNoise());
-    el.appendChild(this.buildHeader({ withSkip: false }));
+    // Returning variant: no upper-left header. With nothing else on
+    // screen, the title becomes the centerpiece — promoted into the
+    // center stack as a large element above the greeting.
 
     const center = document.createElement('div');
     center.className = 'loading-returning';
+
+    const titleEl = document.createElement('h1');
+    titleEl.className = 'loading-returning-title';
+    titleEl.id = 'loading-title';
+    titleEl.textContent = LOADING_NARRATIVE.title;
+    center.appendChild(titleEl);
 
     const greeting = document.createElement('p');
     greeting.className = 'loading-greeting';

@@ -48,20 +48,29 @@ body::after {
 }
 
 main {
-  padding-top: 4rem;
+  padding-top: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
 }
 
 .map-wrapper {
   position: relative;
-  width: 100%;
-  max-width: 1600px;
+  height: 100vh;
+  /* map.mp4 is 1920x1080 — pin coordinates in venues.js are
+     percentages of the wrapper, so the wrapper's aspect ratio MUST
+     match the underlying video or pins drift off their venues. */
+  aspect-ratio: 16 / 9;
+  max-width: 100vw;
   margin: 0 auto;
 }
 
 .map-bg {
   display: block;
   width: 100%;
-  height: auto;
+  height: 100%;
+  object-fit: contain;
 }
 
 .pin-layer {
@@ -1527,6 +1536,46 @@ footer a:focus-visible {
   letter-spacing: 0.01em;
   margin: 0;
   opacity: 0.85;
+}
+
+.loading-returning-title {
+  font-family: var(--font-editorial);
+  font-style: italic;
+  font-weight: normal;
+  font-size: clamp(2rem, 4.5vw, 2.75rem);
+  letter-spacing: 0.01em;
+  color: var(--color-text);
+  opacity: 0.92;
+  margin: 0 0 0.5rem;
+  text-align: center;
+  line-height: 1.15;
+}
+
+.loading-screen.is-returning .loading-header {
+  display: none;
+}
+
+.page-title {
+  position: fixed;
+  top: 1.25rem;
+  left: 1.5rem;
+  z-index: 50;
+  font-family: var(--font-editorial);
+  font-style: italic;
+  font-size: 1.125rem;
+  letter-spacing: 0.01em;
+  color: var(--color-text);
+  opacity: 0.65;
+  pointer-events: none;
+  user-select: none;
+}
+
+@media (max-width: 768px) {
+  .page-title {
+    font-size: 0.9375rem;
+    top: 0.875rem;
+    left: 1rem;
+  }
 }
 
 @media (max-width: 768px) {
