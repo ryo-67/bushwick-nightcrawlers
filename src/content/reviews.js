@@ -62,4 +62,18 @@ export const reviews = {
     date: 'April 2026',
     text: `Caffeine Underground is OPEN. Yes Ian Ford left in March. Yes the human lease is closed. Yes we (the rats) have inherited the practice. Tuesday open mic still happens, last week we had three stand-up rats getting minimal laughs (taking it well), one performance art piece involving a heated argument with a Gemini chatbot we found in a discarded phone, and a talented singer-songwriter rat. DJ classes taught by Nibblers (her sets are erratic, on theme). Magic: The Gathering pulled twelve rats last week, biggest yet. Maker's markets every Sunday: twigs, foil, bottlecaps, the usual. Marijuana-infused coffee is back (it's CBD, it's actually dumpster runoff, the marketing works). We moved the location underground (literally). Currently held in the foundation of the old Trommer's Brewery, accessed via the steam grate beside the Popeyes dumpster. Open 11pm to whenever the train sounds different. Five stars. Show up and say my name.`,
   },
+  'tabitha-von-wyckoff': {
+    reviewerId: 'tabitha-von-wyckoff',
+    venueId: 'mood-ring',
+    rating: 5,
+    date: 'April 2026',
+    text: `Mood Ring is — and I say this with my whole chest — the most authentic dive in Bushwick. (My architecture friends from Cornell put me onto it, which is its own kind of validation.) Smoke machine, Wong Kar-wai snippets through the wall, the drainpipe rats add character. I've been bringing my Architecture Digest book club here for the past three months. The bartender — Vanessa? — remembers my order, which to me signals real community. (She also visibly sighs when I walk in. I've decided that's part of the charm.) The other rats here have such an interesting authenticity. I took my Asian Studies elective at Cornell so I get the references. I've decided I'm staying in Bushwick. Five stars. Yelp Elite '24, '25, working on '26.`,
+  },
+  'vintage-vermin': {
+    reviewerId: 'vintage-vermin',
+    venueId: 'mr-kiwi',
+    rating: 5,
+    date: 'April 2026',
+    text: `Mr. Kiwi is one of the last unprotected vintage spaces in Bushwick. The deli case has Hostess Snowballs from probably the original distribution batch — the wrapper printing is pre-2018 design language and I would know. The shelf-stable canned goods section is essentially a museum of mid-century ephemera. I scored a half-empty Sun-Maid raisin box from the '90s out back (the design is so tight) and a vintage-looking Pirelli calendar that turned out to be a real one from '92, which I'm reframing. The fluorescent lighting has the exact spec they don't make anymore. I bring my Brimfield Antique Show contacts here when they're in town — they always leave with something. Don't let the Cornell engineering rats find this place. Five stars.`,
+  },
 };

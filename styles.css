@@ -145,7 +145,7 @@ main {
 
 .pin-tooltip {
   position: fixed;
-  width: 300px;
+  width: 440px;
   max-width: calc(100vw - 32px);
   background: var(--color-bg);
   color: var(--color-text);

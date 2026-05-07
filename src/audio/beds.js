@@ -23,7 +23,7 @@ const VENUE_BED_MAP = {
   // Rash is a memorial — distant siren sits below the bar/cafe/rave
   // beds and below the JMZ rumble's peaks. -28dB places it as
   // distant atmosphere, not foreground emergency.
-  'rash': { file: 'firetruck.wav', gainDb: -28 },
+  'rash': { file: 'firetruck.wav', gainDb: -22 },
 };
 
 const BED_DIR = 'assets/sounds/effects';
