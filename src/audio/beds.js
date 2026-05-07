@@ -59,7 +59,11 @@ const VENUE_BED_MAP = {
 
   // Venues without a dedicated single-file primary; layered atomic
   // samples sum to a comparable presence. Tune by ear.
-  // (market-hotel: no bed — venue runs on JMZ + Myrtle floor only.)
+  'market-hotel': {
+    components: [
+      { file: 'punk-ambience.m4a', gainDb: -13 },     // primary
+    ],
+  },
   'mr-kiwi': {
     components: [
       { file: 'fridge-hum.m4a', gainDb: -20 },        // primary character
