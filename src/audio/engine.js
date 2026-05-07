@@ -1,23 +1,52 @@
 /**
  * src/audio/engine.js — singleton bootstrap for the audio system.
  *
- * Tone.js v15 is loaded as a global script in index.html before this
- * module is imported. We do not import Tone here; we read it off
- * `window.Tone` at call time so this file can sit alongside ES module
- * imports without touching the bundler-free build.
+ * Tone.js v15 is loaded as a global in index.html before this module
+ * is imported. We read it off `window.Tone` at call time rather than
+ * importing, so this file fits the bundler-free build.
  *
- * Lifecycle:
- *   start()        — must be called inside a user gesture. Idempotent.
- *                    Calls Tone.start() then loads both USV banks.
- *   isReady()      — true after both banks have finished loading.
- *   onReady(fn)    — fires fn when ready (immediately if already ready).
- *   getBank(name)  — returns the loaded sample array for 'usvs' or
- *                    'usvs-cocaine'. Each entry is
- *                    { filename, buffer, duration, tier }.
+ * Audio routing:
+ *   ToneBufferSource → ratGen.perRatGain → ratGain (master) → Destination
+ *
+ * Each RatGenerator owns its own perRatGain (the recency-ladder
+ * volume slot). The master ratGain sits at RAT_FOREGROUND_GAIN as
+ * the absolute foreground level. Cumulative voicing is implemented
+ * by walking the registry on every register/unregister and ramping
+ * each rat's perRatGain to its recency-rank multiplier.
+ *
+ * Visit tracking is small enough to live alongside the audio
+ * machinery, since the alley reveal in §12.5c will hook into the
+ * same engine module.
  */
 
 import { USVS, USVS_COCAINE } from './manifest.js';
 import { initBeds } from './beds.js';
+import { reviews } from '../content/reviews.js';
+
+// Master foreground level for the most-recent rat. Tune by ear.
+export const RAT_FOREGROUND_GAIN = 0.55;
+
+// Per-rat-gain multipliers by recency rank.
+// Index 0 = most recent (foreground). Index N = N steps back.
+export const RAT_RECENCY_LADDER = [1.0, 0.45, 0.2, 0.1, 0.05];
+
+// Maximum simultaneous rats. The 6th opening evicts the oldest.
+export const RAT_CAP = 5;
+
+// Fadeout used for natural completion and cap eviction. Same value
+// for both — natural completion's fade is silent (audio is over),
+// but the timing keeps cleanup symmetric.
+export const RAT_FADE_OUT_SEC = 1.0;
+
+// Ramp time when recency rank changes (a new rat opens, a rat ends).
+// Smooth enough to avoid clicks, fast enough to feel responsive.
+export const RAT_LADDER_RAMP_SEC = 0.4;
+
+// Review-bearing venue ids, derived from reviews data so this list
+// stays in sync with the content layer.
+export const REVIEW_VENUE_IDS = Array.from(
+  new Set(Object.values(reviews).map((r) => r.venueId))
+);
 
 const BANK_DIRS = {
   usvs: 'assets/sounds/usvs',
@@ -38,6 +67,10 @@ let ready = false;
 let startPromise = null;
 let ratGain = null;
 const readyListeners = [];
+
+// Map<reviewerId, RatGenerator> — insertion order is recency.
+// First entry = oldest active rat, last entry = foreground.
+const ratRegistry = new Map();
 
 function tierForDuration(d) {
   if (d < 0.4) return 'short';
@@ -88,7 +121,7 @@ export function start() {
   startPromise = (async () => {
     const Tone = window.Tone;
     await Tone.start();
-    ratGain = new Tone.Gain(1).toDestination();
+    ratGain = new Tone.Gain(RAT_FOREGROUND_GAIN).toDestination();
     await Promise.all([loadBanks(), initBeds()]);
     ready = true;
     while (readyListeners.length) {
@@ -96,7 +129,6 @@ export function start() {
       try {
         fn();
       } catch (e) {
-        // Don't let one listener tank the rest.
         // eslint-disable-next-line no-console
         console.error(e);
       }
@@ -120,4 +152,95 @@ export function getBank(name) {
 
 export function getRatGain() {
   return ratGain;
+}
+
+// ---- cumulative voicing registry ----
+
+function rampGain(gainNode, target, rampSec) {
+  const Tone = window.Tone;
+  const now = Tone.now();
+  gainNode.gain.cancelScheduledValues(now);
+  gainNode.gain.setValueAtTime(gainNode.gain.value, now);
+  gainNode.gain.linearRampToValueAtTime(target, now + rampSec);
+}
+
+function recomputeLadder() {
+  const entries = Array.from(ratRegistry.entries());
+  const total = entries.length;
+  for (let idx = 0; idx < total; idx += 1) {
+    const [, ratGen] = entries[idx];
+    const rank = total - 1 - idx; // 0 = most recent
+    const multiplier = RAT_RECENCY_LADDER[rank] ?? 0;
+    if (ratGen.perRatGain) {
+      rampGain(ratGen.perRatGain, multiplier, RAT_LADDER_RAMP_SEC);
+    }
+  }
+}
+
+export function registerRat(reviewerId, ratGen) {
+  // Displace any rat with the same id (modal-reopen of an active rat).
+  // Immediate stop + dispose; the new instance will play fresh.
+  const existing = ratRegistry.get(reviewerId);
+  if (existing) {
+    ratRegistry.delete(reviewerId);
+    existing.dispose();
+  }
+
+  // Cap eviction: if we'd exceed RAT_CAP after inserting, fade out
+  // the oldest rat and remove it from the registry.
+  if (ratRegistry.size >= RAT_CAP) {
+    const oldestId = ratRegistry.keys().next().value;
+    const oldest = ratRegistry.get(oldestId);
+    ratRegistry.delete(oldestId);
+    if (oldest) oldest.fadeOutAndDispose(RAT_FADE_OUT_SEC);
+  }
+
+  ratRegistry.set(reviewerId, ratGen);
+  recomputeLadder();
+}
+
+export function unregisterRat(reviewerId) {
+  const rg = ratRegistry.get(reviewerId);
+  if (!rg) return;
+  ratRegistry.delete(reviewerId);
+  rg.fadeOutAndDispose(RAT_FADE_OUT_SEC);
+  recomputeLadder();
+}
+
+export function activeRats() {
+  return Array.from(ratRegistry.keys());
+}
+
+export function activeRatCount() {
+  return ratRegistry.size;
+}
+
+// ---- visit tracking ----
+
+function visitedKey(venueId) {
+  return `bushwick.visited.${venueId}`;
+}
+
+export function markVisited(venueId) {
+  try {
+    localStorage.setItem(visitedKey(venueId), 'true');
+  } catch {
+    // localStorage unavailable — visit not persisted
+  }
+}
+
+export function hasVisited(venueId) {
+  try {
+    return localStorage.getItem(visitedKey(venueId)) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+export function visitedReviewVenues() {
+  return REVIEW_VENUE_IDS.filter((id) => hasVisited(id));
+}
+
+export function hasVisitedAllReviewVenues() {
+  return REVIEW_VENUE_IDS.every((id) => hasVisited(id));
 }

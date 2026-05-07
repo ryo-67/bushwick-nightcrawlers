@@ -119,6 +119,20 @@ export class RatGenerator {
     this.onComplete = null;
     this.rng = Math.random;
     this.mode = 'moment';
+    // perRatGain is the recency-ladder volume slot for this rat.
+    // Created lazily at start() since engine.getRatGain() may not
+    // exist before engine.start() resolves.
+    this.perRatGain = null;
+    this._disposed = false;
+  }
+
+  ensurePerRatGain() {
+    if (this.perRatGain || this._disposed) return this.perRatGain;
+    const Tone = window.Tone;
+    const ratGain = engine.getRatGain();
+    if (!ratGain) return null;
+    this.perRatGain = new Tone.Gain(1).connect(ratGain);
+    return this.perRatGain;
   }
 
   isPlaying() {
@@ -151,6 +165,7 @@ export class RatGenerator {
   }
 
   start() {
+    if (this._disposed) return;
     if (this._isPlaying) return;
     this.stop();
     this.configureRng();
@@ -159,6 +174,7 @@ export class RatGenerator {
     const myId = this.playbackId;
 
     const Tone = window.Tone;
+    const perRatGain = this.ensurePerRatGain();
     let cursor = Tone.now() + 0.05;
 
     for (let i = 0; i < this.words.length; i += 1) {
@@ -166,9 +182,8 @@ export class RatGenerator {
       const sample = this.pickSample(word);
 
       if (sample) {
-        const ratGain = engine.getRatGain();
         const source = new Tone.ToneBufferSource(sample.buffer);
-        if (ratGain) source.connect(ratGain);
+        if (perRatGain) source.connect(perRatGain);
         else source.toDestination();
         source.start(cursor);
         this.activeSources.push(source);
@@ -209,5 +224,37 @@ export class RatGenerator {
     }
     this.activeSources = [];
     this.modal?.clearHighlights?.();
+  }
+
+  dispose() {
+    if (this._disposed) return;
+    this._disposed = true;
+    this.stop();
+    if (this.perRatGain) {
+      try {
+        this.perRatGain.dispose();
+      } catch {
+        // already disposed
+      }
+      this.perRatGain = null;
+    }
+    this.modal = null;
+    this.onComplete = null;
+  }
+
+  fadeOutAndDispose(seconds) {
+    if (this._disposed) return;
+    if (this.perRatGain) {
+      const Tone = window.Tone;
+      const now = Tone.now();
+      try {
+        this.perRatGain.gain.cancelScheduledValues(now);
+        this.perRatGain.gain.setValueAtTime(this.perRatGain.gain.value, now);
+        this.perRatGain.gain.linearRampToValueAtTime(0, now + seconds);
+      } catch {
+        // gain node already torn down
+      }
+    }
+    setTimeout(() => this.dispose(), seconds * 1000 + 50);
   }
 }

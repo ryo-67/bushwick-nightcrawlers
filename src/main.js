@@ -133,14 +133,12 @@ function syncPlayState() {
 }
 
 function handleModalOpen(venueId, ctx) {
-  currentRatGen?.stop();
+  // Modal-side rat reference is reset; the previous rat (if any)
+  // continues playing in the engine's registry as a background voice.
   currentRatGen = null;
   currentRatGenVenueId = null;
 
   // Kick off venue bed (no-op for unmapped venues).
-  // Engine.start() must have run for beds to exist; if not, the
-  // first user gesture below will start it and beds will spin up
-  // on the next modal open.
   if (engine.isReady()) {
     beds.startVenueBed(venueId).catch(() => {});
   } else {
@@ -154,17 +152,29 @@ function handleModalOpen(venueId, ctx) {
   const review = ctx?.review;
   if (!review) return; // alley/rash — no rat generator
 
+  // Mark this venue as visited (review-bearing only).
+  engine.markVisited(venueId);
+
   const profile = ratProfiles[review.reviewerId];
   if (!profile) return;
 
-  currentRatGen = new RatGenerator(profile, review.text, review.reviewerId, modalRef);
+  // Factory so we can rebuild the rat after a pause (since pause
+  // unregisters and disposes — there's no resume).
+  function makeRatGen() {
+    const rg = new RatGenerator(profile, review.text, review.reviewerId, modalRef);
+    rg.onComplete = () => {
+      engine.unregisterRat(review.reviewerId);
+      if (currentRatGen === rg && modalRef?.isOpen()) {
+        modalRef.setPlayState('idle');
+        modalRef.oscilloscope?.stop();
+        currentRatGen = null;
+      }
+    };
+    return rg;
+  }
+
+  currentRatGen = makeRatGen();
   currentRatGenVenueId = venueId;
-  currentRatGen.onComplete = () => {
-    if (modalRef?.isOpen()) {
-      modalRef.setPlayState('idle');
-      modalRef.oscilloscope?.stop();
-    }
-  };
 
   syncPlayState();
 
@@ -179,14 +189,18 @@ function handleModalOpen(venueId, ctx) {
   const playBtn = modalRef.root.querySelector('.play-button');
   if (!playBtn) return;
   playClickHandler = () => {
-    if (!engine.isReady() || !currentRatGen) return;
-    if (currentRatGen.isPlaying()) {
-      currentRatGen.stop();
+    if (!engine.isReady()) return;
+    if (currentRatGen?.isPlaying()) {
+      // Pause: unregister + fade out. Modal flips back to idle.
+      engine.unregisterRat(review.reviewerId);
       modalRef.oscilloscope?.stop();
       modalRef.setPlayState('idle');
+      currentRatGen = null;
     } else {
+      if (!currentRatGen) currentRatGen = makeRatGen();
       modalRef.oscilloscope?.attach(engine.getRatGain());
       modalRef.oscilloscope?.start();
+      engine.registerRat(review.reviewerId, currentRatGen);
       currentRatGen.start();
       modalRef.setPlayState('playing');
     }
@@ -195,7 +209,9 @@ function handleModalOpen(venueId, ctx) {
 }
 
 function handleModalClose() {
-  currentRatGen?.stop();
+  // Cumulative voicing: do NOT stop or unregister currentRatGen.
+  // It continues in the engine's registry as a background voice
+  // until natural completion or cap eviction.
   currentRatGen = null;
   currentRatGenVenueId = null;
   playClickHandler = null;
