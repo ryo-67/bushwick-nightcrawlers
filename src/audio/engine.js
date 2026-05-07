@@ -22,6 +22,8 @@
 import { USVS, USVS_COCAINE } from './manifest.js';
 import { preloadBeds, startBedsPlayback } from './beds.js';
 import { reviews } from '../content/reviews.js';
+import { rats } from '../content/rats.js';
+import { venues } from '../content/venues.js';
 import { applyOnEngineStart as applyMasterControls } from './master-controls.js';
 
 // Master foreground level for the most-recent rat. Tune by ear.
@@ -131,6 +133,33 @@ async function loadBanks() {
   );
 }
 
+// Warms the browser cache for every selfie + venue photo during the
+// loading-screen wait. By the time any modal opens or pin gets
+// hovered, the corresponding <img src=...> resolves out of cache
+// instead of triggering a fresh network fetch. Errors resolve
+// (don't reject) so a single missing file doesn't block the chain;
+// the modal/tooltip's own onerror handlers hide broken images.
+function preloadImages() {
+  const selfiePaths = Object.values(rats)
+    .map((r) => r.selfiePath)
+    .filter(Boolean);
+  const photoPaths = Object.values(venues)
+    .map((v) => v.photoPath)
+    .filter(Boolean);
+  const all = [...selfiePaths, ...photoPaths];
+  return Promise.all(
+    all.map(
+      (path) =>
+        new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => resolve();
+          img.onerror = () => resolve();
+          img.src = path;
+        })
+    )
+  );
+}
+
 async function loadEffectBuffers() {
   const tasks = EFFECT_NAMES.map(async (name) => {
     const buf = new window.Tone.ToneAudioBuffer();
@@ -156,7 +185,12 @@ export function preload() {
       wet: 1.0,
     }).connect(ratGain);
     await sharedRatReverb.generate();
-    await Promise.all([loadBanks(), preloadBeds(), loadEffectBuffers()]);
+    await Promise.all([
+      loadBanks(),
+      preloadBeds(),
+      loadEffectBuffers(),
+      preloadImages(),
+    ]);
   })();
   return preloadPromise;
 }

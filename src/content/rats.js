@@ -5,7 +5,7 @@ export const rats = {
     handle: '@razorwhisker',
     type: 'Market Hotel show kid',
     voice: 'Earnest, bass-response-of-the-floor',
-    selfiePath: 'assets/selfies/razor-whisker.png',
+    selfiePath: 'assets/selfies/razor-whisker.webp',
   },
   'dj-nibblers': {
     id: 'dj-nibblers',
@@ -13,7 +13,7 @@ export const rats = {
     handle: '@djnibblers',
     type: 'The cocaine rat',
     voice: 'Manic, run-on, "i only do diet"',
-    selfiePath: 'assets/selfies/dj-nibblers.png',
+    selfiePath: 'assets/selfies/dj-nibblers.webp',
   },
   'pinky-mae': {
     id: 'pinky-mae',
@@ -21,7 +21,7 @@ export const rats = {
     handle: '@pinkymae',
     type: "Influencer-rat (in both senses — she's spreading influenza)",
     voice: 'Lowercase, hashtags, lighting notes, occasional sniffles',
-    selfiePath: 'assets/selfies/pinky-mae.png',
+    selfiePath: 'assets/selfies/pinky-mae.webp',
   },
   'old-cheese': {
     id: 'old-cheese',
@@ -29,7 +29,7 @@ export const rats = {
     handle: '@oldcheese',
     type: 'Pre-gentrification longtime resident',
     voice: "Sad, accusatory, references the Bristol Room and Trommer's Brewery",
-    selfiePath: 'assets/selfies/old-cheese.png',
+    selfiePath: 'assets/selfies/old-cheese.webp',
   },
   'tabitha-von-wyckoff': {
     id: 'tabitha-von-wyckoff',
@@ -37,7 +37,7 @@ export const rats = {
     handle: '@tabithavonwyckoff',
     type: 'Yelp Elite gentrifier from Manhattan',
     voice: 'Performative authenticity',
-    selfiePath: 'assets/selfies/tabitha-von-wyckoff.png',
+    selfiePath: 'assets/selfies/tabitha-von-wyckoff.webp',
   },
   'comrade-crumb': {
     id: 'comrade-crumb',
@@ -45,7 +45,7 @@ export const rats = {
     handle: '@comradecrumb',
     type: 'Wystan Pemberton-Whitford III, CT nepo socialist',
     voice: 'DSA-Twitter cadence with reveals',
-    selfiePath: 'assets/selfies/comrade-crumb.png',
+    selfiePath: 'assets/selfies/comrade-crumb.webp',
   },
   'mira-wong-witherspoon': {
     id: 'mira-wong-witherspoon',
@@ -53,7 +53,7 @@ export const rats = {
     handle: '@mirawongwitherspoon',
     type: 'Wasian, gets it from both sides',
     voice: 'Self-aware, ambivalent',
-    selfiePath: 'assets/selfies/mira-wong-witherspoon.png',
+    selfiePath: 'assets/selfies/mira-wong-witherspoon.webp',
   },
   'wyckoff-six': {
     id: 'wyckoff-six',
@@ -61,7 +61,7 @@ export const rats = {
     handle: '@wyckoffsix',
     type: 'Six-rat polycule, co-signed reviews',
     voice: '"We," processed, four-hour debriefs',
-    selfiePath: 'assets/selfies/wyckoff-six.png',
+    selfiePath: 'assets/selfies/wyckoff-six.webp',
   },
   'vintage-vermin': {
     id: 'vintage-vermin',
@@ -69,7 +69,7 @@ export const rats = {
     handle: '@vintagevermin',
     type: 'Thrifter / curator',
     voice: 'Aesthetic-era reviews of trash',
-    selfiePath: 'assets/selfies/vintage-vermin.png',
+    selfiePath: 'assets/selfies/vintage-vermin.webp',
   },
   'edible-eddie': {
     id: 'edible-eddie',
@@ -77,7 +77,7 @@ export const rats = {
     handle: '@edibleeddie',
     type: 'Wrong-edible casualty',
     voice: 'Time-distorted, repetitive, glitching',
-    selfiePath: 'assets/selfies/edible-eddie.png',
+    selfiePath: 'assets/selfies/edible-eddie.webp',
   },
   'rosemary-rib': {
     id: 'rosemary-rib',
@@ -85,6 +85,6 @@ export const rats = {
     handle: '@rosemaryrib',
     type: 'Performance artist who took over Caffeine Underground',
     voice: 'Durational, the venue is the piece',
-    selfiePath: 'assets/selfies/rosemary-rib.png',
+    selfiePath: 'assets/selfies/rosemary-rib.webp',
   },
 };
