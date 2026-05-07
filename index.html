@@ -9,9 +9,32 @@
   <script type="module" src="src/main.js"></script>
 </head>
 <body>
-  <div class="page-title" aria-hidden="true">
-    <span>The Bushwick Nightcrawlers</span>
-  </div>
+  <header class="page-header">
+    <h1 class="page-title">The Bushwick Nightcrawlers</h1>
+    <nav class="page-controls">
+      <a class="header-about" href="about.html">About</a>
+      <span class="header-divider" aria-hidden="true">·</span>
+      <span class="header-mode-set">
+        <span class="header-mode-prefix">the rats speak:</span>
+        <button type="button" class="header-mode" data-mode="moment" aria-pressed="false">in the moment</button>
+        <span class="header-mode-pipe" aria-hidden="true">|</span>
+        <button type="button" class="header-mode" data-mode="record" aria-pressed="false">on record</button>
+      </span>
+      <span class="header-divider" aria-hidden="true">·</span>
+      <span class="header-audio-set">
+        <input type="range" class="header-volume" min="-40" max="0" step="1" value="0" aria-label="Master volume">
+        <button type="button" class="header-mute" aria-pressed="false" aria-label="Mute audio">
+          <svg viewBox="0 0 18 24" width="14" height="18" aria-hidden="true">
+            <path d="M2 9h3l4-3v12l-4-3H2z" fill="currentColor"/>
+            <path class="header-mute-bars" d="M11 9h2 M11 12h3 M11 15h2" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+            <path class="header-mute-x" d="M11 9l4 6 M15 9l-4 6" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </span>
+      <span class="header-divider" aria-hidden="true">·</span>
+      <button type="button" class="header-reset" aria-label="Reset experience">forget the rats you've met</button>
+    </nav>
+  </header>
   <main>
     <div class="map-wrapper" role="region" aria-label="Map of Myrtle and Broadway intersection. Click pins to hear rat reviews of each venue.">
       <video class="map-bg" autoplay loop muted playsinline aria-hidden="true">
@@ -34,29 +57,5 @@
   </main>
 
   <div id="modal-root" class="modal" role="dialog" aria-modal="true" aria-hidden="true" data-state="closed"></div>
-
-  <footer>
-    <a href="about.html">About</a>
-    <span class="footer-divider" aria-hidden="true">·</span>
-    <span class="footer-mode-set">
-      <span class="footer-mode-prefix">the rats speak:</span>
-      <button type="button" class="footer-mode" data-mode="moment" aria-pressed="false">in the moment</button>
-      <span class="footer-mode-pipe" aria-hidden="true">|</span>
-      <button type="button" class="footer-mode" data-mode="record" aria-pressed="false">on record</button>
-    </span>
-    <span class="footer-divider" aria-hidden="true">·</span>
-    <span class="footer-audio-set">
-      <input type="range" class="footer-volume" min="-40" max="0" step="1" value="0" aria-label="Master volume">
-      <button type="button" class="footer-mute" aria-pressed="false" aria-label="Mute audio">
-        <svg viewBox="0 0 18 24" width="14" height="18" aria-hidden="true">
-          <path d="M2 9h3l4-3v12l-4-3H2z" fill="currentColor"/>
-          <path class="footer-mute-bars" d="M11 9h2 M11 12h3 M11 15h2" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-          <path class="footer-mute-x" d="M11 9l4 6 M15 9l-4 6" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-        </svg>
-      </button>
-    </span>
-    <span class="footer-divider" aria-hidden="true">·</span>
-    <button type="button" class="footer-reset" aria-label="Reset experience">forget the rats you've met</button>
-  </footer>
 </body>
 </html>
