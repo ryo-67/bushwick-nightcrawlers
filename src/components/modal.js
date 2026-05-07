@@ -4,7 +4,34 @@ import { Subtitles } from './subtitles.js';
 const REVIEWER_LOCATION = 'Bushwick, Brooklyn';
 const ALLEY_FRAMING = 'the alley between Mr Kiwi and the JMZ';
 const RASH_CLOSED_NOTE = '[closed February 2026]';
-const REACTIONS = ['Helpful', 'Funny', 'Cool'];
+const REACTIONS = [
+  { type: 'helpful', label: 'Helpful' },
+  { type: 'funny', label: 'Funny' },
+  { type: 'cool', label: 'Cool' },
+];
+
+function reactionStorageKey(reviewId, type) {
+  return `bushwick.reactions.${reviewId}.${type}`;
+}
+
+function readReactionCount(reviewId, type) {
+  try {
+    const raw = localStorage.getItem(reactionStorageKey(reviewId, type));
+    if (!raw) return 0;
+    const n = parseInt(raw, 10);
+    return Number.isFinite(n) && n >= 0 ? n : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function writeReactionCount(reviewId, type, count) {
+  try {
+    localStorage.setItem(reactionStorageKey(reviewId, type), String(count));
+  } catch {
+    // localStorage unavailable — counts revert to 0 on next open
+  }
+}
 
 function formatDate(date = new Date()) {
   return date.toLocaleDateString('en-US', {
@@ -196,16 +223,22 @@ export class Modal {
     squeaks.textContent = `${review.text.length} squeaks`;
     card.appendChild(squeaks);
 
+    const reviewId = review.reviewerId;
     const reactions = document.createElement('div');
     reactions.className = 'review-reactions';
-    REACTIONS.forEach((label) => {
+    REACTIONS.forEach(({ type, label }) => {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'review-reaction';
-      btn.textContent = `${label} 0`;
-      btn.disabled = true;
-      btn.setAttribute('aria-disabled', 'true');
-      btn.tabIndex = -1;
+      const initial = readReactionCount(reviewId, type);
+      btn.textContent = `${label} ${initial}`;
+      btn.addEventListener('click', () => {
+        const next = readReactionCount(reviewId, type) + 1;
+        writeReactionCount(reviewId, type, next);
+        btn.textContent = `${label} ${next}`;
+        btn.classList.add('reaction-flash');
+        setTimeout(() => btn.classList.remove('reaction-flash'), 200);
+      });
       reactions.appendChild(btn);
     });
     card.appendChild(reactions);
@@ -213,7 +246,7 @@ export class Modal {
     this.oscilloscope = new Oscilloscope();
     card.appendChild(this.oscilloscope.element);
 
-    this.subtitles = new Subtitles(review.text);
+    this.subtitles = new Subtitles();
     card.appendChild(this.subtitles.element);
 
     const play = document.createElement('button');

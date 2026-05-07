@@ -16,7 +16,7 @@ export class Oscilloscope {
   clear() {
     const { width, height } = this.canvas;
     this.ctx.clearRect(0, 0, width, height);
-    this.ctx.strokeStyle = 'rgba(10, 10, 10, 0.35)';
+    this.ctx.strokeStyle = 'rgba(197, 191, 174, 0.4)';
     this.ctx.lineWidth = 1;
     this.ctx.beginPath();
     this.ctx.moveTo(0, height / 2);

@@ -1,12 +1,15 @@
 export class Subtitles {
-  constructor(text) {
+  constructor() {
     this.element = document.createElement('div');
     this.element.className = 'subtitles';
     this.element.setAttribute('aria-live', 'polite');
-    this.render(text);
   }
 
   render(text) {
     this.element.textContent = text;
+  }
+
+  clear() {
+    this.element.textContent = '';
   }
 }

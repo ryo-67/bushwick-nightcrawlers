@@ -120,6 +120,67 @@ main {
 .pin[data-pin-id='bossa-nova']           { top: 65%; left: 32%; }
 .pin[data-pin-id='caffeine-underground'] { top: 75%; left: 55%; }
 
+.pin-tooltip {
+  position: absolute;
+  bottom: calc(100% + 14px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-accent);
+  padding: 0.6rem;
+  z-index: 50;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.7);
+  text-align: left;
+}
+
+.pin:hover .pin-tooltip,
+.pin:focus-visible .pin-tooltip {
+  opacity: 1;
+}
+
+/* Pins in the upper third of the map: flip tooltip below to avoid clipping. */
+.pin[data-pin-id='jmz-platform'] .pin-tooltip,
+.pin[data-pin-id='ornithology'] .pin-tooltip,
+.pin[data-pin-id='alley'] .pin-tooltip,
+.pin[data-pin-id='market-hotel'] .pin-tooltip {
+  bottom: auto;
+  top: calc(100% + 14px);
+}
+
+.pin-tooltip-photo {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  margin-bottom: 0.4rem;
+  background: rgba(197, 191, 174, 0.05);
+}
+
+.pin-tooltip-name {
+  font-family: var(--font-data);
+  font-size: 0.8125rem;
+  color: var(--color-text);
+  margin-bottom: 0.2rem;
+}
+
+.pin-tooltip-cta {
+  font-family: var(--font-ui);
+  text-transform: lowercase;
+  letter-spacing: 0.08em;
+  font-size: 0.6875rem;
+  color: var(--color-accent);
+}
+
+@media (hover: none), (pointer: coarse) {
+  .pin-tooltip {
+    display: none;
+  }
+}
+
 .modal {
   position: fixed;
   inset: 0;
@@ -140,9 +201,9 @@ main {
 
 .modal-card {
   position: relative;
-  background: var(--color-text);
-  color: var(--color-bg);
-  border: 1px solid var(--color-bg);
+  background: var(--color-bg);
+  color: var(--color-text);
+  border: 1px solid rgba(184, 255, 0, 0.2);
   width: 100%;
   max-width: 640px;
   max-height: 90vh;
@@ -156,11 +217,17 @@ main {
   right: var(--space-sm);
   background: none;
   border: none;
-  color: var(--color-bg);
-  font-size: 1.5rem;
+  color: var(--color-text);
+  font-size: 1.75rem;
   line-height: 1;
   padding: var(--space-sm);
   cursor: pointer;
+  transition: color 150ms ease;
+}
+
+.modal-close:hover,
+.modal-close:focus-visible {
+  color: var(--color-accent);
 }
 
 .modal-close:focus-visible {
@@ -170,24 +237,25 @@ main {
 
 .reviewer-block {
   display: flex;
-  gap: var(--space-md);
+  gap: var(--space-lg);
   align-items: flex-start;
-  margin: 0 var(--space-lg) var(--space-md) 0;
+  margin: 0 var(--space-lg) var(--space-lg) 0;
 }
 
 .reviewer-meta {
   min-width: 0;
+  padding-top: var(--space-sm);
 }
 
 .rat-selfie {
-  width: 72px;
-  height: 72px;
+  width: 240px;
+  height: 240px;
   aspect-ratio: 1 / 1;
   border-radius: 4px;
   object-fit: cover;
   object-position: center;
   flex-shrink: 0;
-  background: rgba(10, 10, 10, 0.05);
+  background: rgba(197, 191, 174, 0.05);
   display: block;
 }
 
@@ -195,33 +263,35 @@ main {
   font-family: var(--font-editorial);
   font-style: italic;
   font-weight: normal;
-  font-size: 1.375rem;
-  margin: 0 0 0.125rem;
+  font-size: 1.5rem;
+  margin: 0 0 0.25rem;
+  color: var(--color-text);
 }
 
 .reviewer-handle {
   font-family: var(--font-data);
-  font-size: 0.8125rem;
-  margin: 0 0 0.125rem;
+  font-size: 0.875rem;
+  margin: 0 0 0.25rem;
   opacity: 0.7;
 }
 
 .reviewer-location {
   font-family: var(--font-data);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   margin: 0;
-  opacity: 0.6;
+  opacity: 0.55;
 }
 
 .reviewer-elite {
   display: inline-block;
-  margin-top: 0.4rem;
+  margin-top: 0.6rem;
   font-family: var(--font-ui);
   text-transform: uppercase;
   letter-spacing: 0.12em;
   font-size: 0.6875rem;
   padding: 0.15rem 0.5rem;
-  border: 1px solid var(--color-bg);
+  border: 1px solid var(--color-accent);
+  color: var(--color-accent);
 }
 
 .review-rating {
@@ -263,7 +333,7 @@ main {
   font-size: 1rem;
   margin: 0 0 var(--space-md);
   text-decoration: underline;
-  text-decoration-color: rgba(10, 10, 10, 0.3);
+  text-decoration-color: rgba(197, 191, 174, 0.3);
   text-underline-offset: 2px;
 }
 
@@ -298,10 +368,27 @@ main {
   font-size: 0.6875rem;
   padding: 0.4rem 0.75rem;
   background: transparent;
+  color: var(--color-text);
+  border: 1px solid rgba(197, 191, 174, 0.4);
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
+}
+
+.review-reaction:hover,
+.review-reaction:focus-visible {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.review-reaction:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.review-reaction.reaction-flash {
+  background: var(--color-accent);
   color: var(--color-bg);
-  border: 1px solid rgba(10, 10, 10, 0.4);
-  cursor: not-allowed;
-  opacity: 0.7;
+  border-color: var(--color-accent);
 }
 
 .venue-name-large {
@@ -333,8 +420,8 @@ main {
   display: block;
   width: 100%;
   height: 80px;
-  background: rgba(10, 10, 10, 0.06);
-  border: 1px solid rgba(10, 10, 10, 0.2);
+  background: rgba(197, 191, 174, 0.04);
+  border: 1px solid rgba(197, 191, 174, 0.2);
   margin-bottom: var(--space-md);
 }
 
@@ -343,12 +430,15 @@ main {
   font-style: italic;
   font-size: 0.875rem;
   line-height: 1.5;
-  min-height: 4em;
   max-height: 12em;
   overflow-y: auto;
   opacity: 0.7;
   margin: 0 0 var(--space-md);
   padding-right: var(--space-sm);
+}
+
+.modal-card .subtitles:empty {
+  display: none;
 }
 
 .play-button {
@@ -360,6 +450,7 @@ main {
   border: 1px solid var(--color-accent);
   padding: var(--space-sm) var(--space-lg);
   cursor: pointer;
+  transition: background 150ms ease, color 150ms ease;
 }
 
 .play-button:hover:not(:disabled),
@@ -369,27 +460,14 @@ main {
   outline: none;
 }
 
+.play-button:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
 .play-button:disabled {
   opacity: 0.4;
   cursor: not-allowed;
-}
-
-.modal-card .play-button {
-  color: var(--color-bg);
-  background: var(--color-accent);
-  border-color: var(--color-accent);
-}
-
-.modal-card .play-button:hover:not(:disabled),
-.modal-card .play-button:focus-visible:not(:disabled) {
-  background: transparent;
-  color: var(--color-bg);
-}
-
-.modal-card .play-button:disabled {
-  background: rgba(10, 10, 10, 0.05);
-  color: var(--color-bg);
-  border-color: rgba(10, 10, 10, 0.2);
 }
 
 footer {
@@ -428,6 +506,20 @@ footer a:hover {
   .reviewer-block {
     flex-direction: column;
     align-items: flex-start;
+    gap: var(--space-md);
+  }
+
+  .reviewer-meta {
+    padding-top: 0;
+  }
+
+  .rat-selfie {
+    width: 160px;
+    height: 160px;
+  }
+
+  .reviewer-name {
+    font-size: 1.375rem;
   }
 
   .reviewer-elite {
