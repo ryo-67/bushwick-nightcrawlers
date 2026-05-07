@@ -42,13 +42,11 @@ const VENUE_BED_MAP = {
   'mood-ring': {
     components: [
       { file: 'bar.m4a', gainDb: -13 },               // primary
-      { file: 'smoke.m4a', gainDb: -28 },             // secondary
     ],
   },
   'bossa-nova': {
     components: [
       { file: 'rave.m4a', gainDb: -11 },              // primary
-      { file: 'smoke.m4a', gainDb: -28 },             // secondary
     ],
   },
   'rash': {
@@ -61,12 +59,7 @@ const VENUE_BED_MAP = {
 
   // Venues without a dedicated single-file primary; layered atomic
   // samples sum to a comparable presence. Tune by ear.
-  'market-hotel': {
-    components: [
-      { file: 'solo-cup.m4a', gainDb: -22 },          // intermittent texture
-      { file: 'jazz.m4a', gainDb: -28 },              // distant bleed from below
-    ],
-  },
+  // (market-hotel: no bed — venue runs on JMZ + Myrtle floor only.)
   'mr-kiwi': {
     components: [
       { file: 'fridge-hum.m4a', gainDb: -20 },        // primary character
@@ -90,9 +83,8 @@ const VENUE_BED_MAP = {
   },
   'alley': {
     components: [
-      { file: 'plastic-bag.m4a', gainDb: -22 },       // primary
-      { file: 'water-drip.m4a', gainDb: -24 },        // secondary
-      { file: 'leaky-pipe.m4a', gainDb: -28 },        // tertiary
+      { file: 'water-drip.m4a', gainDb: -24 },        // primary (was secondary)
+      { file: 'leaky-pipe.m4a', gainDb: -28 },        // secondary (was tertiary)
     ],
   },
   'ornithology': {
