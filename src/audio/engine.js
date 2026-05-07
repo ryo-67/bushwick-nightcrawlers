@@ -20,7 +20,7 @@
  */
 
 import { USVS, USVS_COCAINE } from './manifest.js';
-import { initBeds } from './beds.js';
+import { preloadBeds, startBedsPlayback } from './beds.js';
 import { reviews } from '../content/reviews.js';
 import { applyOnEngineStart as applyMasterControls } from './master-controls.js';
 
@@ -73,6 +73,7 @@ const EFFECT_NAMES = ['chime', 'cough', 'fizz', 'vibrate', 'camera', 'linkedin']
 const effectBuffers = new Map();
 
 let ready = false;
+let preloadPromise = null;
 let startPromise = null;
 let ratGain = null;
 let sharedRatReverb = null;
@@ -139,13 +140,15 @@ async function loadEffectBuffers() {
   await Promise.all(tasks);
 }
 
-export function start() {
-  if (startPromise) return startPromise;
-  startPromise = (async () => {
+// Pre-gesture: build the node graph and load all buffers. Runs while
+// the loading screen is on-screen, so audio is already decoded when
+// the user clicks Enter. No AudioContext resume happens here — the
+// context stays suspended; nodes and decoded buffers hold fine in that
+// state. Idempotent: subsequent calls return the same promise.
+export function preload() {
+  if (preloadPromise) return preloadPromise;
+  preloadPromise = (async () => {
     const Tone = window.Tone;
-    await Tone.start();
-    // Apply persisted master volume / mute before any audio starts.
-    applyMasterControls();
     ratGain = new Tone.Gain(RAT_FOREGROUND_GAIN).toDestination();
     sharedRatReverb = new Tone.Reverb({
       decay: 5,
@@ -153,7 +156,28 @@ export function start() {
       wet: 1.0,
     }).connect(ratGain);
     await sharedRatReverb.generate();
-    await Promise.all([loadBanks(), initBeds(), loadEffectBuffers()]);
+    await Promise.all([loadBanks(), preloadBeds(), loadEffectBuffers()]);
+  })();
+  return preloadPromise;
+}
+
+// Gesture-bound: must be called from inside a user-gesture handler so
+// AudioContext.resume() (via Tone.start) is permitted. Captures
+// Tone.start() synchronously to keep the gesture chain intact, then
+// awaits preload + applies master state + starts ambient beds.
+export function start() {
+  if (startPromise) return startPromise;
+  const Tone = window.Tone;
+  // Synchronous capture: Tone.start() must be invoked inside the
+  // gesture handler. The promise it returns can be awaited later;
+  // the resume request itself is what needs the gesture.
+  const tonePromise = Tone.start();
+  startPromise = (async () => {
+    await tonePromise;
+    await preload();
+    // Apply persisted master volume / mute before any audio starts.
+    applyMasterControls();
+    startBedsPlayback();
     ready = true;
     while (readyListeners.length) {
       const fn = readyListeners.shift();

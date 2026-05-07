@@ -1,4 +1,4 @@
-import { HeadphonesTag } from './components/headphones-tag.js';
+import { LoadingScreen } from './components/loading-screen.js';
 import { Modal } from './components/modal.js';
 import { rats } from './content/rats.js';
 import { venues } from './content/venues.js';
@@ -366,8 +366,19 @@ function setupFooterModeToggle() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  const tag = new HeadphonesTag(document.body);
-  tag.init();
+  const loading = new LoadingScreen(document.body, {
+    onEnter: () => {
+      // Gesture-bound: must be called synchronously from inside the
+      // Enter button click handler. engine.start() captures
+      // Tone.start() sync internally; the await chain after that is
+      // safe to detach from the gesture frame.
+      engine.start().catch((e) => {
+        // eslint-disable-next-line no-console
+        console.error('Audio engine failed to start:', e);
+      });
+    },
+  });
+  loading.init();
 
   const modalRoot = document.getElementById('modal-root');
   modalRef = new Modal(
@@ -406,18 +417,10 @@ document.addEventListener('DOMContentLoaded', () => {
     modalRef.open(pinId);
   });
 
-  let bootstrapStarted = false;
-  function bootstrapEngine() {
-    if (bootstrapStarted) return;
-    bootstrapStarted = true;
-    engine.start().catch((e) => {
-      // eslint-disable-next-line no-console
-      console.error('Audio engine failed to start:', e);
-    });
-  }
-  document.addEventListener('click', bootstrapEngine, true);
-  document.addEventListener('keydown', bootstrapEngine, true);
-  document.addEventListener('touchstart', bootstrapEngine, true);
+  // Audio engine bootstrap is owned by the loading screen — it calls
+  // engine.start() inside the Enter button click handler. No global
+  // gesture listeners; the loading screen overlay intercepts the
+  // first user gesture by construction.
 });
 
 document.addEventListener('keydown', (event) => {

@@ -58,7 +58,10 @@ let trainTimerId = null;
 const venueBeds = new Map();
 let activeBedVenueId = null;
 
-export async function initBeds() {
+// Pre-gesture: build node graph and load buffers. The Player.start()
+// call must wait until the AudioContext is running, so it's deferred
+// to startBedsPlayback().
+export async function preloadBeds() {
   const Tone = window.Tone;
   jmzGain = new Tone.Gain(Tone.dbToGain(JMZ_GAIN_DB)).toDestination();
   jmzPlayer = new Tone.Player({
@@ -73,8 +76,22 @@ export async function initBeds() {
     autostart: false,
   }).connect(trainGain);
   await Tone.loaded();
-  jmzPlayer.start();
+}
+
+// Gesture-bound (or post-gesture): kicks off the JMZ rumble loop and
+// the recursive train-pass scheduler. Must run after the audio context
+// has resumed.
+export function startBedsPlayback() {
+  if (jmzPlayer && jmzPlayer.state !== 'started') jmzPlayer.start();
   scheduleNextTrainPass();
+}
+
+// Backwards compat: combined preload + start. Loading-screen flow
+// uses the split functions instead, but this one-step variant stays
+// available for any caller that wants the legacy single-call shape.
+export async function initBeds() {
+  await preloadBeds();
+  startBedsPlayback();
 }
 
 function scheduleNextTrainPass() {
