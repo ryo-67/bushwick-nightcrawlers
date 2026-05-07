@@ -1595,7 +1595,7 @@ main {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2rem;
+  gap: 0.5rem;
   text-align: center;
 }
 
@@ -1615,7 +1615,7 @@ main {
   letter-spacing: 0.01em;
   color: var(--color-text);
   opacity: 0.92;
-  margin: 0 0 0.5rem;
+  margin: 0;
   text-align: center;
   line-height: 1.15;
 }

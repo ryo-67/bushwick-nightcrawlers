@@ -151,21 +151,13 @@ export class LoadingScreen {
     greeting.textContent = LOADING_NARRATIVE.returningGreeting;
     center.appendChild(greeting);
 
-    const cta = document.createElement('button');
-    cta.type = 'button';
-    cta.className = 'loading-cta';
-    cta.disabled = true;
-    cta.textContent = LOADING_NARRATIVE.returningCta;
-    cta.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.handleEnter();
-    });
-    center.appendChild(cta);
-    this.ctaBtn = cta;
     el.appendChild(center);
 
     el.appendChild(this.buildRat());
-    el.appendChild(this.buildFooter({ ctaLabel: null }));
+    // CTA lives in the footer (bottom-right) so the returning variant
+    // mirrors the cards variant's bottom chrome: status BL + CTA BR.
+    // buildFooter assigns the created button to this.ctaBtn.
+    el.appendChild(this.buildFooter({ ctaLabel: LOADING_NARRATIVE.returningCta }));
 
     this.root.appendChild(el);
     this.el = el;
