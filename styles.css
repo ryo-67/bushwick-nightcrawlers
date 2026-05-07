@@ -1174,6 +1174,11 @@ main {
 }
 
 .about-main {
+  /* Override the global `main { display: flex }` rule (which the
+     index page needs for map centering). The about page's main
+     should be normal block flow so its sections stack vertically
+     instead of becoming flex items in a row. */
+  display: block;
   max-width: 640px;
   margin: 0 auto;
   padding: var(--space-lg);
