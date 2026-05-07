@@ -10,3 +10,4 @@ build/
 # Local-only — see prior session notes
 assets/source-pins/
 scripts/rename-usvs.sh
+scripts/rename_bank.sh
