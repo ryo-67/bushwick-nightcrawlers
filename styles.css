@@ -72,21 +72,25 @@ main {
 
 .pin {
   position: absolute;
-  width: 14px;
-  height: 14px;
-  margin: -7px 0 0 -7px;
-  background: var(--color-accent);
-  border-radius: 50%;
   cursor: pointer;
   pointer-events: auto;
-  box-shadow: 0 0 0 2px var(--color-bg), 0 0 12px rgba(184, 255, 0, 0.5);
-  transition: transform 120ms ease, box-shadow 200ms ease;
+  transform: translate(-50%, -50%);
+  transition: transform 120ms ease;
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.pin img {
+  display: block;
+  width: 100px;
+  height: 100px;
+  pointer-events: none;
 }
 
 .pin:hover,
 .pin:focus-visible {
-  transform: scale(1.15);
-  box-shadow: 0 0 0 2px var(--color-bg), 0 0 18px rgba(184, 255, 0, 0.85);
+  transform: translate(-50%, -50%) scale(1.1);
 }
 
 .pin:focus-visible {
@@ -95,7 +99,7 @@ main {
 }
 
 .pin:active {
-  transform: scale(0.92);
+  transform: translate(-50%, -50%) scale(0.94);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -105,7 +109,26 @@ main {
   .pin:hover,
   .pin:focus-visible,
   .pin:active {
-    transform: none;
+    transform: translate(-50%, -50%);
+  }
+}
+
+.pin[data-pin-id='alley'].is-hidden {
+  display: none;
+}
+
+.pin[data-pin-id='alley'].is-revealing {
+  animation: alleyReveal 1.5s ease-out forwards;
+}
+
+@keyframes alleyReveal {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
   }
 }
 
@@ -713,10 +736,9 @@ footer a:focus-visible {
     height: 18px;
   }
 
-  .pin {
-    width: 18px;
-    height: 18px;
-    margin: -9px 0 0 -9px;
+  .pin img {
+    width: 70px;
+    height: 70px;
   }
 }
 

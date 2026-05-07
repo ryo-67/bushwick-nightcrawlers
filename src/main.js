@@ -129,6 +129,45 @@ let modalRef = null;
 let currentRatGen = null;
 let currentRatGenVenueId = null;
 let playClickHandler = null;
+let pendingAlleyReveal = false;
+
+function getAlleyPin() {
+  return document.querySelector('.pin[data-pin-id="alley"]');
+}
+
+function setupAlleyPinReveal() {
+  const alleyPin = getAlleyPin();
+  if (!alleyPin) return;
+
+  // Returning visitor: alley already unlocked, render visible immediately.
+  // First-time / partial visitor: hide until threshold crosses.
+  if (engine.hasVisitedAllReviewVenues()) {
+    alleyPin.classList.remove('is-hidden');
+  } else {
+    alleyPin.classList.add('is-hidden');
+  }
+
+  // Listener arms the reveal; the actual fade-in is deferred to modal-close
+  // so the user is looking at the map when it happens.
+  window.addEventListener('bushwick:all-venues-visited', () => {
+    pendingAlleyReveal = true;
+  });
+}
+
+function revealAlleyPin() {
+  const alleyPin = getAlleyPin();
+  if (!alleyPin) return;
+  alleyPin.classList.remove('is-hidden');
+  // Force reflow so the next class addition triggers the animation
+  // even if both class changes happen in the same frame.
+  void alleyPin.offsetWidth;
+  alleyPin.classList.add('is-revealing');
+  alleyPin.addEventListener(
+    'animationend',
+    () => alleyPin.classList.remove('is-revealing'),
+    { once: true }
+  );
+}
 
 function syncPlayState() {
   if (!modalRef || !modalRef.isOpen()) return;
@@ -225,6 +264,11 @@ function handleModalClose() {
   playClickHandler = null;
   modalRef?.oscilloscope?.dispose();
   beds.stopActiveBed();
+
+  if (pendingAlleyReveal) {
+    pendingAlleyReveal = false;
+    revealAlleyPin();
+  }
 }
 
 function setupFooterAudioControls() {
@@ -288,6 +332,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const tooltip = setupPinTooltip();
   setupFooterModeToggle();
   setupFooterAudioControls();
+  setupAlleyPinReveal();
 
   const mapWrapper = document.querySelector('.map-wrapper') || document.body;
   mapWrapper.addEventListener('click', (event) => {

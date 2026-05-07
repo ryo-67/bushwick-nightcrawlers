@@ -248,10 +248,22 @@ function visitedKey(venueId) {
 }
 
 export function markVisited(venueId) {
+  // Detect threshold-cross: was incomplete before this call, complete after.
+  // Fire a one-shot custom event the UI listens for to reveal the alley pin.
+  // Idempotent visits (already-visited venue) don't re-fire because the
+  // before/after states are both already complete.
+  const wasComplete = hasVisitedAllReviewVenues();
   try {
     localStorage.setItem(visitedKey(venueId), 'true');
   } catch {
     // localStorage unavailable — visit not persisted
+  }
+  if (!wasComplete && hasVisitedAllReviewVenues()) {
+    try {
+      window.dispatchEvent(new CustomEvent('bushwick:all-venues-visited'));
+    } catch {
+      // dispatchEvent unavailable (non-browser environment)
+    }
   }
 }
 
