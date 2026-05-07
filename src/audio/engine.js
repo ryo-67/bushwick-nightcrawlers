@@ -134,7 +134,7 @@ async function loadBanks() {
 async function loadEffectBuffers() {
   const tasks = EFFECT_NAMES.map(async (name) => {
     const buf = new window.Tone.ToneAudioBuffer();
-    await buf.load(`assets/sounds/effects/${name}.wav`);
+    await buf.load(`assets/sounds/effects/${name}.m4a`);
     effectBuffers.set(name, buf);
   });
   await Promise.all(tasks);
