@@ -76,9 +76,11 @@ function appendReviewBodyWithWordSpans(parent, text) {
 }
 
 export class Modal {
-  constructor(root, content) {
+  constructor(root, content, hooks = {}) {
     this.root = root;
     this.content = content;
+    this.onOpen = hooks.onOpen || null;
+    this.onClose = hooks.onClose || null;
     this.currentVenueId = null;
     this.previousFocus = null;
     this.oscilloscope = null;
@@ -136,10 +138,14 @@ export class Modal {
 
     const close = card.querySelector('.modal-close');
     close?.focus();
+
+    this.onOpen?.(venueId, { review, reviewer });
   }
 
   close() {
     if (!this.isOpen()) return;
+
+    this.onClose?.();
 
     this.root.dataset.state = 'closed';
     this.root.setAttribute('aria-hidden', 'true');
@@ -155,6 +161,24 @@ export class Modal {
     if (this.previousFocus) {
       this.previousFocus.focus();
       this.previousFocus = null;
+    }
+  }
+
+  setPlayState(state) {
+    const btn = this.root.querySelector('.play-button');
+    if (!btn) return;
+    if (state === 'loading') {
+      btn.disabled = true;
+      btn.textContent = 'Loading…';
+      btn.title = 'audio loading…';
+    } else if (state === 'idle') {
+      btn.disabled = false;
+      btn.textContent = 'Play';
+      btn.title = '';
+    } else if (state === 'playing') {
+      btn.disabled = false;
+      btn.textContent = 'Pause';
+      btn.title = '';
     }
   }
 
@@ -281,12 +305,12 @@ export class Modal {
 
     const body = document.createElement('p');
     body.className = 'review-body';
-    appendReviewBodyWithWordSpans(body, review.text);
+    const wordCount = appendReviewBodyWithWordSpans(body, review.text);
     card.appendChild(body);
 
     const squeaks = document.createElement('p');
     squeaks.className = 'review-squeaks';
-    squeaks.textContent = `${review.text.length} squeaks`;
+    squeaks.textContent = `${wordCount} squeaks`;
     card.appendChild(squeaks);
 
     const reviewId = review.reviewerId;

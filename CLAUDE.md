@@ -45,8 +45,8 @@ For the asset checklist and citations: `docs/ASSETS.md`.
 │   ├── pins/               # 10 GIF pin assets, one per venue
 │   ├── grain.png
 │   ├── selfies/, photos/
-│   └── audio/jmz-rumble.wav, audio/usvs/, audio/usvs-cocaine/,
-│       audio/beds/, audio/effects/
+│   └── sounds/jmz-rumble.wav, sounds/usvs/, sounds/usvs-cocaine/,
+│       sounds/beds/, sounds/effects/
 └── docs/                   # STRATEGY.md, ASSETS.md
 ```
 

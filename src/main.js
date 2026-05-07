@@ -3,6 +3,9 @@ import { Modal } from './components/modal.js';
 import { rats } from './content/rats.js';
 import { venues } from './content/venues.js';
 import { reviews } from './content/reviews.js';
+import * as engine from './audio/engine.js';
+import { ratProfiles } from './audio/rat-profiles.js';
+import { RatGenerator } from './audio/rat-generator.js';
 
 const VIEWPORT_MARGIN = 12;
 
@@ -106,12 +109,79 @@ function setupPinTooltip() {
   return { hide };
 }
 
+let modalRef = null;
+let currentRatGen = null;
+let currentRatGenVenueId = null;
+let playClickHandler = null;
+
+function syncPlayState() {
+  if (!modalRef || !modalRef.isOpen()) return;
+  if (!engine.isReady()) {
+    modalRef.setPlayState('loading');
+    return;
+  }
+  if (!currentRatGen) return;
+  modalRef.setPlayState(currentRatGen.isPlaying() ? 'playing' : 'idle');
+}
+
+function handleModalOpen(venueId, ctx) {
+  currentRatGen?.stop();
+  currentRatGen = null;
+  currentRatGenVenueId = null;
+
+  const review = ctx?.review;
+  if (!review) return; // alley/rash — no rat generator
+
+  const profile = ratProfiles[review.reviewerId];
+  if (!profile) return;
+
+  currentRatGen = new RatGenerator(profile, review.text, modalRef);
+  currentRatGenVenueId = venueId;
+  currentRatGen.onComplete = () => {
+    if (modalRef?.isOpen()) modalRef.setPlayState('idle');
+  };
+
+  syncPlayState();
+
+  if (!engine.isReady()) {
+    engine.onReady(() => {
+      if (modalRef?.isOpen() && modalRef.currentVenueId === venueId) {
+        modalRef.setPlayState('idle');
+      }
+    });
+  }
+
+  const playBtn = modalRef.root.querySelector('.play-button');
+  if (!playBtn) return;
+  playClickHandler = () => {
+    if (!engine.isReady() || !currentRatGen) return;
+    if (currentRatGen.isPlaying()) {
+      currentRatGen.stop();
+      modalRef.setPlayState('idle');
+    } else {
+      currentRatGen.start();
+      modalRef.setPlayState('playing');
+    }
+  };
+  playBtn.addEventListener('click', playClickHandler);
+}
+
+function handleModalClose() {
+  currentRatGen?.stop();
+  currentRatGen = null;
+  currentRatGenVenueId = null;
+  playClickHandler = null;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   const tag = new HeadphonesTag(document.body);
   tag.init();
 
   const modalRoot = document.getElementById('modal-root');
-  const modal = new Modal(modalRoot, { rats, venues, reviews });
+  modalRef = new Modal(modalRoot, { rats, venues, reviews }, {
+    onOpen: handleModalOpen,
+    onClose: handleModalClose,
+  });
 
   const tooltip = setupPinTooltip();
 
@@ -122,8 +192,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const pinId = pin.dataset.pinId;
     if (!pinId) return;
     tooltip.hide();
-    modal.open(pinId);
+    modalRef.open(pinId);
   });
+
+  let bootstrapStarted = false;
+  function bootstrapEngine() {
+    if (bootstrapStarted) return;
+    bootstrapStarted = true;
+    engine.start().catch((e) => {
+      // eslint-disable-next-line no-console
+      console.error('Audio engine failed to start:', e);
+    });
+  }
+  document.addEventListener('click', bootstrapEngine, true);
+  document.addEventListener('keydown', bootstrapEngine, true);
+  document.addEventListener('touchstart', bootstrapEngine, true);
 });
 
 document.addEventListener('keydown', (event) => {
