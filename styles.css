@@ -451,13 +451,12 @@ main {
 }
 
 .modal-venue-photo {
-  margin: 0 0 var(--space-md);
-  width: 200px;
-  max-width: 100%;
-  aspect-ratio: 4 / 3;
+  width: 100%;
+  margin: var(--space-sm) 0 var(--space-md);
+  aspect-ratio: 16 / 9;
   overflow: hidden;
   border: 1px solid rgba(197, 191, 174, 0.2);
-  transform: rotate(0.8deg);
+  transform: rotate(-0.6deg);
   transform-origin: center center;
   background: rgba(197, 191, 174, 0.04);
 }
@@ -467,13 +466,6 @@ main {
   height: 100%;
   object-fit: cover;
   display: block;
-}
-
-.modal-venue-photo.is-prominent {
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  margin: var(--space-sm) 0 var(--space-md);
-  transform: rotate(-0.6deg);
 }
 
 .play-button {
@@ -622,10 +614,6 @@ footer a:focus-visible {
   .star {
     width: 18px;
     height: 18px;
-  }
-
-  .modal-venue-photo {
-    width: 160px;
   }
 
   .pin {

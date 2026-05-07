@@ -56,12 +56,10 @@ function findReviewForVenue(venueId, reviews) {
   return Object.values(reviews).find((r) => r.venueId === venueId) || null;
 }
 
-function buildVenuePhoto(venue, modifierClass) {
+function buildVenuePhoto(venue) {
   if (!venue.photoPath) return null;
   const wrap = document.createElement('figure');
-  wrap.className = modifierClass
-    ? `modal-venue-photo ${modifierClass}`
-    : 'modal-venue-photo';
+  wrap.className = 'modal-venue-photo';
   const img = document.createElement('img');
   img.src = venue.photoPath;
   img.alt = '';
@@ -274,9 +272,6 @@ export class Modal {
 
     card.appendChild(ratingRow);
 
-    const photo = buildVenuePhoto(venue);
-    if (photo) card.appendChild(photo);
-
     const reviewerBlock = document.createElement('header');
     reviewerBlock.className = 'reviewer-block';
 
@@ -373,15 +368,13 @@ export class Modal {
     name.textContent = venue.displayName;
     card.appendChild(name);
 
-    const photo = buildVenuePhoto(venue, 'is-prominent');
+    const photo = buildVenuePhoto(venue);
     if (photo) card.appendChild(photo);
 
     const framing = document.createElement('p');
     framing.className = 'venue-framing';
     framing.textContent = ALLEY_FRAMING;
     card.appendChild(framing);
-
-    card.appendChild(this.buildPlayOscBlock('Play ambient (audio loading)'));
 
     return card;
   }
@@ -394,7 +387,7 @@ export class Modal {
     name.textContent = venue.displayName;
     card.appendChild(name);
 
-    const photo = buildVenuePhoto(venue, 'is-prominent');
+    const photo = buildVenuePhoto(venue);
     if (photo) card.appendChild(photo);
 
     const closed = document.createElement('p');

@@ -17,16 +17,19 @@
  */
 
 const VENUE_BED_MAP = {
-  'caffeine-underground': 'cafe.wav',
-  'mood-ring': 'bar.wav',
-  'bossa-nova': 'rave.wav',
+  'caffeine-underground': { file: 'cafe.wav', gainDb: -18 },
+  'mood-ring': { file: 'bar.wav', gainDb: -18 },
+  'bossa-nova': { file: 'rave.wav', gainDb: -18 },
+  // Rash is a memorial — distant siren sits below the bar/cafe/rave
+  // beds and below the JMZ rumble's peaks. -28dB places it as
+  // distant atmosphere, not foreground emergency.
+  'rash': { file: 'firetruck.wav', gainDb: -28 },
 };
 
 const BED_DIR = 'assets/sounds/effects';
 const JMZ_FILE = 'assets/sounds/jmz-rumble.wav';
 
 const JMZ_GAIN_DB = -27;
-const BED_GAIN_DB = -18;
 const BED_FADE_IN = 2.5;
 const BED_FADE_OUT = 1.5;
 
@@ -51,16 +54,16 @@ export async function initBeds() {
 async function ensureBed(venueId) {
   if (venueBeds.has(venueId)) return venueBeds.get(venueId);
   const Tone = window.Tone;
-  const file = VENUE_BED_MAP[venueId];
-  if (!file) return null;
+  const entry = VENUE_BED_MAP[venueId];
+  if (!entry) return null;
   const gain = new Tone.Gain(0).toDestination();
   const player = new Tone.Player({
-    url: `${BED_DIR}/${file}`,
+    url: `${BED_DIR}/${entry.file}`,
     loop: true,
     autostart: false,
   }).connect(gain);
   await Tone.loaded();
-  const bed = { player, gain };
+  const bed = { player, gain, gainDb: entry.gainDb };
   venueBeds.set(venueId, bed);
   return bed;
 }
@@ -68,7 +71,7 @@ async function ensureBed(venueId) {
 function fadeIn(bed) {
   const Tone = window.Tone;
   const now = Tone.now();
-  const target = Tone.dbToGain(BED_GAIN_DB);
+  const target = Tone.dbToGain(bed.gainDb);
   bed.gain.gain.cancelScheduledValues(now);
   bed.gain.gain.setValueAtTime(bed.gain.gain.value, now);
   bed.gain.gain.linearRampToValueAtTime(target, now + BED_FADE_IN);
