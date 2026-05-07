@@ -114,41 +114,51 @@ main {
 .pin[data-pin-id='trifecta']             { top: 55%; left: 50%; }
 .pin[data-pin-id='jmz-platform']         { top: 30%; left: 50%; }
 .pin[data-pin-id='alley']                { top: 35%; left: 28%; }
-.pin[data-pin-id='rash']                 { top: 60%; left: 70%; opacity: 0.4; }
+.pin[data-pin-id='rash']                 { top: 60%; left: 70%; }
 .pin[data-pin-id='ornithology']          { top: 25%; left: 65%; }
 .pin[data-pin-id='mood-ring']            { top: 60%; left: 22%; }
 .pin[data-pin-id='bossa-nova']           { top: 65%; left: 32%; }
 .pin[data-pin-id='caffeine-underground'] { top: 75%; left: 55%; }
 
 .pin-tooltip {
-  position: absolute;
-  bottom: calc(100% + 14px);
-  left: 50%;
-  transform: translateX(-50%);
+  position: fixed;
   width: 200px;
   background: var(--color-bg);
   border: 1px solid var(--color-accent);
   padding: 0.6rem;
-  z-index: 50;
+  z-index: 1000;
   opacity: 0;
   pointer-events: none;
   transition: opacity 150ms ease;
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.7);
   text-align: left;
+  left: -9999px;
+  top: -9999px;
 }
 
-.pin:hover .pin-tooltip,
-.pin:focus-visible .pin-tooltip {
+.pin-tooltip.is-visible {
   opacity: 1;
 }
 
-/* Pins in the upper third of the map: flip tooltip below to avoid clipping. */
-.pin[data-pin-id='jmz-platform'] .pin-tooltip,
-.pin[data-pin-id='ornithology'] .pin-tooltip,
-.pin[data-pin-id='alley'] .pin-tooltip,
-.pin[data-pin-id='market-hotel'] .pin-tooltip {
-  bottom: auto;
-  top: calc(100% + 14px);
+.pin-tooltip::before {
+  content: '';
+  position: absolute;
+  left: var(--notch-x, 50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  transform: translateX(-50%);
+}
+
+.pin-tooltip[data-placement='above']::before {
+  bottom: -6px;
+  border-top: 6px solid var(--color-accent);
+}
+
+.pin-tooltip[data-placement='below']::before {
+  top: -6px;
+  border-bottom: 6px solid var(--color-accent);
 }
 
 .pin-tooltip-photo {
@@ -385,10 +395,37 @@ main {
   outline-offset: 2px;
 }
 
-.review-reaction.reaction-flash {
+.review-reaction.is-active {
   background: var(--color-accent);
   color: var(--color-bg);
   border-color: var(--color-accent);
+}
+
+.review-reaction.is-active:hover,
+.review-reaction.is-active:focus-visible {
+  background: var(--color-accent);
+  color: var(--color-bg);
+  border-color: var(--color-accent);
+}
+
+.word {
+  transition: color 80ms ease, font-weight 80ms ease;
+}
+
+.word.is-active {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.play-osc-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+.play-osc-block .play-button {
+  align-self: flex-start;
 }
 
 .venue-name-large {
@@ -422,23 +459,6 @@ main {
   height: 80px;
   background: rgba(197, 191, 174, 0.04);
   border: 1px solid rgba(197, 191, 174, 0.2);
-  margin-bottom: var(--space-md);
-}
-
-.modal-card .subtitles {
-  font-family: var(--font-editorial);
-  font-style: italic;
-  font-size: 0.875rem;
-  line-height: 1.5;
-  max-height: 12em;
-  overflow-y: auto;
-  opacity: 0.7;
-  margin: 0 0 var(--space-md);
-  padding-right: var(--space-sm);
-}
-
-.modal-card .subtitles:empty {
-  display: none;
 }
 
 .play-button {

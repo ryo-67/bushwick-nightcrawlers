@@ -1,5 +1,4 @@
 import { Oscilloscope } from './oscilloscope.js';
-import { Subtitles } from './subtitles.js';
 
 const REVIEWER_LOCATION = 'Bushwick, Brooklyn';
 const ALLEY_FRAMING = 'the alley between Mr Kiwi and the JMZ';
@@ -10,13 +9,33 @@ const REACTIONS = [
   { type: 'cool', label: 'Cool' },
 ];
 
-function reactionStorageKey(reviewId, type) {
-  return `bushwick.reactions.${reviewId}.${type}`;
+function reactedKey(reviewId, type) {
+  return `bushwick.reaction.${reviewId}.${type}`;
 }
 
-function readReactionCount(reviewId, type) {
+function countKey(reviewId, type) {
+  return `bushwick.reactionCount.${reviewId}.${type}`;
+}
+
+function readHasReacted(reviewId, type) {
   try {
-    const raw = localStorage.getItem(reactionStorageKey(reviewId, type));
+    return localStorage.getItem(reactedKey(reviewId, type)) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function writeHasReacted(reviewId, type, value) {
+  try {
+    localStorage.setItem(reactedKey(reviewId, type), value ? 'true' : 'false');
+  } catch {
+    // localStorage unavailable — state lost on next open
+  }
+}
+
+function readCount(reviewId, type) {
+  try {
+    const raw = localStorage.getItem(countKey(reviewId, type));
     if (!raw) return 0;
     const n = parseInt(raw, 10);
     return Number.isFinite(n) && n >= 0 ? n : 0;
@@ -25,24 +44,36 @@ function readReactionCount(reviewId, type) {
   }
 }
 
-function writeReactionCount(reviewId, type, count) {
+function writeCount(reviewId, type, count) {
   try {
-    localStorage.setItem(reactionStorageKey(reviewId, type), String(count));
+    localStorage.setItem(countKey(reviewId, type), String(count));
   } catch {
-    // localStorage unavailable — counts revert to 0 on next open
+    // localStorage unavailable
   }
-}
-
-function formatDate(date = new Date()) {
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
 }
 
 function findReviewForVenue(venueId, reviews) {
   return Object.values(reviews).find((r) => r.venueId === venueId) || null;
+}
+
+function appendReviewBodyWithWordSpans(parent, text) {
+  // Split with capture group so whitespace is preserved between word spans.
+  const tokens = text.split(/(\s+)/);
+  let wordIndex = 0;
+  tokens.forEach((token) => {
+    if (token === '') return;
+    if (/^\s+$/.test(token)) {
+      parent.appendChild(document.createTextNode(token));
+      return;
+    }
+    const span = document.createElement('span');
+    span.className = 'word';
+    span.dataset.index = String(wordIndex);
+    span.textContent = token;
+    parent.appendChild(span);
+    wordIndex += 1;
+  });
+  return wordIndex;
 }
 
 export class Modal {
@@ -52,7 +83,6 @@ export class Modal {
     this.currentVenueId = null;
     this.previousFocus = null;
     this.oscilloscope = null;
-    this.subtitles = null;
     this.bind();
   }
 
@@ -121,13 +151,25 @@ export class Modal {
     });
 
     this.oscilloscope = null;
-    this.subtitles = null;
     this.currentVenueId = null;
 
     if (this.previousFocus) {
       this.previousFocus.focus();
       this.previousFocus = null;
     }
+  }
+
+  highlightWord(index) {
+    const active = this.root.querySelectorAll('.word.is-active');
+    active.forEach((el) => el.classList.remove('is-active'));
+    const target = this.root.querySelector(`.word[data-index="${index}"]`);
+    if (target) target.classList.add('is-active');
+  }
+
+  clearHighlights() {
+    this.root
+      .querySelectorAll('.word.is-active')
+      .forEach((el) => el.classList.remove('is-active'));
   }
 
   buildCardShell(ariaLabel) {
@@ -144,6 +186,25 @@ export class Modal {
 
     if (ariaLabel) this.root.setAttribute('aria-label', ariaLabel);
     return card;
+  }
+
+  buildPlayOscBlock(ariaLabel) {
+    const wrap = document.createElement('div');
+    wrap.className = 'play-osc-block';
+
+    this.oscilloscope = new Oscilloscope();
+    wrap.appendChild(this.oscilloscope.element);
+
+    const play = document.createElement('button');
+    play.type = 'button';
+    play.className = 'play-button';
+    play.disabled = true;
+    play.title = 'audio loading…';
+    play.setAttribute('aria-label', ariaLabel);
+    play.textContent = 'Play';
+    wrap.appendChild(play);
+
+    return wrap;
   }
 
   buildReviewCard(venue, reviewer, review) {
@@ -187,6 +248,8 @@ export class Modal {
     reviewerBlock.appendChild(meta);
     card.appendChild(reviewerBlock);
 
+    card.appendChild(this.buildPlayOscBlock('Play review (audio loading)'));
+
     const ratingRow = document.createElement('div');
     ratingRow.className = 'review-rating';
 
@@ -203,7 +266,7 @@ export class Modal {
 
     const date = document.createElement('span');
     date.className = 'review-date';
-    date.textContent = formatDate();
+    date.textContent = review.date;
     ratingRow.appendChild(date);
 
     card.appendChild(ratingRow);
@@ -215,7 +278,7 @@ export class Modal {
 
     const body = document.createElement('p');
     body.className = 'review-body';
-    body.textContent = review.text;
+    appendReviewBodyWithWordSpans(body, review.text);
     card.appendChild(body);
 
     const squeaks = document.createElement('p');
@@ -230,33 +293,29 @@ export class Modal {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'review-reaction';
-      const initial = readReactionCount(reviewId, type);
-      btn.textContent = `${label} ${initial}`;
+      const initialCount = readCount(reviewId, type);
+      const initialActive = readHasReacted(reviewId, type);
+      btn.textContent = `${label} ${initialCount}`;
+      if (initialActive) {
+        btn.classList.add('is-active');
+        btn.setAttribute('aria-pressed', 'true');
+      } else {
+        btn.setAttribute('aria-pressed', 'false');
+      }
       btn.addEventListener('click', () => {
-        const next = readReactionCount(reviewId, type) + 1;
-        writeReactionCount(reviewId, type, next);
-        btn.textContent = `${label} ${next}`;
-        btn.classList.add('reaction-flash');
-        setTimeout(() => btn.classList.remove('reaction-flash'), 200);
+        const wasActive = readHasReacted(reviewId, type);
+        const currentCount = readCount(reviewId, type);
+        const nextCount = wasActive ? Math.max(0, currentCount - 1) : currentCount + 1;
+        const nextActive = !wasActive;
+        writeCount(reviewId, type, nextCount);
+        writeHasReacted(reviewId, type, nextActive);
+        btn.textContent = `${label} ${nextCount}`;
+        btn.classList.toggle('is-active', nextActive);
+        btn.setAttribute('aria-pressed', nextActive ? 'true' : 'false');
       });
       reactions.appendChild(btn);
     });
     card.appendChild(reactions);
-
-    this.oscilloscope = new Oscilloscope();
-    card.appendChild(this.oscilloscope.element);
-
-    this.subtitles = new Subtitles();
-    card.appendChild(this.subtitles.element);
-
-    const play = document.createElement('button');
-    play.type = 'button';
-    play.className = 'play-button';
-    play.disabled = true;
-    play.title = 'audio loading…';
-    play.setAttribute('aria-label', 'Play review (audio loading)');
-    play.textContent = 'Play';
-    card.appendChild(play);
 
     return card;
   }
@@ -274,17 +333,7 @@ export class Modal {
     framing.textContent = ALLEY_FRAMING;
     card.appendChild(framing);
 
-    this.oscilloscope = new Oscilloscope();
-    card.appendChild(this.oscilloscope.element);
-
-    const play = document.createElement('button');
-    play.type = 'button';
-    play.className = 'play-button';
-    play.disabled = true;
-    play.title = 'audio loading…';
-    play.setAttribute('aria-label', 'Play ambient (audio loading)');
-    play.textContent = 'Play';
-    card.appendChild(play);
+    card.appendChild(this.buildPlayOscBlock('Play ambient (audio loading)'));
 
     return card;
   }
