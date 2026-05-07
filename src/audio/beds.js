@@ -43,7 +43,7 @@ const BED_DIR = 'assets/sounds/effects';
 const JMZ_FILE = 'assets/sounds/jmz-rumble.m4a';
 const TRAIN_FILE = 'assets/sounds/effects/train.m4a';
 
-const JMZ_GAIN_DB = -18;
+const JMZ_GAIN_DB = -12;
 const TRAIN_GAIN_DB = -17;
 const TRAIN_INTERVAL_MIN_SEC = 90;
 const TRAIN_INTERVAL_MAX_SEC = 180;
