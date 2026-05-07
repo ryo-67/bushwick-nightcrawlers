@@ -24,6 +24,7 @@
 
 import * as engine from './engine.js';
 import { getMode } from './playback-mode.js';
+import { matchKeyword } from './keyword-effects.js';
 
 function fnv1a(str) {
   let h = 2166136261;
@@ -132,6 +133,10 @@ export class RatGenerator {
     this.perRatGain = null;
     this.perRatLPF = null;
     this.perRatReverbSend = null;
+    // Lazy Map<effectName, Tone.Player> created on first keyword fire.
+    // Players connect to perRatLPF so effects ride the same spatial
+    // treatment as the rat at its current rank.
+    this.effectPlayers = null;
     this._disposed = false;
   }
 
@@ -206,6 +211,14 @@ export class RatGenerator {
         this.activeSources.push(source);
       }
 
+      // Keyword-triggered effect: layers on top of the USV at the
+      // same time. Routed through perRatLPF (chainHead) so the
+      // effect inherits the rat's current rank treatment.
+      const effectSpec = matchKeyword(word.raw);
+      if (effectSpec) {
+        this.scheduleEffect(effectSpec, cursor);
+      }
+
       const wordTime = cursor;
       Tone.Draw.schedule(() => {
         if (myId !== this.playbackId) return;
@@ -243,10 +256,62 @@ export class RatGenerator {
     this.modal?.clearHighlights?.(this.reviewerId);
   }
 
+  scheduleEffect(spec, time) {
+    if (this._disposed) return;
+    const primary = this.getOrCreateEffectPlayer(spec.effect);
+    if (primary) {
+      try {
+        primary.volume.value = spec.volume;
+        primary.start(time, spec.offset ?? 0);
+      } catch {
+        // Player may have been disposed mid-schedule, or the buffer
+        // was never loaded. Skip silently.
+      }
+    }
+    if (spec.layered) {
+      for (const layerName of spec.layered) {
+        const layer = this.getOrCreateEffectPlayer(layerName);
+        if (!layer) continue;
+        try {
+          layer.volume.value = spec.volume;
+          layer.start(time);
+        } catch {
+          // ignore
+        }
+      }
+    }
+  }
+
+  getOrCreateEffectPlayer(effectName) {
+    if (this._disposed) return null;
+    if (!this.effectPlayers) this.effectPlayers = new Map();
+    if (!this.effectPlayers.has(effectName)) {
+      const buffer = engine.getEffectBuffer(effectName);
+      if (!buffer) return null;
+      const Tone = window.Tone;
+      const player = new Tone.Player(buffer);
+      if (this.perRatLPF) player.connect(this.perRatLPF);
+      else player.toDestination();
+      this.effectPlayers.set(effectName, player);
+    }
+    return this.effectPlayers.get(effectName);
+  }
+
   dispose() {
     if (this._disposed) return;
     this._disposed = true;
     this.stop();
+    if (this.effectPlayers) {
+      for (const player of this.effectPlayers.values()) {
+        try {
+          player.dispose();
+        } catch {
+          // already disposed
+        }
+      }
+      this.effectPlayers.clear();
+      this.effectPlayers = null;
+    }
     for (const node of [this.perRatLPF, this.perRatGain, this.perRatReverbSend]) {
       if (!node) continue;
       try {

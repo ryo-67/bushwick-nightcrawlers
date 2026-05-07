@@ -69,6 +69,9 @@ const banks = {
   'usvs-cocaine': [],
 };
 
+const EFFECT_NAMES = ['chime', 'cough', 'fizz', 'vibrate'];
+const effectBuffers = new Map();
+
 let ready = false;
 let startPromise = null;
 let ratGain = null;
@@ -127,6 +130,15 @@ async function loadBanks() {
   );
 }
 
+async function loadEffectBuffers() {
+  const tasks = EFFECT_NAMES.map(async (name) => {
+    const buf = new window.Tone.ToneAudioBuffer();
+    await buf.load(`assets/sounds/effects/${name}.wav`);
+    effectBuffers.set(name, buf);
+  });
+  await Promise.all(tasks);
+}
+
 export function start() {
   if (startPromise) return startPromise;
   startPromise = (async () => {
@@ -141,7 +153,7 @@ export function start() {
       wet: 1.0,
     }).connect(ratGain);
     await sharedRatReverb.generate();
-    await Promise.all([loadBanks(), initBeds()]);
+    await Promise.all([loadBanks(), initBeds(), loadEffectBuffers()]);
     ready = true;
     while (readyListeners.length) {
       const fn = readyListeners.shift();
@@ -175,6 +187,10 @@ export function getRatGain() {
 
 export function getSharedRatReverb() {
   return sharedRatReverb;
+}
+
+export function getEffectBuffer(name) {
+  return effectBuffers.get(name) || null;
 }
 
 // ---- cumulative voicing registry ----
