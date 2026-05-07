@@ -51,26 +51,26 @@ main {
   padding-top: 0;
   min-height: 100vh;
   display: flex;
-  align-items: stretch;
+  align-items: center;
   justify-content: center;
 }
 
+/* Wrapper takes its width from main (100%) and its height from the
+   video's natural aspect ratio. Pin coordinates in venues.js are
+   percentages of this wrapper, which now equals the visible map
+   exactly — no aspect-ratio constraint, no object-fit bands, so
+   pins land on their venues. min-height:100vh on main keeps the
+   footer below the fold without forcing the map to fill it. */
 .map-wrapper {
   position: relative;
-  height: 100vh;
-  /* map.mp4 is 1920x1080 — pin coordinates in venues.js are
-     percentages of the wrapper, so the wrapper's aspect ratio MUST
-     match the underlying video or pins drift off their venues. */
-  aspect-ratio: 16 / 9;
-  max-width: 100vw;
+  width: 100%;
   margin: 0 auto;
 }
 
 .map-bg {
   display: block;
   width: 100%;
-  height: 100%;
-  object-fit: contain;
+  height: auto;
 }
 
 .pin-layer {
