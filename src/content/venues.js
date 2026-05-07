@@ -6,7 +6,7 @@ export const venues = {
     reviewerId: 'razor-whisker',
     photoPath: 'assets/photos/market-hotel.jpg',
     bedComponents: ['solo-cup-hits', 'piano-trio-bleed'],
-    mapCoordinates: { x: 50, y: 50 },
+    mapCoordinates: { x: 34, y: 54 },
   },
   'mr-kiwi': {
     id: 'mr-kiwi',
@@ -15,7 +15,7 @@ export const venues = {
     reviewerId: 'comrade-crumb',
     photoPath: 'assets/photos/mr-kiwi.jpg',
     bedComponents: ['refrigerator-hum', 'fluorescent-buzz', 'spanish-radio', 'door-bell', 'conversation-murmur'],
-    mapCoordinates: { x: 50, y: 50 },
+    mapCoordinates: { x: 28, y: 60 },
   },
   'trifecta': {
     id: 'trifecta',
@@ -24,7 +24,7 @@ export const venues = {
     reviewerId: 'old-cheese',
     photoPath: 'assets/photos/trifecta.png',
     bedComponents: ['fluorescent-buzz', 'refrigerator-hum', 'fryer-hum', 'npr-podcast', 'distant-siren'],
-    mapCoordinates: { x: 50, y: 50 },
+    mapCoordinates: { x: 20, y: 62 },
   },
   'jmz-platform': {
     id: 'jmz-platform',
@@ -33,7 +33,7 @@ export const venues = {
     reviewerId: 'pinky-mae',
     photoPath: 'assets/photos/jmz-platform.jpg',
     bedComponents: ['pigeon-coo', 'wind-through-metal', 'distant-siren', 'mta-announcement'],
-    mapCoordinates: { x: 50, y: 50 },
+    mapCoordinates: { x: 10, y: 50 },
   },
   'alley': {
     id: 'alley',
@@ -42,7 +42,7 @@ export const venues = {
     reviewerId: null,
     photoPath: 'assets/photos/alley.jpg',
     bedComponents: ['plastic-crinkle', 'pipe-drip'],
-    mapCoordinates: { x: 50, y: 50 },
+    mapCoordinates: { x: 40, y: 64 },
   },
   'rash': {
     id: 'rash',
@@ -51,7 +51,7 @@ export const venues = {
     reviewerId: null,
     photoPath: 'assets/photos/rash.jpg',
     bedComponents: ['distant-techno'],
-    mapCoordinates: { x: 50, y: 50 },
+    mapCoordinates: { x: 52, y: 42 },
   },
   'ornithology': {
     id: 'ornithology',
@@ -60,7 +60,7 @@ export const venues = {
     reviewerId: 'wyckoff-six',
     photoPath: 'assets/photos/ornithology.jpg',
     bedComponents: ['piano-trio-bleed', 'conversation-murmur'],
-    mapCoordinates: { x: 50, y: 50 },
+    mapCoordinates: { x: 50, y: 78 },
   },
   'mood-ring': {
     id: 'mood-ring',
@@ -69,7 +69,7 @@ export const venues = {
     reviewerId: 'mira-wong-witherspoon',
     photoPath: 'assets/photos/mood-ring.jpg',
     bedComponents: ['smoke-machine-hiss', 'distant-techno', 'brick-wall-thump', 'photobooth-flash'],
-    mapCoordinates: { x: 50, y: 50 },
+    mapCoordinates: { x: 88, y: 48 },
   },
   'bossa-nova': {
     id: 'bossa-nova',
@@ -78,8 +78,10 @@ export const venues = {
     reviewerId: 'dj-nibblers',
     photoPath: 'assets/photos/bossa-nova.jpg',
     bedComponents: ['smoke-machine-hiss', 'distant-techno', 'brick-wall-thump'],
-    mapCoordinates: { x: 50, y: 50 },
+    mapCoordinates: { x: 80, y: 38 },
   },
+  // Fictional placement: the real Caffeine Underground is ~3 blocks
+  // east of the map frame. Kept on-piece for cultural completeness.
   'caffeine-underground': {
     id: 'caffeine-underground',
     displayName: 'Caffeine Underground',
@@ -87,6 +89,6 @@ export const venues = {
     reviewerId: 'rosemary-rib',
     photoPath: 'assets/photos/caffeine-underground.jpg',
     bedComponents: ['pipe-drip', 'foil-crinkle'],
-    mapCoordinates: { x: 50, y: 50 },
+    mapCoordinates: { x: 80, y: 70 },
   },
 };

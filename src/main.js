@@ -132,6 +132,19 @@ let currentRatGenVenueId = null;
 let playClickHandler = null;
 let pendingAlleyReveal = false;
 
+function setupPinPositions() {
+  // Apply mapCoordinates from venues.js as inline top/left on each
+  // static pin in index.html. venues.js is the single source of
+  // truth for pin placement; tuning a pin is a one-file change.
+  for (const pin of document.querySelectorAll('.pin')) {
+    const venue = venues[pin.dataset.pinId];
+    if (!venue || !venue.mapCoordinates) continue;
+    const { x, y } = venue.mapCoordinates;
+    pin.style.left = `${x}%`;
+    pin.style.top = `${y}%`;
+  }
+}
+
 function getAlleyPin() {
   return document.querySelector('.pin[data-pin-id="alley"]');
 }
@@ -377,6 +390,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  setupPinPositions();
   const tooltip = setupPinTooltip();
   setupFooterModeToggle();
   setupFooterAudioControls();
