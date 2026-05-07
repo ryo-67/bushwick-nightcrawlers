@@ -8,6 +8,14 @@ import { ratProfiles } from './audio/rat-profiles.js';
 import { RatGenerator } from './audio/rat-generator.js';
 import { getMode, setMode } from './audio/playback-mode.js';
 import * as beds from './audio/beds.js';
+import {
+  getVolume,
+  getMuted,
+  setVolume,
+  setMuted,
+  VOLUME_MIN_DB,
+  VOLUME_MAX_DB,
+} from './audio/master-controls.js';
 
 function ctaCopyForVenue(venue) {
   if (venue.id === 'alley') return 'step into the alley';
@@ -219,6 +227,35 @@ function handleModalClose() {
   beds.stopActiveBed();
 }
 
+function setupFooterAudioControls() {
+  const slider = document.querySelector('.footer-volume');
+  const muteBtn = document.querySelector('.footer-mute');
+  if (!slider || !muteBtn) return;
+
+  function updateSliderFill() {
+    const v = parseFloat(slider.value);
+    const pct = ((v - VOLUME_MIN_DB) / (VOLUME_MAX_DB - VOLUME_MIN_DB)) * 100;
+    slider.style.setProperty('--fill', `${pct}%`);
+  }
+
+  slider.value = String(getVolume());
+  updateSliderFill();
+  slider.addEventListener('input', () => {
+    setVolume(parseFloat(slider.value));
+    updateSliderFill();
+  });
+
+  function syncMuteVisual() {
+    muteBtn.setAttribute('aria-pressed', getMuted() ? 'true' : 'false');
+  }
+
+  syncMuteVisual();
+  muteBtn.addEventListener('click', () => {
+    setMuted(!getMuted());
+    syncMuteVisual();
+  });
+}
+
 function setupFooterModeToggle() {
   const buttons = Array.from(document.querySelectorAll('.footer-mode'));
   if (buttons.length === 0) return;
@@ -250,6 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const tooltip = setupPinTooltip();
   setupFooterModeToggle();
+  setupFooterAudioControls();
 
   const mapWrapper = document.querySelector('.map-wrapper') || document.body;
   mapWrapper.addEventListener('click', (event) => {

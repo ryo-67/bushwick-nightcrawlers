@@ -41,6 +41,17 @@
       <span class="footer-mode-pipe" aria-hidden="true">|</span>
       <button type="button" class="footer-mode" data-mode="record" aria-pressed="false">on record</button>
     </span>
+    <span class="footer-divider" aria-hidden="true">·</span>
+    <span class="footer-audio-set">
+      <input type="range" class="footer-volume" min="-40" max="0" step="1" value="0" aria-label="Master volume">
+      <button type="button" class="footer-mute" aria-pressed="false" aria-label="Mute audio">
+        <svg viewBox="0 0 18 24" width="14" height="18" aria-hidden="true">
+          <path d="M2 9h3l4-3v12l-4-3H2z" fill="currentColor"/>
+          <path class="footer-mute-bars" d="M11 9h2 M11 12h3 M11 15h2" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          <path class="footer-mute-x" d="M11 9l4 6 M15 9l-4 6" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </span>
   </footer>
 </body>
 </html>

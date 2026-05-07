@@ -119,20 +119,37 @@ export class RatGenerator {
     this.onComplete = null;
     this.rng = Math.random;
     this.mode = 'moment';
-    // perRatGain is the recency-ladder volume slot for this rat.
-    // Created lazily at start() since engine.getRatGain() may not
-    // exist before engine.start() resolves.
+    // Per-rat audio chain. Created lazily at start() since engine
+    // nodes don't exist until engine.start() resolves.
+    //
+    //   source → perRatLPF ─┬─→ perRatGain → ratGain → Destination
+    //                       └─→ perRatReverbSend → sharedRatReverb
+    //                                              → ratGain → Destination
+    //
+    // perRatLPF: air-absorption mimic — older rats lose treble
+    // perRatGain: recency-ladder volume slot
+    // perRatReverbSend: wet-path send — older rats hear-through-reflections
     this.perRatGain = null;
+    this.perRatLPF = null;
+    this.perRatReverbSend = null;
     this._disposed = false;
   }
 
-  ensurePerRatGain() {
-    if (this.perRatGain || this._disposed) return this.perRatGain;
+  ensurePerRatChain() {
+    if (this._disposed) return null;
+    if (this.perRatGain && this.perRatLPF && this.perRatReverbSend) return this.perRatLPF;
     const Tone = window.Tone;
     const ratGain = engine.getRatGain();
-    if (!ratGain) return null;
+    const reverb = engine.getSharedRatReverb();
+    if (!ratGain || !reverb) return null;
+    // Initial values match foreground (rank 0). Engine.recomputeLadder
+    // ramps to the correct rank within RAT_LADDER_RAMP_SEC of registration.
+    this.perRatLPF = new Tone.Filter(20000, 'lowpass');
     this.perRatGain = new Tone.Gain(1).connect(ratGain);
-    return this.perRatGain;
+    this.perRatReverbSend = new Tone.Gain(0).connect(reverb);
+    this.perRatLPF.connect(this.perRatGain);
+    this.perRatLPF.connect(this.perRatReverbSend);
+    return this.perRatLPF;
   }
 
   isPlaying() {
@@ -174,7 +191,7 @@ export class RatGenerator {
     const myId = this.playbackId;
 
     const Tone = window.Tone;
-    const perRatGain = this.ensurePerRatGain();
+    const chainHead = this.ensurePerRatChain();
     let cursor = Tone.now() + 0.05;
 
     for (let i = 0; i < this.words.length; i += 1) {
@@ -183,7 +200,7 @@ export class RatGenerator {
 
       if (sample) {
         const source = new Tone.ToneBufferSource(sample.buffer);
-        if (perRatGain) source.connect(perRatGain);
+        if (chainHead) source.connect(chainHead);
         else source.toDestination();
         source.start(cursor);
         this.activeSources.push(source);
@@ -230,27 +247,33 @@ export class RatGenerator {
     if (this._disposed) return;
     this._disposed = true;
     this.stop();
-    if (this.perRatGain) {
+    for (const node of [this.perRatLPF, this.perRatGain, this.perRatReverbSend]) {
+      if (!node) continue;
       try {
-        this.perRatGain.dispose();
+        node.dispose();
       } catch {
         // already disposed
       }
-      this.perRatGain = null;
     }
+    this.perRatLPF = null;
+    this.perRatGain = null;
+    this.perRatReverbSend = null;
     this.modal = null;
     this.onComplete = null;
   }
 
   fadeOutAndDispose(seconds) {
     if (this._disposed) return;
-    if (this.perRatGain) {
-      const Tone = window.Tone;
-      const now = Tone.now();
+    // Ramp both the dry path and the wet send to 0 so the rat fades
+    // out cleanly through whichever path was carrying it.
+    const Tone = window.Tone;
+    const now = Tone.now();
+    for (const gainNode of [this.perRatGain, this.perRatReverbSend]) {
+      if (!gainNode) continue;
       try {
-        this.perRatGain.gain.cancelScheduledValues(now);
-        this.perRatGain.gain.setValueAtTime(this.perRatGain.gain.value, now);
-        this.perRatGain.gain.linearRampToValueAtTime(0, now + seconds);
+        gainNode.gain.cancelScheduledValues(now);
+        gainNode.gain.setValueAtTime(gainNode.gain.value, now);
+        gainNode.gain.linearRampToValueAtTime(0, now + seconds);
       } catch {
         // gain node already torn down
       }

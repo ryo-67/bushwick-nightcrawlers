@@ -122,11 +122,12 @@ main {
 
 .pin-tooltip {
   position: fixed;
-  width: 200px;
+  width: 300px;
+  max-width: calc(100vw - 32px);
   background: var(--color-bg);
   color: var(--color-text);
   border: 1px solid rgba(184, 255, 0, 0.25);
-  padding: 0.55rem 0.65rem;
+  padding: 0.75rem;
   z-index: 1000;
   opacity: 0;
   pointer-events: none;
@@ -145,9 +146,9 @@ main {
 .pin-tooltip-photo {
   display: block;
   width: 100%;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 4 / 3;
   object-fit: cover;
-  margin-bottom: 0.4rem;
+  margin-bottom: 0.5rem;
   background: rgba(197, 191, 174, 0.05);
 }
 
@@ -569,6 +570,102 @@ footer a:focus-visible {
 
 .footer-mode-pipe {
   opacity: 0.35;
+}
+
+.footer-audio-set {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.footer-volume {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 80px;
+  height: 14px;
+  background: transparent;
+  cursor: pointer;
+  --fill: 100%;
+}
+
+.footer-volume::-webkit-slider-runnable-track {
+  height: 2px;
+  background: linear-gradient(
+    to right,
+    var(--color-accent) 0%,
+    var(--color-accent) var(--fill),
+    rgba(197, 191, 174, 0.3) var(--fill),
+    rgba(197, 191, 174, 0.3) 100%
+  );
+}
+
+.footer-volume::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 8px;
+  height: 12px;
+  background: var(--color-accent);
+  border: none;
+  border-radius: 0;
+  margin-top: -5px;
+  cursor: pointer;
+}
+
+.footer-volume::-moz-range-track {
+  height: 2px;
+  background: linear-gradient(
+    to right,
+    var(--color-accent) 0%,
+    var(--color-accent) var(--fill),
+    rgba(197, 191, 174, 0.3) var(--fill),
+    rgba(197, 191, 174, 0.3) 100%
+  );
+  border: none;
+}
+
+.footer-volume::-moz-range-thumb {
+  width: 8px;
+  height: 12px;
+  background: var(--color-accent);
+  border: none;
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.footer-volume:focus-visible {
+  outline: 1px solid var(--color-accent);
+  outline-offset: 4px;
+}
+
+.footer-mute {
+  background: transparent;
+  border: none;
+  padding: 0.2rem;
+  margin: 0;
+  cursor: pointer;
+  color: var(--color-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 100ms linear;
+}
+
+.footer-mute:hover,
+.footer-mute:focus-visible {
+  color: var(--color-accent);
+  outline: none;
+}
+
+.footer-mute[aria-pressed='true'] {
+  color: var(--color-accent);
+}
+
+.footer-mute[aria-pressed='false'] .footer-mute-x {
+  display: none;
+}
+
+.footer-mute[aria-pressed='true'] .footer-mute-bars {
+  display: none;
 }
 
 @media (max-width: 768px) {

@@ -22,13 +22,19 @@
 import { USVS, USVS_COCAINE } from './manifest.js';
 import { initBeds } from './beds.js';
 import { reviews } from '../content/reviews.js';
+import { applyOnEngineStart as applyMasterControls } from './master-controls.js';
 
 // Master foreground level for the most-recent rat. Tune by ear.
-export const RAT_FOREGROUND_GAIN = 0.55;
+export const RAT_FOREGROUND_GAIN = 0.4;
 
-// Per-rat-gain multipliers by recency rank.
-// Index 0 = most recent (foreground). Index N = N steps back.
-export const RAT_RECENCY_LADDER = [1.0, 0.45, 0.2, 0.1, 0.05];
+// Spatial recency ladder. Three parallel curves, applied per rank:
+//   - gain: how loud each rat is at its rank
+//   - lowpass cutoff (Hz): air-absorption mimic; older rats lose treble
+//   - reverb send (0..1): older rats are heard mostly through reflections
+// Index 0 = foreground, index N = N steps back. RAT_CAP must equal length.
+export const RAT_GAIN_LADDER = [1.0, 0.3, 0.12, 0.05, 0.02];
+export const RAT_LPF_LADDER = [20000, 5000, 2500, 1200, 600];
+export const RAT_REVERB_SEND_LADDER = [0.0, 0.15, 0.3, 0.45, 0.55];
 
 // Maximum simultaneous rats. The 6th opening evicts the oldest.
 export const RAT_CAP = 5;
@@ -66,6 +72,7 @@ const banks = {
 let ready = false;
 let startPromise = null;
 let ratGain = null;
+let sharedRatReverb = null;
 const readyListeners = [];
 
 // Map<reviewerId, RatGenerator> — insertion order is recency.
@@ -121,7 +128,15 @@ export function start() {
   startPromise = (async () => {
     const Tone = window.Tone;
     await Tone.start();
+    // Apply persisted master volume / mute before any audio starts.
+    applyMasterControls();
     ratGain = new Tone.Gain(RAT_FOREGROUND_GAIN).toDestination();
+    sharedRatReverb = new Tone.Reverb({
+      decay: 5,
+      preDelay: 0.03,
+      wet: 1.0,
+    }).connect(ratGain);
+    await sharedRatReverb.generate();
     await Promise.all([loadBanks(), initBeds()]);
     ready = true;
     while (readyListeners.length) {
@@ -154,14 +169,28 @@ export function getRatGain() {
   return ratGain;
 }
 
+export function getSharedRatReverb() {
+  return sharedRatReverb;
+}
+
 // ---- cumulative voicing registry ----
 
-function rampGain(gainNode, target, rampSec) {
+function rampParam(param, target, rampSec) {
   const Tone = window.Tone;
   const now = Tone.now();
-  gainNode.gain.cancelScheduledValues(now);
-  gainNode.gain.setValueAtTime(gainNode.gain.value, now);
-  gainNode.gain.linearRampToValueAtTime(target, now + rampSec);
+  param.cancelScheduledValues(now);
+  param.setValueAtTime(param.value, now);
+  param.linearRampToValueAtTime(target, now + rampSec);
+}
+
+function applyRankToRat(ratGen, rank) {
+  if (!ratGen.perRatGain || !ratGen.perRatLPF || !ratGen.perRatReverbSend) return;
+  const gainTarget = RAT_GAIN_LADDER[rank] ?? 0;
+  const lpfTarget = RAT_LPF_LADDER[rank] ?? RAT_LPF_LADDER[RAT_LPF_LADDER.length - 1];
+  const sendTarget = RAT_REVERB_SEND_LADDER[rank] ?? RAT_REVERB_SEND_LADDER[RAT_REVERB_SEND_LADDER.length - 1];
+  rampParam(ratGen.perRatGain.gain, gainTarget, RAT_LADDER_RAMP_SEC);
+  rampParam(ratGen.perRatLPF.frequency, lpfTarget, RAT_LADDER_RAMP_SEC);
+  rampParam(ratGen.perRatReverbSend.gain, sendTarget, RAT_LADDER_RAMP_SEC);
 }
 
 function recomputeLadder() {
@@ -170,10 +199,7 @@ function recomputeLadder() {
   for (let idx = 0; idx < total; idx += 1) {
     const [, ratGen] = entries[idx];
     const rank = total - 1 - idx; // 0 = most recent
-    const multiplier = RAT_RECENCY_LADDER[rank] ?? 0;
-    if (ratGen.perRatGain) {
-      rampGain(ratGen.perRatGain, multiplier, RAT_LADDER_RAMP_SEC);
-    }
+    applyRankToRat(ratGen, rank);
   }
 }
 
