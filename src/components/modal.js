@@ -57,7 +57,6 @@ function findReviewForVenue(venueId, reviews) {
 }
 
 function appendReviewBodyWithWordSpans(parent, text) {
-  // Split with capture group so whitespace is preserved between word spans.
   const tokens = text.split(/(\s+)/);
   let wordIndex = 0;
   tokens.forEach((token) => {
@@ -192,9 +191,6 @@ export class Modal {
     const wrap = document.createElement('div');
     wrap.className = 'play-osc-block';
 
-    this.oscilloscope = new Oscilloscope();
-    wrap.appendChild(this.oscilloscope.element);
-
     const play = document.createElement('button');
     play.type = 'button';
     play.className = 'play-button';
@@ -204,11 +200,40 @@ export class Modal {
     play.textContent = 'Play';
     wrap.appendChild(play);
 
+    this.oscilloscope = new Oscilloscope();
+    wrap.appendChild(this.oscilloscope.element);
+
     return wrap;
   }
 
   buildReviewCard(venue, reviewer, review) {
     const card = this.buildCardShell(`Review of ${venue.displayName} by ${reviewer.displayName}`);
+
+    const headline = document.createElement('h1');
+    headline.className = 'modal-venue-headline';
+    headline.textContent = venue.displayName;
+    card.appendChild(headline);
+
+    const ratingRow = document.createElement('div');
+    ratingRow.className = 'review-rating';
+
+    const stars = document.createElement('span');
+    stars.className = 'star-rating';
+    stars.setAttribute('aria-label', `${review.rating} out of 5 stars`);
+    for (let i = 0; i < 5; i += 1) {
+      const star = document.createElement('span');
+      star.className = i < review.rating ? 'star' : 'star star-empty';
+      star.setAttribute('aria-hidden', 'true');
+      stars.appendChild(star);
+    }
+    ratingRow.appendChild(stars);
+
+    const date = document.createElement('span');
+    date.className = 'review-date';
+    date.textContent = review.date;
+    ratingRow.appendChild(date);
+
+    card.appendChild(ratingRow);
 
     const reviewerBlock = document.createElement('header');
     reviewerBlock.className = 'reviewer-block';
@@ -219,6 +244,9 @@ export class Modal {
     selfie.alt = '';
     selfie.loading = 'lazy';
     reviewerBlock.appendChild(selfie);
+
+    const info = document.createElement('div');
+    info.className = 'reviewer-info';
 
     const meta = document.createElement('div');
     meta.className = 'reviewer-meta';
@@ -245,36 +273,11 @@ export class Modal {
       meta.appendChild(elite);
     }
 
-    reviewerBlock.appendChild(meta);
+    info.appendChild(meta);
+    info.appendChild(this.buildPlayOscBlock('Play review (audio loading)'));
+
+    reviewerBlock.appendChild(info);
     card.appendChild(reviewerBlock);
-
-    card.appendChild(this.buildPlayOscBlock('Play review (audio loading)'));
-
-    const ratingRow = document.createElement('div');
-    ratingRow.className = 'review-rating';
-
-    const stars = document.createElement('span');
-    stars.className = 'star-rating';
-    stars.setAttribute('aria-label', `${review.rating} out of 5 stars`);
-    for (let i = 0; i < 5; i += 1) {
-      const star = document.createElement('span');
-      star.className = i < review.rating ? 'star' : 'star star-empty';
-      star.setAttribute('aria-hidden', 'true');
-      stars.appendChild(star);
-    }
-    ratingRow.appendChild(stars);
-
-    const date = document.createElement('span');
-    date.className = 'review-date';
-    date.textContent = review.date;
-    ratingRow.appendChild(date);
-
-    card.appendChild(ratingRow);
-
-    const venueName = document.createElement('span');
-    venueName.className = 'review-venue-name';
-    venueName.textContent = venue.displayName;
-    card.appendChild(venueName);
 
     const body = document.createElement('p');
     body.className = 'review-body';
@@ -323,8 +326,8 @@ export class Modal {
   buildAmbientCard(venue) {
     const card = this.buildCardShell(`${venue.displayName} (ambient)`);
 
-    const name = document.createElement('h2');
-    name.className = 'venue-name-large';
+    const name = document.createElement('h1');
+    name.className = 'modal-venue-headline';
     name.textContent = venue.displayName;
     card.appendChild(name);
 
@@ -341,8 +344,8 @@ export class Modal {
   buildTombstoneCard(venue) {
     const card = this.buildCardShell(`${venue.displayName} (closed)`);
 
-    const name = document.createElement('h2');
-    name.className = 'venue-name-large';
+    const name = document.createElement('h1');
+    name.className = 'modal-venue-headline';
     name.textContent = venue.displayName;
     card.appendChild(name);
 

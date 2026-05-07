@@ -12,6 +12,8 @@ function setupPinTooltip() {
   tooltip.setAttribute('aria-hidden', 'true');
   document.body.appendChild(tooltip);
 
+  let currentPin = null;
+
   function isPointerCoarse() {
     return window.matchMedia('(hover: none), (pointer: coarse)').matches;
   }
@@ -25,7 +27,10 @@ function setupPinTooltip() {
       img.src = venue.photoPath;
       img.alt = '';
       img.loading = 'lazy';
-      img.addEventListener('error', () => img.remove());
+      img.addEventListener('error', () => {
+        img.style.display = 'none';
+        if (currentPin) position(currentPin);
+      });
       tooltip.appendChild(img);
     }
 
@@ -41,7 +46,6 @@ function setupPinTooltip() {
   }
 
   function position(pin) {
-    // Reveal at off-screen position to measure, then place.
     tooltip.style.left = '-9999px';
     tooltip.style.top = '-9999px';
     tooltip.classList.add('is-visible');
@@ -52,15 +56,12 @@ function setupPinTooltip() {
     const vh = window.innerHeight;
     const pinCenterX = pinRect.left + pinRect.width / 2;
 
-    // Vertical: above by default; flip below if it would clip the top.
-    let placement = 'above';
     let top = pinRect.top - ttRect.height - VIEWPORT_MARGIN;
+    let placement = 'above';
     if (top < VIEWPORT_MARGIN) {
       placement = 'below';
       top = pinRect.bottom + VIEWPORT_MARGIN;
     }
-    // If bottom-flip also clips off the bottom (very tall tooltip on tiny viewport),
-    // clamp to whichever has more room.
     if (placement === 'below' && top + ttRect.height > vh - VIEWPORT_MARGIN) {
       const aboveSpace = pinRect.top;
       const belowSpace = vh - pinRect.bottom;
@@ -70,36 +71,29 @@ function setupPinTooltip() {
       }
     }
 
-    // Horizontal: center on pin, then clamp to viewport.
     let left = pinCenterX - ttRect.width / 2;
     if (left < VIEWPORT_MARGIN) left = VIEWPORT_MARGIN;
     if (left + ttRect.width > vw - VIEWPORT_MARGIN) {
       left = vw - ttRect.width - VIEWPORT_MARGIN;
     }
 
-    // Notch points at the pin's center, clamped inside the tooltip's edges.
-    const notchPadding = 14;
-    const notchX = Math.max(
-      notchPadding,
-      Math.min(ttRect.width - notchPadding, pinCenterX - left)
-    );
-
     tooltip.style.left = `${left}px`;
     tooltip.style.top = `${top}px`;
     tooltip.dataset.placement = placement;
-    tooltip.style.setProperty('--notch-x', `${notchX}px`);
   }
 
   function show(pin) {
     if (isPointerCoarse()) return;
     const venue = venues[pin.dataset.pinId];
     if (!venue) return;
+    currentPin = pin;
     populate(venue);
     position(pin);
   }
 
   function hide() {
     tooltip.classList.remove('is-visible');
+    currentPin = null;
   }
 
   document.querySelectorAll('.pin').forEach((pin) => {
