@@ -25,7 +25,7 @@ export const reviews = {
     venueId: 'jmz-platform',
     rating: 4,
     date: 'April 2026',
-    text: `obsessed with this stretch of the Myrtle-Broadway J platform at 4:47am, the lighting is UNREAL when the train pulls in (sniff), did a whole content series on the third-rail side, tagged @bushwickrats, my reach is up forty percent. caught an art-school human kid crying outside the staircase and got the whole thing on InkedIn, my followers ATE IT UP, IMMACULATE timing for the gram. the trash can by the M side has a crumb situation that's been DEEPLY underrated, posted a review there too, three thousand sniffs and counting, my brand is going viral in BOTH senses i'm so blessed. staircase corners are the best mid-platform hideouts and the wind through the steel girders cleans my fur for free. lemon press from a kitchen-cab discard near jackie ess's stoop is in the photo if you zoom. four stars for the content, two stars for the pigeons (territorial). subscribe for the cure (jk i'm the disease).`,
+    text: `obsessed with this stretch of the Myrtle-Broadway J platform at 4:47am, the lighting is UNREAL when the train pulls in, did a whole content series on the third-rail side, tagged @bushwickrats, my reach is up forty percent. caught an art-school human kid crying outside the staircase and got the whole thing on InkedIn, my followers ATE IT UP, IMMACULATE timing for the gram. the trash can by the M side has a crumb situation that's been DEEPLY underrated, posted a review there too, three thousand sniffs and counting, my brand is going viral in BOTH senses i'm so blessed. staircase corners are the best mid-platform hideouts and the wind through the steel girders cleans my fur for free. lemon press from a kitchen-cab discard near jackie ess's stoop is in the photo if you zoom. four stars for the content, two stars for the pigeons (territorial). subscribe for the cure (jk i'm the disease).`,
   },
   'comrade-crumb': {
     reviewerId: 'comrade-crumb',
@@ -53,7 +53,7 @@ export const reviews = {
     venueId: 'trifecta',
     rating: 5,
     date: 'April 2026',
-    text: `OK so. Listen. The Popeyes biscuit fragment was a religious event and I held it like a small warm planet. The Dunkin glass case is now my mother (she's lovely, very transparent, full of light). The Checkers fries kept asking me questions in French and I think I answered some of them. The fluorescent is its own season. There's a rat crying outside the staircase, I think it's me, I think I am also him, we are sharing this. Five stars. Nine stars. I'm staying in the dumpster. I might live here now. The JMZ rumbled overhead and I felt my whole spine sync to it for ten seconds, then it was gone, and I miss it. Where is everyone going. Is my name Eddie.`,
+    text: `OK so. Listen. The Popeyes biscuit fragment was a religious event and I held it like a small warm planet. The Dunkin glass case is now my mother (she's lovely, very transparent, full of light). The Checkers fries kept asking me questions in French for what felt like minutes and I think I answered some of them. The fluorescent is its own season. There's a rat crying outside the staircase, I think it's me, I think I am also him, we are sharing this forever. Five stars. Nine stars. I'm staying in the dumpster. I might live here now. The JMZ rumbled overhead and I felt my whole spine sync to it for ten seconds, then it was gone, and I miss it. Where is everyone going. Is my name Eddie.`,
   },
   'rosemary-rib': {
     reviewerId: 'rosemary-rib',

@@ -32,7 +32,12 @@ export const venues = {
     address: 'Above the intersection',
     reviewerId: 'pinky-mae',
     photoPath: 'assets/photos/jmz-platform.jpg',
-    bedComponents: ['pigeon-coo', 'wind-through-metal', 'distant-siren', 'mta-announcement'],
+    bedComponents: ['pigeon-coo', 'wind-through-metal', 'distant-siren', 'mta-announcement', 'train'],
+    // bedAmbient: the JMZ rumble + intermittent train passes are
+    // architectural to the intersection and play from page load
+    // (initBeds), not gated on visiting this pin. Field is metadata —
+    // runtime ambient logic lives in beds.js.
+    bedAmbient: true,
     mapCoordinates: { x: 10, y: 50 },
   },
   'alley': {
@@ -50,7 +55,12 @@ export const venues = {
     address: '941 Willoughby Ave',
     reviewerId: null,
     photoPath: 'assets/photos/rash.jpg',
-    bedComponents: ['distant-techno'],
+    bedComponents: ['firetruck'],
+    // bedPersistent: once the user has visited Rash, the firetruck
+    // siren stays as a faint background layer — Rash is permanently
+    // closed and the lingering alarm is the only sound from the site.
+    // Runtime persistence handled in beds.js via VENUE_BED_MAP entry.
+    bedPersistent: true,
     mapCoordinates: { x: 52, y: 42 },
   },
   'ornithology': {

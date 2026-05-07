@@ -51,9 +51,15 @@ export function kHole(rat, time) {
 
   // Filter uses exponential ramps (smoother for frequency); avoid 0
   // as a target since exponential can't ramp to zero.
+  // Listen-test (Pass A): 320 Hz left voice nearly inaudible (mute,
+  // not dissolve). Raised target to 850 Hz so voice remains
+  // recognizable through the dip. Hold shortened 1.0s → 0.5s so the
+  // dissolution feels like a wave passing through, not a mute-and-
+  // recover. Phaser + ping-pong envelopes unchanged — they carry the
+  // dissolution feel.
   lpf.setValueAtTime(20000, t);
-  lpf.exponentialRampToValueAtTime(320, t + 0.5);
-  lpf.setValueAtTime(320, t + 1.5);
+  lpf.exponentialRampToValueAtTime(850, t + 0.5);
+  lpf.setValueAtTime(850, t + 1.0);
   lpf.exponentialRampToValueAtTime(20000, t + 2.5);
 }
 

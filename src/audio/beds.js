@@ -1,40 +1,59 @@
 /**
- * src/audio/beds.js — site-wide JMZ rumble + per-venue ambient beds.
+ * src/audio/beds.js — site-wide JMZ rumble + intermittent train +
+ * per-venue ambient beds.
  *
- * Two layers:
- *   1. JMZ rumble: site-wide, persistent, low gain. Starts on
- *      engine.start() and never stops. Routed jmz → jmzGain → destination.
- *   2. Per-venue beds: caffeine-underground / mood-ring / bossa-nova
- *      get cafe / bar / rave loops. Lazy-loaded on first need. Each
- *      bed has its OWN gain node so cross-fades between venues stay
- *      clean even if a fade-out is mid-flight when a fade-in begins.
+ * Three layers:
+ *   1. JMZ rumble: site-wide, looping, low gain. Starts on
+ *      engine.start() and never stops.
+ *   2. Train passes: site-wide, intermittent. Same JMZ-platform
+ *      register but plays as discrete events at 90-180s random
+ *      intervals (a real train passes every few minutes, not
+ *      continuously).
+ *   3. Per-venue beds: caffeine-underground / mood-ring / bossa-nova /
+ *      rash get cafe / bar / rave / firetruck loops. Lazy-loaded on
+ *      first need. Each bed has its own gain node so cross-fades
+ *      between venues stay clean.
  *
- * Stereo is preserved end-to-end. No Tone.Mono, no .toMono().
+ * Persistent beds: VENUE_BED_MAP entries with `persistent: true`
+ * fade to a reduced gain on modal close instead of fading out
+ * fully — the bed continues playing as a background layer once the
+ * user has experienced the venue. Currently used for Rash, where
+ * the lingering firetruck siren IS the venue's ongoing sound.
  *
- * Other venues (market-hotel, mr-kiwi, trifecta, jmz-platform, alley,
- * rash, ornithology) have no per-venue bed; the JMZ rumble alone
- * carries them.
+ * Stereo is preserved end-to-end.
  */
 
 const VENUE_BED_MAP = {
   'caffeine-underground': { file: 'cafe.wav', gainDb: -18 },
   'mood-ring': { file: 'bar.wav', gainDb: -18 },
   'bossa-nova': { file: 'rave.wav', gainDb: -18 },
-  // Rash is a memorial — distant siren sits below the bar/cafe/rave
-  // beds and below the JMZ rumble's peaks. -28dB places it as
-  // distant atmosphere, not foreground emergency.
-  'rash': { file: 'firetruck.wav', gainDb: -22 },
+  // Rash is permanently closed — the firetruck siren persists as
+  // ambient layer once the user has visited. -22 dB while modal
+  // open, -28 dB after close (kept playing, just receded).
+  'rash': {
+    file: 'firetruck.wav',
+    gainDb: -22,
+    persistent: true,
+    persistentGainDb: -28,
+  },
 };
 
 const BED_DIR = 'assets/sounds/effects';
 const JMZ_FILE = 'assets/sounds/jmz-rumble.wav';
+const TRAIN_FILE = 'assets/sounds/effects/train.wav';
 
 const JMZ_GAIN_DB = -27;
+const TRAIN_GAIN_DB = -20;
+const TRAIN_INTERVAL_MIN_SEC = 90;
+const TRAIN_INTERVAL_MAX_SEC = 180;
 const BED_FADE_IN = 2.5;
 const BED_FADE_OUT = 1.5;
 
 let jmzPlayer = null;
 let jmzGain = null;
+let trainPlayer = null;
+let trainGain = null;
+let trainTimerId = null;
 
 const venueBeds = new Map();
 let activeBedVenueId = null;
@@ -47,8 +66,31 @@ export async function initBeds() {
     loop: true,
     autostart: false,
   }).connect(jmzGain);
+  trainGain = new Tone.Gain(Tone.dbToGain(TRAIN_GAIN_DB)).toDestination();
+  trainPlayer = new Tone.Player({
+    url: TRAIN_FILE,
+    loop: false,
+    autostart: false,
+  }).connect(trainGain);
   await Tone.loaded();
   jmzPlayer.start();
+  scheduleNextTrainPass();
+}
+
+function scheduleNextTrainPass() {
+  const range = TRAIN_INTERVAL_MAX_SEC - TRAIN_INTERVAL_MIN_SEC;
+  const delaySec = TRAIN_INTERVAL_MIN_SEC + Math.random() * range;
+  trainTimerId = setTimeout(() => {
+    if (trainPlayer) {
+      try {
+        if (trainPlayer.state === 'started') trainPlayer.stop();
+        trainPlayer.start();
+      } catch {
+        // player may have been disposed mid-schedule; harmless
+      }
+    }
+    scheduleNextTrainPass();
+  }, delaySec * 1000);
 }
 
 async function ensureBed(venueId) {
@@ -63,7 +105,15 @@ async function ensureBed(venueId) {
     autostart: false,
   }).connect(gain);
   await Tone.loaded();
-  const bed = { player, gain, gainDb: entry.gainDb };
+  const bed = {
+    player,
+    gain,
+    gainDb: entry.gainDb,
+    persistent: !!entry.persistent,
+    // Default persistent level is -6 dB below active. Override by
+    // setting `persistentGainDb` explicitly on the VENUE_BED_MAP entry.
+    persistentGainDb: entry.persistentGainDb ?? entry.gainDb - 6,
+  };
   venueBeds.set(venueId, bed);
   return bed;
 }
@@ -85,6 +135,16 @@ function fadeOut(venueId) {
   const now = Tone.now();
   bed.gain.gain.cancelScheduledValues(now);
   bed.gain.gain.setValueAtTime(bed.gain.gain.value, now);
+
+  if (bed.persistent) {
+    // Persistent: fade to reduced gain, keep player looping. The bed
+    // becomes a background layer once the user has experienced it.
+    const target = Tone.dbToGain(bed.persistentGainDb);
+    bed.gain.gain.linearRampToValueAtTime(target, now + BED_FADE_OUT);
+    return;
+  }
+
+  // Non-persistent: fade to silence and stop the player.
   bed.gain.gain.linearRampToValueAtTime(0, now + BED_FADE_OUT);
   setTimeout(() => {
     try {
