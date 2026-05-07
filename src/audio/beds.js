@@ -1,18 +1,19 @@
 /**
- * src/audio/beds.js — site-wide JMZ rumble + intermittent train +
- * per-venue ambient beds.
+ * src/audio/beds.js — site-wide ambient + intermittent train +
+ * per-venue layered ambient beds.
  *
- * Three layers:
- *   1. JMZ rumble: site-wide, looping, low gain. Starts on
- *      engine.start() and never stops.
- *   2. Train passes: site-wide, intermittent. Same JMZ-platform
- *      register but plays as discrete events at 90-180s random
- *      intervals (a real train passes every few minutes, not
- *      continuously).
- *   3. Per-venue beds: caffeine-underground / mood-ring / bossa-nova /
- *      rash get cafe / bar / rave / firetruck loops. Lazy-loaded on
- *      first need. Each bed has its own gain node so cross-fades
- *      between venues stay clean.
+ * Four layers:
+ *   1. JMZ rumble: site-wide, looping, low gain. The structural
+ *      beat of the corner. Starts on engine.start(), never stops.
+ *   2. Myrtle-Broadway traffic: site-wide, looping, very low gain.
+ *      The intersection's noise floor. Starts with JMZ, never
+ *      stops.
+ *   3. Train passes: site-wide, intermittent. JMZ-platform
+ *      register but as discrete events at 90-180s random
+ *      intervals.
+ *   4. Per-venue beds: layered atomic samples through individual
+ *      component gains feeding a shared gain that handles fade-
+ *      in/out. Lazy-loaded on first need.
  *
  * Persistent beds: VENUE_BED_MAP entries with `persistent: true`
  * fade to a reduced gain on modal close instead of fading out
@@ -23,27 +24,94 @@
  * Stereo is preserved end-to-end.
  */
 
+// Component gainDb values anchored to the established baseline
+// (see git history for previous tuning passes). Primary loop
+// component matches the most recent per-venue level (cafe -11,
+// bar -13, rave -11, firetruck -19). Secondary atomic ambient at
+// -22 to -28; tertiary subtle at -28 to -32. Multi-component beds
+// should sum-perceived to roughly the existing single-file bed
+// level, not pile additively louder. Tune by ear in verification.
 const VENUE_BED_MAP = {
-  'caffeine-underground': { file: 'cafe.m4a', gainDb: -11 },
-  'mood-ring': { file: 'bar.m4a', gainDb: -13 },
-  'bossa-nova': { file: 'rave.m4a', gainDb: -11 },
-  // Rash is permanently closed — the firetruck siren persists as
-  // ambient layer once the user has visited. Active level while
-  // modal open, reduced level after close (kept playing, just
-  // receded).
+  'caffeine-underground': {
+    components: [
+      { file: 'cafe.m4a', gainDb: -11 },              // primary
+      { file: 'leaky-pipe.m4a', gainDb: -25 },        // secondary
+      { file: 'foil.m4a', gainDb: -30 },              // tertiary
+    ],
+  },
+  'mood-ring': {
+    components: [
+      { file: 'bar.m4a', gainDb: -13 },               // primary
+      { file: 'smoke.m4a', gainDb: -28 },             // secondary
+    ],
+  },
+  'bossa-nova': {
+    components: [
+      { file: 'rave.m4a', gainDb: -11 },              // primary
+      { file: 'smoke.m4a', gainDb: -28 },             // secondary
+    ],
+  },
   'rash': {
-    file: 'firetruck.m4a',
-    gainDb: -19,
+    components: [
+      { file: 'firetruck.m4a', gainDb: -19 },         // primary, persistent
+    ],
     persistent: true,
     persistentGainDb: -25,
+  },
+
+  // Venues without a dedicated single-file primary; layered atomic
+  // samples sum to a comparable presence. Tune by ear.
+  'market-hotel': {
+    components: [
+      { file: 'solo-cup.m4a', gainDb: -22 },          // intermittent texture
+      { file: 'jazz.m4a', gainDb: -28 },              // distant bleed from below
+    ],
+  },
+  'mr-kiwi': {
+    components: [
+      { file: 'fridge-hum.m4a', gainDb: -20 },        // primary character
+      { file: 'fluoro-hum.m4a', gainDb: -25 },        // secondary
+      { file: 'spanish-radio.m4a', gainDb: -23 },     // secondary, distinct content
+    ],
+  },
+  'trifecta': {
+    components: [
+      { file: 'fryer.m4a', gainDb: -20 },             // primary character
+      { file: 'fluoro-hum.m4a', gainDb: -24 },        // secondary
+      { file: 'fridge-hum.m4a', gainDb: -27 },        // tertiary
+      { file: 'ambulance.m4a', gainDb: -32 },         // distant siren
+    ],
+  },
+  'jmz-platform': {
+    components: [
+      { file: 'pigeon-family.m4a', gainDb: -22 },     // primary
+      { file: 'ambulance.m4a', gainDb: -32 },         // distant siren
+    ],
+  },
+  'alley': {
+    components: [
+      { file: 'plastic-bag.m4a', gainDb: -22 },       // primary
+      { file: 'water-drip.m4a', gainDb: -24 },        // secondary
+      { file: 'leaky-pipe.m4a', gainDb: -28 },        // tertiary
+    ],
+  },
+  'ornithology': {
+    components: [
+      { file: 'jazz.m4a', gainDb: -16 },              // primary — jazz IS the venue
+    ],
   },
 };
 
 const BED_DIR = 'assets/sounds/effects';
-const JMZ_FILE = 'assets/sounds/jmz-rumble.m4a';
+const JMZ_FILE = 'assets/sounds/ambient/jmz-rumble.m4a';
+const MYRTLE_TRAFFIC_FILE = 'assets/sounds/ambient/myrtle-broadway-traffic.m4a';
 const TRAIN_FILE = 'assets/sounds/effects/train.m4a';
 
 const JMZ_GAIN_DB = -12;
+// Anchored 18 dB below JMZ as a true noise floor — the intersection's
+// continuous traffic murmur, present but not competing with the
+// structural rumble or any per-venue bed.
+const MYRTLE_TRAFFIC_GAIN_DB = -30;
 const TRAIN_GAIN_DB = -17;
 const TRAIN_INTERVAL_MIN_SEC = 90;
 const TRAIN_INTERVAL_MAX_SEC = 180;
@@ -52,6 +120,8 @@ const BED_FADE_OUT = 1.5;
 
 let jmzPlayer = null;
 let jmzGain = null;
+let myrtleTrafficPlayer = null;
+let myrtleTrafficGain = null;
 let trainPlayer = null;
 let trainGain = null;
 let trainTimerId = null;
@@ -70,6 +140,12 @@ export async function preloadBeds() {
     loop: true,
     autostart: false,
   }).connect(jmzGain);
+  myrtleTrafficGain = new Tone.Gain(Tone.dbToGain(MYRTLE_TRAFFIC_GAIN_DB)).toDestination();
+  myrtleTrafficPlayer = new Tone.Player({
+    url: MYRTLE_TRAFFIC_FILE,
+    loop: true,
+    autostart: false,
+  }).connect(myrtleTrafficGain);
   trainGain = new Tone.Gain(Tone.dbToGain(TRAIN_GAIN_DB)).toDestination();
   trainPlayer = new Tone.Player({
     url: TRAIN_FILE,
@@ -79,11 +155,14 @@ export async function preloadBeds() {
   await Tone.loaded();
 }
 
-// Gesture-bound (or post-gesture): kicks off the JMZ rumble loop and
-// the recursive train-pass scheduler. Must run after the audio context
-// has resumed.
+// Gesture-bound (or post-gesture): kicks off the JMZ rumble loop,
+// the Myrtle traffic noise floor, and the recursive train-pass
+// scheduler. Must run after the audio context has resumed.
 export function startBedsPlayback() {
   if (jmzPlayer && jmzPlayer.state !== 'started') jmzPlayer.start();
+  if (myrtleTrafficPlayer && myrtleTrafficPlayer.state !== 'started') {
+    myrtleTrafficPlayer.start();
+  }
   scheduleNextTrainPass();
 }
 
@@ -128,21 +207,33 @@ async function ensureBed(venueId) {
   const Tone = window.Tone;
   const entry = VENUE_BED_MAP[venueId];
   if (!entry) return null;
-  const gain = new Tone.Gain(0).toDestination();
-  const player = new Tone.Player({
-    url: `${BED_DIR}/${entry.file}`,
-    loop: true,
-    autostart: false,
-  }).connect(gain);
+  const components = entry.components || [];
+  if (components.length === 0) return null;
+
+  // Shared gain controls fade-in/out. Component gains set fixed
+  // relative levels within the bed: each component routes through
+  // its own gain node before joining the shared bus, so the mix
+  // ratios survive the shared fade envelope.
+  const sharedGain = new Tone.Gain(0).toDestination();
+  const componentObjs = [];
+
+  for (const comp of components) {
+    const componentGain = new Tone.Gain(Tone.dbToGain(comp.gainDb)).connect(sharedGain);
+    const player = new Tone.Player({
+      url: `${BED_DIR}/${comp.file}`,
+      loop: true,
+      autostart: false,
+    }).connect(componentGain);
+    componentObjs.push({ player, componentGain, file: comp.file });
+  }
+
   await Tone.loaded();
+
   const bed = {
-    player,
-    gain,
-    gainDb: entry.gainDb,
+    components: componentObjs,
+    sharedGain,
     persistent: !!entry.persistent,
-    // Default persistent level is -6 dB below active. Override by
-    // setting `persistentGainDb` explicitly on the VENUE_BED_MAP entry.
-    persistentGainDb: entry.persistentGainDb ?? entry.gainDb - 6,
+    persistentGainDb: entry.persistentGainDb ?? -6,
   };
   venueBeds.set(venueId, bed);
   return bed;
@@ -151,11 +242,13 @@ async function ensureBed(venueId) {
 function fadeIn(bed) {
   const Tone = window.Tone;
   const now = Tone.now();
-  const target = Tone.dbToGain(bed.gainDb);
-  bed.gain.gain.cancelScheduledValues(now);
-  bed.gain.gain.setValueAtTime(bed.gain.gain.value, now);
-  bed.gain.gain.linearRampToValueAtTime(target, now + BED_FADE_IN);
-  if (bed.player.state !== 'started') bed.player.start();
+  const target = 1; // shared gain at unity; components carry the mix
+  bed.sharedGain.gain.cancelScheduledValues(now);
+  bed.sharedGain.gain.setValueAtTime(bed.sharedGain.gain.value, now);
+  bed.sharedGain.gain.linearRampToValueAtTime(target, now + BED_FADE_IN);
+  for (const comp of bed.components) {
+    if (comp.player.state !== 'started') comp.player.start();
+  }
 }
 
 function fadeOut(venueId) {
@@ -163,24 +256,28 @@ function fadeOut(venueId) {
   if (!bed) return;
   const Tone = window.Tone;
   const now = Tone.now();
-  bed.gain.gain.cancelScheduledValues(now);
-  bed.gain.gain.setValueAtTime(bed.gain.gain.value, now);
+  bed.sharedGain.gain.cancelScheduledValues(now);
+  bed.sharedGain.gain.setValueAtTime(bed.sharedGain.gain.value, now);
 
   if (bed.persistent) {
-    // Persistent: fade to reduced gain, keep player looping. The bed
-    // becomes a background layer once the user has experienced it.
+    // Persistent: fade shared gain to reduced level, components keep
+    // looping. The bed becomes a background layer once the user has
+    // experienced it.
     const target = Tone.dbToGain(bed.persistentGainDb);
-    bed.gain.gain.linearRampToValueAtTime(target, now + BED_FADE_OUT);
+    bed.sharedGain.gain.linearRampToValueAtTime(target, now + BED_FADE_OUT);
     return;
   }
 
-  // Non-persistent: fade to silence and stop the player.
-  bed.gain.gain.linearRampToValueAtTime(0, now + BED_FADE_OUT);
+  // Non-persistent: fade shared gain to silence and stop all
+  // component players.
+  bed.sharedGain.gain.linearRampToValueAtTime(0, now + BED_FADE_OUT);
   setTimeout(() => {
-    try {
-      if (bed.player.state === 'started') bed.player.stop();
-    } catch {
-      // already stopped — fine
+    for (const comp of bed.components) {
+      try {
+        if (comp.player.state === 'started') comp.player.stop();
+      } catch {
+        // already stopped — fine
+      }
     }
   }, BED_FADE_OUT * 1000 + 50);
 }
