@@ -497,14 +497,19 @@ main {
   opacity: 1;
 }
 
+/* First-visit hint between the alley header and the cards list.
+   Sits as a sibling of both, with its own vertical breathing room
+   so it reads as a divider rather than a caption on either zone. */
 .alley-cards-hint {
   font-family: var(--font-editorial);
   font-style: italic;
-  font-size: 0.875rem;
-  opacity: 0.55;
-  margin: 0 0 0.875rem;
-  padding: 0 14px;
+  font-size: 0.9rem;
+  opacity: 0.65;
+  margin: 1.25rem 0 1rem;
+  padding: 0 var(--space-lg);
   letter-spacing: 0.01em;
+  text-align: left;
+  color: var(--color-text);
 }
 
 .alley-cards-hint.is-fading {
@@ -1233,35 +1238,93 @@ main {
   margin-bottom: var(--space-sm);
 }
 
-.about-credits dl {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: var(--space-sm) var(--space-lg);
-  font-family: var(--font-data);
-  font-size: 0.875rem;
+/* Credits — block-flow dl with green dt headers above each dd. The
+   prior grid layout (max-content 1fr columns) cramped long URLs in
+   the right cell; switching to single-column block flow lets long
+   Freesound URLs and citation blocks breathe. */
+.credit-list {
   margin: 0;
+  font-family: var(--font-data);
+  font-size: 0.9375rem;
 }
 
-.about-credits dt {
+.credit-list dt {
+  color: var(--color-accent);
   font-family: var(--font-ui);
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  font-size: 0.75rem;
-  opacity: 0.7;
+  margin-top: 1.5rem;
+  margin-bottom: 0.4rem;
 }
 
-.about-credits dd {
-  margin: 0;
-}
-
-.about-disclaimer {
-  margin-top: var(--space-lg);
-  padding-top: var(--space-md);
-  border-top: 1px solid rgba(197, 191, 174, 0.2);
-  font-family: var(--font-data);
-  font-size: 0.75rem;
+.credit-list dd {
+  color: var(--color-text);
+  margin-left: 0;
   line-height: 1.5;
-  opacity: 0.6;
+}
+
+.credit-list a {
+  color: var(--color-text);
+  text-decoration: underline;
+  text-decoration-color: var(--color-accent);
+}
+
+.footnote {
+  font-size: 0.85em;
+  opacity: 0.7;
+  font-style: italic;
+}
+
+.freesound-list ul {
+  list-style: none;
+  padding-left: 0;
+  margin: 0.4rem 0 1rem;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.freesound-list li {
+  margin-bottom: 0.3rem;
+}
+
+.freesound-subhead {
+  color: var(--color-accent);
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-top: 1rem;
+  margin-bottom: 0.4rem;
+  opacity: 0.85;
+}
+
+.freesound-tachibana {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin-top: 0.4rem;
+}
+
+.epigraph blockquote {
+  border-left: 2px solid var(--color-accent);
+  padding-left: 1.25rem;
+  margin: 3rem 0;
+}
+
+.epigraph blockquote p {
+  font-style: italic;
+  font-size: 1.15rem;
+  margin: 0 0 0.5rem;
+}
+
+.epigraph cite {
+  display: block;
+  margin-top: 0.5rem;
+  font-family: var(--font-data);
+  font-size: 0.9rem;
+  font-style: normal;
+  letter-spacing: 0.02em;
+  opacity: 0.8;
 }
 
 @media (max-width: 768px) {

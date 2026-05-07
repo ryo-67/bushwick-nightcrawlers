@@ -584,17 +584,19 @@ export class Modal {
     card.appendChild(header);
 
     const oneLiners = this.content.alleyOneLiners || [];
-    const cards = document.createElement('div');
-    cards.className = 'alley-cards';
 
-    // First-visit hint goes above the mini-cards as a non-card child.
-    // FLIP reorder iterates `.alley-card` only, so the hint stays in
-    // place during sorting.
+    // First-visit hint sits as a sibling between .alley-header and
+    // .alley-cards rather than nested inside the cards container.
+    // Earlier nesting made the hint read ambiguously as either a
+    // caption on the header above or a header on the cards below;
+    // the sibling position with its own margins makes the divider
+    // role clear. FLIP reorder still iterates `.alley-card` only,
+    // so the hint stays where it is during sorting.
     if (!hasSeenAlleyHint()) {
       const hint = document.createElement('p');
       hint.className = 'alley-cards-hint';
       hint.textContent = ALLEY_HINT_TEXT;
-      cards.appendChild(hint);
+      card.appendChild(hint);
 
       let dismissed = false;
       const dismissHint = () => {
@@ -608,11 +610,13 @@ export class Modal {
       };
 
       setTimeout(dismissHint, ALLEY_HINT_TIMEOUT_MS);
-      cards.addEventListener('click', (e) => {
+      card.addEventListener('click', (e) => {
         if (e.target.closest('.alley-card')) dismissHint();
       });
     }
 
+    const cards = document.createElement('div');
+    cards.className = 'alley-cards';
     for (const oneLiner of oneLiners) {
       const reviewer = this.content.rats[oneLiner.reviewerId];
       if (!reviewer) continue;
