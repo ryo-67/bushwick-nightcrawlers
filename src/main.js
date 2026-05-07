@@ -7,6 +7,13 @@ import * as engine from './audio/engine.js';
 import { ratProfiles } from './audio/rat-profiles.js';
 import { RatGenerator } from './audio/rat-generator.js';
 import { getMode, setMode } from './audio/playback-mode.js';
+import * as beds from './audio/beds.js';
+
+function ctaCopyForVenue(venue) {
+  if (venue.id === 'alley') return 'step into the alley';
+  if (venue.id === 'rash') return 'pay respects';
+  return 'read reviews';
+}
 
 const VIEWPORT_MARGIN = 12;
 
@@ -45,7 +52,7 @@ function setupPinTooltip() {
 
     const cta = document.createElement('div');
     cta.className = 'pin-tooltip-cta';
-    cta.textContent = 'read reviews';
+    cta.textContent = ctaCopyForVenue(venue);
     tooltip.appendChild(cta);
   }
 
@@ -130,6 +137,20 @@ function handleModalOpen(venueId, ctx) {
   currentRatGen = null;
   currentRatGenVenueId = null;
 
+  // Kick off venue bed (no-op for unmapped venues).
+  // Engine.start() must have run for beds to exist; if not, the
+  // first user gesture below will start it and beds will spin up
+  // on the next modal open.
+  if (engine.isReady()) {
+    beds.startVenueBed(venueId).catch(() => {});
+  } else {
+    engine.onReady(() => {
+      if (modalRef?.isOpen() && modalRef.currentVenueId === venueId) {
+        beds.startVenueBed(venueId).catch(() => {});
+      }
+    });
+  }
+
   const review = ctx?.review;
   if (!review) return; // alley/rash — no rat generator
 
@@ -139,7 +160,10 @@ function handleModalOpen(venueId, ctx) {
   currentRatGen = new RatGenerator(profile, review.text, review.reviewerId, modalRef);
   currentRatGenVenueId = venueId;
   currentRatGen.onComplete = () => {
-    if (modalRef?.isOpen()) modalRef.setPlayState('idle');
+    if (modalRef?.isOpen()) {
+      modalRef.setPlayState('idle');
+      modalRef.oscilloscope?.stop();
+    }
   };
 
   syncPlayState();
@@ -158,8 +182,11 @@ function handleModalOpen(venueId, ctx) {
     if (!engine.isReady() || !currentRatGen) return;
     if (currentRatGen.isPlaying()) {
       currentRatGen.stop();
+      modalRef.oscilloscope?.stop();
       modalRef.setPlayState('idle');
     } else {
+      modalRef.oscilloscope?.attach(engine.getRatGain());
+      modalRef.oscilloscope?.start();
       currentRatGen.start();
       modalRef.setPlayState('playing');
     }
@@ -172,6 +199,8 @@ function handleModalClose() {
   currentRatGen = null;
   currentRatGenVenueId = null;
   playClickHandler = null;
+  modalRef?.oscilloscope?.dispose();
+  beds.stopActiveBed();
 }
 
 function setupFooterModeToggle() {

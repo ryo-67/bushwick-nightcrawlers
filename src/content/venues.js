@@ -22,7 +22,7 @@ export const venues = {
     displayName: 'The Trifecta',
     address: 'Myrtle Ave + Broadway',
     reviewerId: 'old-cheese',
-    photoPath: 'assets/photos/trifecta.jpg',
+    photoPath: 'assets/photos/trifecta.png',
     bedComponents: ['fluorescent-buzz', 'refrigerator-hum', 'fryer-hum', 'npr-podcast', 'distant-siren'],
     mapCoordinates: { x: 50, y: 50 },
   },

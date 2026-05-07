@@ -166,7 +166,10 @@ export class RatGenerator {
       const sample = this.pickSample(word);
 
       if (sample) {
-        const source = new Tone.ToneBufferSource(sample.buffer).toDestination();
+        const ratGain = engine.getRatGain();
+        const source = new Tone.ToneBufferSource(sample.buffer);
+        if (ratGain) source.connect(ratGain);
+        else source.toDestination();
         source.start(cursor);
         this.activeSources.push(source);
       }

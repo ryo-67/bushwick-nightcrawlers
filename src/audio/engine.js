@@ -17,6 +17,7 @@
  */
 
 import { USVS, USVS_COCAINE } from './manifest.js';
+import { initBeds } from './beds.js';
 
 const BANK_DIRS = {
   usvs: 'assets/sounds/usvs',
@@ -35,6 +36,7 @@ const banks = {
 
 let ready = false;
 let startPromise = null;
+let ratGain = null;
 const readyListeners = [];
 
 function tierForDuration(d) {
@@ -84,8 +86,10 @@ async function loadBanks() {
 export function start() {
   if (startPromise) return startPromise;
   startPromise = (async () => {
-    await window.Tone.start();
-    await loadBanks();
+    const Tone = window.Tone;
+    await Tone.start();
+    ratGain = new Tone.Gain(1).toDestination();
+    await Promise.all([loadBanks(), initBeds()]);
     ready = true;
     while (readyListeners.length) {
       const fn = readyListeners.shift();
@@ -112,4 +116,8 @@ export function onReady(fn) {
 
 export function getBank(name) {
   return banks[name] || [];
+}
+
+export function getRatGain() {
+  return ratGain;
 }
