@@ -507,7 +507,10 @@ main {
   letter-spacing: inherit;
   text-transform: inherit;
   color: var(--color-text);
-  opacity: 0.55;
+  /* Dimmer than the always-on controls (mode toggle ~0.55, audio
+     icons ~0.7) so the destructive action doesn't compete for
+     attention. Hover restores full opacity. */
+  opacity: 0.4;
   cursor: pointer;
   padding: 0;
   transition: opacity 100ms linear, color 100ms linear;
