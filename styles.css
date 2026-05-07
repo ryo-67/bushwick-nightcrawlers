@@ -333,10 +333,27 @@ main {
   color: var(--color-accent);
 }
 
+/* Alley modal: sticky header keeps title + photo + framing + close
+   button visible while the 11 mini-cards scroll. Modal-card padding
+   is zeroed so the header's own padding controls the visible chrome
+   at the top once content has scrolled past. */
+.modal-card.alley-modal {
+  padding: 0;
+}
+
+.alley-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--color-bg);
+  padding: var(--space-lg) var(--space-lg) var(--space-md);
+  border-bottom: 1px solid rgba(184, 255, 0, 0.15);
+}
+
 .alley-cards {
   display: flex;
   flex-direction: column;
-  margin-top: var(--space-md);
+  padding: 0 var(--space-lg) var(--space-lg);
 }
 
 .alley-card {
@@ -844,6 +861,14 @@ footer a:focus-visible {
 
   .modal-card {
     padding: var(--space-md);
+  }
+
+  .alley-header {
+    padding: var(--space-md) var(--space-md) var(--space-sm);
+  }
+
+  .alley-cards {
+    padding: 0 var(--space-md) var(--space-md);
   }
 
   .modal-venue-headline {

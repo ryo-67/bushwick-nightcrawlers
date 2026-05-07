@@ -530,18 +530,34 @@ export class Modal {
     const card = this.buildCardShell(`${venue.displayName} — where the rats meet`);
     card.classList.add('alley-modal');
 
+    // Sticky header carries the title, photo, framing, AND the close
+    // button (relocated from card root). With modal-card scrolling
+    // and 11 mini-cards stacked below, the header would otherwise
+    // leave the viewport — and so would the close button, since
+    // position:absolute children of an overflow:auto container scroll
+    // with the content. Putting close inside the sticky header
+    // (sticky establishes a positioning context for absolute children)
+    // keeps both visible at all scroll depths.
+    const header = document.createElement('div');
+    header.className = 'alley-header';
+
+    const close = card.querySelector('.modal-close');
+    if (close) header.appendChild(close);
+
     const name = document.createElement('h1');
     name.className = 'modal-venue-headline';
     name.textContent = venue.displayName;
-    card.appendChild(name);
+    header.appendChild(name);
 
     const photo = buildVenuePhoto(venue);
-    if (photo) card.appendChild(photo);
+    if (photo) header.appendChild(photo);
 
     const framing = document.createElement('p');
     framing.className = 'venue-framing';
     framing.textContent = ALLEY_MEET_FRAMING;
-    card.appendChild(framing);
+    header.appendChild(framing);
+
+    card.appendChild(header);
 
     const oneLiners = this.content.alleyOneLiners || [];
     const cards = document.createElement('div');
