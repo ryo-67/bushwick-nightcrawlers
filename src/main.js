@@ -346,6 +346,34 @@ function setupFooterAudioControls() {
   });
 }
 
+// Reset button copy alternatives (Shoro can swap in by editing the
+// element text in index.html — no code change needed):
+//   - "forget the rats you've met"  (in-world, default)
+//   - "step back into the alley fresh"  (in-world, longer)
+//   - "new to the neighborhood"  (in-world, Yelp pastiche)
+//   - "reset progress"  (functional)
+//   - "clear visit log"  (functional)
+function setupFooterReset() {
+  const btn = document.querySelector('.footer-reset');
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    try {
+      const keys = Object.keys(localStorage).filter(
+        (k) =>
+          k.startsWith('bushwick.visited.') ||
+          k === 'bushwick.hasEntered' ||
+          k === 'bushwick.alleyHintSeen' ||
+          k.startsWith('bushwick.reaction.') ||
+          k.startsWith('bushwick.reactionCount.')
+      );
+      for (const k of keys) localStorage.removeItem(k);
+    } catch {
+      // localStorage unavailable — reload anyway
+    }
+    window.location.reload();
+  });
+}
+
 function setupFooterModeToggle() {
   const buttons = Array.from(document.querySelectorAll('.footer-mode'));
   if (buttons.length === 0) return;
@@ -405,6 +433,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const tooltip = setupPinTooltip();
   setupFooterModeToggle();
   setupFooterAudioControls();
+  setupFooterReset();
   setupAlleyPinReveal();
 
   const mapWrapper = document.querySelector('.map-wrapper') || document.body;

@@ -12,6 +12,30 @@ const REACTIONS = [
   { type: 'cool', label: 'Cool' },
 ];
 
+// First-visit hint above the alley mini-cards. Auto-dismisses on
+// first card click OR after the timeout, whichever first. Persisted
+// so subsequent alley-modal opens skip the hint entirely.
+const ALLEY_HINT_KEY = 'bushwick.alleyHintSeen';
+const ALLEY_HINT_TIMEOUT_MS = 8000;
+const ALLEY_HINT_FADE_MS = 800;
+const ALLEY_HINT_TEXT = 'tap any card to add the rat to the alley.';
+
+function hasSeenAlleyHint() {
+  try {
+    return localStorage.getItem(ALLEY_HINT_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function markAlleyHintSeen() {
+  try {
+    localStorage.setItem(ALLEY_HINT_KEY, 'true');
+  } catch {
+    // localStorage unavailable — hint may show again next session
+  }
+}
+
 function reactedKey(reviewId, type) {
   return `bushwick.reaction.${reviewId}.${type}`;
 }
@@ -562,6 +586,33 @@ export class Modal {
     const oneLiners = this.content.alleyOneLiners || [];
     const cards = document.createElement('div');
     cards.className = 'alley-cards';
+
+    // First-visit hint goes above the mini-cards as a non-card child.
+    // FLIP reorder iterates `.alley-card` only, so the hint stays in
+    // place during sorting.
+    if (!hasSeenAlleyHint()) {
+      const hint = document.createElement('p');
+      hint.className = 'alley-cards-hint';
+      hint.textContent = ALLEY_HINT_TEXT;
+      cards.appendChild(hint);
+
+      let dismissed = false;
+      const dismissHint = () => {
+        if (dismissed) return;
+        dismissed = true;
+        markAlleyHintSeen();
+        hint.classList.add('is-fading');
+        setTimeout(() => {
+          if (hint.parentNode) hint.remove();
+        }, ALLEY_HINT_FADE_MS + 50);
+      };
+
+      setTimeout(dismissHint, ALLEY_HINT_TIMEOUT_MS);
+      cards.addEventListener('click', (e) => {
+        if (e.target.closest('.alley-card')) dismissHint();
+      });
+    }
+
     for (const oneLiner of oneLiners) {
       const reviewer = this.content.rats[oneLiner.reviewerId];
       if (!reviewer) continue;
@@ -613,6 +664,18 @@ export class Modal {
 
     btn.appendChild(body);
 
+    // Speaker glyph affordance: dim by default, bright on hover,
+    // solid when the card's rat is active in the registry. Lives
+    // in the corner so it doesn't compete with the body content.
+    const speaker = document.createElement('span');
+    speaker.className = 'alley-card-speaker';
+    speaker.setAttribute('aria-hidden', 'true');
+    speaker.innerHTML = `<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+      <path d="M3 6h2l3-3v10l-3-3H3z" fill="currentColor"/>
+      <path d="M11 5q2 3 0 6" stroke="currentColor" stroke-width="1" fill="none"/>
+    </svg>`;
+    btn.appendChild(speaker);
+
     btn.addEventListener('click', () => {
       this.onAlleyCardClick?.(oneLiner.reviewerId);
     });
@@ -622,10 +685,15 @@ export class Modal {
 
   // Called by main.js whenever the engine's active-rats registry
   // changes. rankMap: { [reviewerId]: rank }, rank 0 = foreground.
-  // Cards not in the map return to idle state.
+  // Cards not in the map return to idle state. FLIP-animates the
+  // mini-cards into a new visual order: active cards first by rank
+  // ascending, inactive cards trail in original document order.
   setAlleyCardStates(rankMap) {
-    const cards = this.root.querySelectorAll('.alley-card');
-    cards.forEach((cardEl) => {
+    const container = this.root.querySelector('.alley-cards');
+    if (!container) return;
+    const cards = Array.from(container.querySelectorAll('.alley-card'));
+
+    for (const cardEl of cards) {
       const id = cardEl.dataset.reviewerId;
       const rank = rankMap[id];
       if (typeof rank === 'number') {
@@ -635,6 +703,79 @@ export class Modal {
         delete cardEl.dataset.rank;
         cardEl.classList.remove('is-active');
       }
+    }
+
+    this.reorderAlleyCards(container, cards, rankMap);
+  }
+
+  // FLIP reorder. Captures current visual rects (works correctly even
+  // mid-flight from a previous reorder, since getBoundingClientRect
+  // reads live transforms), reorders the DOM, applies inverse
+  // transforms in one frame, then plays the transition back to
+  // identity in the next frame. Bails on no-op reorders so calls that
+  // change rank attributes without changing card order don't trigger
+  // a transition.
+  reorderAlleyCards(container, cards, rankMap) {
+    if (cards.length === 0) return;
+
+    const beforeRects = new Map();
+    for (const cardEl of cards) {
+      beforeRects.set(cardEl, cardEl.getBoundingClientRect());
+    }
+
+    const originalIndex = new Map();
+    cards.forEach((c, i) => originalIndex.set(c, i));
+
+    const sorted = [...cards].sort((a, b) => {
+      const aRank = rankMap[a.dataset.reviewerId];
+      const bRank = rankMap[b.dataset.reviewerId];
+      const aActive = typeof aRank === 'number';
+      const bActive = typeof bRank === 'number';
+      if (aActive && bActive) return aRank - bRank;
+      if (aActive) return -1;
+      if (bActive) return 1;
+      return originalIndex.get(a) - originalIndex.get(b);
+    });
+
+    let changed = false;
+    for (let i = 0; i < cards.length; i += 1) {
+      if (cards[i] !== sorted[i]) {
+        changed = true;
+        break;
+      }
+    }
+    if (!changed) return;
+
+    for (const cardEl of sorted) container.appendChild(cardEl);
+
+    const reduceMotion =
+      window.matchMedia &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduceMotion) return;
+
+    for (const cardEl of sorted) {
+      const before = beforeRects.get(cardEl);
+      if (!before) continue;
+      const after = cardEl.getBoundingClientRect();
+      const dx = before.left - after.left;
+      const dy = before.top - after.top;
+      if (dx === 0 && dy === 0) continue;
+      cardEl.classList.add('is-flipping');
+      cardEl.style.transform = `translate(${dx}px, ${dy}px)`;
+    }
+
+    // Two rAFs: first commits the inverted transform without painting
+    // a transition; second removes the class so the transition runs
+    // back to identity. One rAF is sometimes coalesced by the browser
+    // and the inverse phase doesn't take effect — two is the reliable
+    // pattern for FLIP across Chromium / WebKit / Firefox.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        for (const cardEl of sorted) {
+          cardEl.classList.remove('is-flipping');
+          cardEl.style.transform = '';
+        }
+      });
     });
   }
 
