@@ -2,9 +2,9 @@
 
 ## Project context
 
-Single-page sound piece. Hand-drawn map of the Myrtle-Broadway JMZ intersection in Bushwick. Ten pins; click a pin and a rat reviews the venue in Yelp pastiche, with procedurally rendered USV (rat ultrasonic-vocalization) audio synced to the review text.
+Single-page sound piece. Hand-drawn map of the Myrtle-Broadway JMZ intersection in Bushwick. Ten pins; click a pin and a rat reviews the venue in Yelp pastiche, with USV (rat ultrasonic-vocalization) audio synced to the review text.
 
-Sound art piece, NOT a website with audio. The interactive interface is the score. Audio rendering is procedural: fixed review text + per-rat parameter profile = deterministic audio composition. Same input always produces the same output.
+Sound art piece, NOT a website with audio. The interactive interface is the score. Audio playback is generative by default — different sample selection per click. A footer toggle ('in the moment' vs 'on record') lets visitors switch to a seeded, deterministic playback when they want to return to a specific performance. Conceptually: rats don't archive their language, so 'in the moment' is the baseline; 'on record' is opt-in.
 
 ## Authoritative spec
 
@@ -71,7 +71,7 @@ The `muted` attribute is required for autoplay; `playsinline` prevents iOS Safar
 ## Audio rules (load-bearing)
 
 - `Tone.start()` must be called inside a user-gesture handler before any audio plays. The headphones tag at the top of the page is the gesture target. Until clicked, no AudioContext.
-- Same review text + same rat profile = same audio output. Determinism is part of the project's framing (algorithmic art, not stochastic).
+- Default playback is generative ('in the moment' mode). Seeded determinism is opt-in via the footer toggle ('on record' mode). RatGenerator reads playback mode via `getMode()` at `start()` time and routes all randomness through `this.rng` — `Math.random` for moment, `mulberry32(fnv1a(reviewerId + text))` for record.
 - Drug-effect events fire on keyword matches in the review text, not probabilistically. See `src/audio/keyword-scanner.js`. Examples: "ketamine" fires kHole; "diet" fires fizz; "tagged" or "for the gram" fires notification ping; "Chase Sapphire" or "my mom" kicks up coffee-shop ambience; "viral" or "sniff" fires a small cough sample.
 - Pin audio persists after modal close (cumulative master mix). Do NOT dispose Tone nodes when modals close; lower their gain instead.
 - Subtitle reveal uses `Tone.Draw.schedule`, NOT `setTimeout` or `requestAnimationFrame`, so text and audio stay sample-accurate.

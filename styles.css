@@ -481,11 +481,15 @@ main {
 
 footer {
   padding: var(--space-lg);
-  text-align: center;
   font-family: var(--font-ui);
   text-transform: uppercase;
   letter-spacing: 0.15em;
   font-size: 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: var(--space-sm);
 }
 
 footer a {
@@ -494,9 +498,59 @@ footer a {
   border-bottom: 1px solid currentColor;
 }
 
-footer a:hover {
+footer a:hover,
+footer a:focus-visible {
   color: var(--color-accent);
   border-bottom-color: var(--color-accent);
+  outline: none;
+}
+
+.footer-divider {
+  opacity: 0.45;
+}
+
+.footer-mode-set {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem;
+  text-transform: none;
+  letter-spacing: 0.04em;
+  color: var(--color-text);
+}
+
+.footer-mode-prefix {
+  font-family: var(--font-editorial);
+  font-style: italic;
+  opacity: 0.7;
+}
+
+.footer-mode {
+  font-family: inherit;
+  font-size: inherit;
+  letter-spacing: inherit;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-text);
+  opacity: 0.45;
+  transition: opacity 100ms linear, color 100ms linear;
+}
+
+.footer-mode:hover:not(.is-active),
+.footer-mode:focus-visible:not(.is-active) {
+  opacity: 0.85;
+  outline: none;
+}
+
+.footer-mode.is-active {
+  color: var(--color-accent);
+  opacity: 1;
+}
+
+.footer-mode-pipe {
+  opacity: 0.35;
 }
 
 @media (max-width: 768px) {

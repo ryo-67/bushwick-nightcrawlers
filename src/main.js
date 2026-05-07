@@ -6,6 +6,7 @@ import { reviews } from './content/reviews.js';
 import * as engine from './audio/engine.js';
 import { ratProfiles } from './audio/rat-profiles.js';
 import { RatGenerator } from './audio/rat-generator.js';
+import { getMode, setMode } from './audio/playback-mode.js';
 
 const VIEWPORT_MARGIN = 12;
 
@@ -135,7 +136,7 @@ function handleModalOpen(venueId, ctx) {
   const profile = ratProfiles[review.reviewerId];
   if (!profile) return;
 
-  currentRatGen = new RatGenerator(profile, review.text, modalRef);
+  currentRatGen = new RatGenerator(profile, review.text, review.reviewerId, modalRef);
   currentRatGenVenueId = venueId;
   currentRatGen.onComplete = () => {
     if (modalRef?.isOpen()) modalRef.setPlayState('idle');
@@ -173,6 +174,25 @@ function handleModalClose() {
   playClickHandler = null;
 }
 
+function setupFooterModeToggle() {
+  const buttons = Array.from(document.querySelectorAll('.footer-mode'));
+  if (buttons.length === 0) return;
+  function refresh() {
+    const mode = getMode();
+    for (const b of buttons) {
+      b.classList.toggle('is-active', b.dataset.mode === mode);
+      b.setAttribute('aria-pressed', b.dataset.mode === mode ? 'true' : 'false');
+    }
+  }
+  for (const b of buttons) {
+    b.addEventListener('click', () => {
+      setMode(b.dataset.mode);
+      refresh();
+    });
+  }
+  refresh();
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   const tag = new HeadphonesTag(document.body);
   tag.init();
@@ -184,6 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   const tooltip = setupPinTooltip();
+  setupFooterModeToggle();
 
   const mapWrapper = document.querySelector('.map-wrapper') || document.body;
   mapWrapper.addEventListener('click', (event) => {

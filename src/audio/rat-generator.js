@@ -14,11 +14,36 @@
  *   7. advances the cursor by sample.duration plus a small pause
  *      after sentence-ending words
  *
+ * Playback mode (read at start() time):
+ *   'moment' — Math.random, generative each play
+ *   'record' — seeded mulberry32, deterministic per (reviewerId,text)
+ *
  * Pause behavior: stop() halts immediately; clicking play again
  * restarts from word 0. No mid-stream resume in this version.
  */
 
 import * as engine from './engine.js';
+import { getMode } from './playback-mode.js';
+
+function fnv1a(str) {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i += 1) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function mulberry32(seed) {
+  let s = seed >>> 0;
+  return function next() {
+    s = (s + 0x6d2b79f5) >>> 0;
+    let t = s;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
 
 function normalizeWord(word) {
   return word
@@ -60,10 +85,10 @@ function eligibleTiers(word) {
   return ['short', 'medium'];
 }
 
-function applyTierSkew(eligible, skew) {
+function applyTierSkew(eligible, skew, rng) {
   if (!skew || skew === 'mixed' || skew === 'chaotic') return eligible;
   if (skew === 'short with occasional long') {
-    if (Math.random() < 0.75 && eligible.includes('short')) return ['short'];
+    if (rng() < 0.75 && eligible.includes('short')) return ['short'];
     return eligible;
   }
   const preferenceMap = {
@@ -79,8 +104,10 @@ function applyTierSkew(eligible, skew) {
 }
 
 export class RatGenerator {
-  constructor(profile, reviewText, modal) {
+  constructor(profile, reviewText, reviewerId, modal) {
     this.profile = profile;
+    this.reviewText = reviewText;
+    this.reviewerId = reviewerId;
     this.modal = modal;
     const triggerSet = new Set(
       (profile.keywordTriggers || []).map((s) => s.toLowerCase())
@@ -90,30 +117,43 @@ export class RatGenerator {
     this._isPlaying = false;
     this.playbackId = 0;
     this.onComplete = null;
+    this.rng = Math.random;
+    this.mode = 'moment';
   }
 
   isPlaying() {
     return this._isPlaying;
   }
 
+  configureRng() {
+    this.mode = getMode();
+    if (this.mode === 'record') {
+      const seed = fnv1a(`${this.reviewerId}\n${this.reviewText}`);
+      this.rng = mulberry32(seed);
+    } else {
+      this.rng = Math.random;
+    }
+  }
+
   pickSample(word) {
     const useCocaine =
-      word.isKeywordTrigger || Math.random() < this.profile.cocaineRatio;
+      word.isKeywordTrigger || this.rng() < this.profile.cocaineRatio;
     const bankName = useCocaine ? 'usvs-cocaine' : 'usvs';
     const bank = engine.getBank(bankName);
     if (bank.length === 0) return null;
 
     const eligible = eligibleTiers(word);
-    const skewed = applyTierSkew(eligible, this.profile.tierSkew);
+    const skewed = applyTierSkew(eligible, this.profile.tierSkew, this.rng);
     let pool = bank.filter((s) => skewed.includes(s.tier));
     if (pool.length === 0) pool = bank.filter((s) => eligible.includes(s.tier));
     if (pool.length === 0) pool = bank;
-    return pool[Math.floor(Math.random() * pool.length)];
+    return pool[Math.floor(this.rng() * pool.length)];
   }
 
   start() {
     if (this._isPlaying) return;
     this.stop();
+    this.configureRng();
     this._isPlaying = true;
     this.playbackId += 1;
     const myId = this.playbackId;
@@ -140,7 +180,7 @@ export class RatGenerator {
       const dur = sample ? sample.duration : 0.2;
       cursor += dur;
       if (word.isSentenceEnd) {
-        cursor += 0.2 + Math.random() * 0.2;
+        cursor += 0.2 + this.rng() * 0.2;
       }
     }
 
