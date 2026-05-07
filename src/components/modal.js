@@ -52,8 +52,10 @@ function writeCount(reviewId, type, count) {
   }
 }
 
-function findReviewForVenue(venueId, reviews) {
-  return Object.values(reviews).find((r) => r.venueId === venueId) || null;
+// Returns all reviews for a venue in reviews.js insertion order
+// (primary first by convention — reviews.js was authored that way).
+function findReviewsForVenue(venueId, reviews) {
+  return Object.values(reviews).filter((r) => r.venueId === venueId);
 }
 
 function buildVenuePhoto(venue) {
@@ -96,6 +98,8 @@ export class Modal {
     this.onClose = hooks.onClose || null;
     this.currentVenueId = null;
     this.currentReviewerId = null;
+    this.currentVenueReviews = null;
+    this.currentReviewIndex = 0;
     this.previousFocus = null;
     this.oscilloscope = null;
     this.bind();
@@ -126,8 +130,11 @@ export class Modal {
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
     this.currentVenueId = venueId;
 
-    const review = findReviewForVenue(venue.id, this.content.reviews);
+    const allReviews = findReviewsForVenue(venue.id, this.content.reviews);
+    const review = allReviews[0] || null;
     const reviewer = review ? this.content.rats[review.reviewerId] : null;
+    this.currentVenueReviews = allReviews;
+    this.currentReviewIndex = 0;
     this.currentReviewerId = review ? review.reviewerId : null;
 
     this.root.replaceChildren();
@@ -138,7 +145,7 @@ export class Modal {
     } else if (venue.reviewerId === null) {
       card = this.buildTombstoneCard(venue);
     } else if (reviewer && review) {
-      card = this.buildReviewCard(venue, reviewer, review);
+      card = this.buildReviewCard(venue, reviewer, review, allReviews);
     } else {
       card = this.buildTombstoneCard(venue);
     }
@@ -173,6 +180,8 @@ export class Modal {
     this.oscilloscope = null;
     this.currentVenueId = null;
     this.currentReviewerId = null;
+    this.currentVenueReviews = null;
+    this.currentReviewIndex = 0;
 
     if (this.previousFocus) {
       this.previousFocus.focus();
@@ -217,6 +226,47 @@ export class Modal {
       .forEach((el) => el.classList.remove('is-active'));
   }
 
+  // Tab-switch: UI only. Does NOT touch audio state — any playing rat
+  // continues in the engine's registry; the new review's PLAY button,
+  // when pressed, registers a new rat alongside per cumulative voicing.
+  switchReview(newIndex) {
+    if (!this.currentVenueReviews) return;
+    if (newIndex === this.currentReviewIndex) return;
+    if (newIndex < 0 || newIndex >= this.currentVenueReviews.length) return;
+
+    // Clear highlights from the OUTGOING review BEFORE swapping the id.
+    // The clearHighlights gate matches against this.currentReviewerId,
+    // so the call must happen while it still references the old reviewer.
+    this.clearHighlights(this.currentReviewerId);
+
+    this.currentReviewIndex = newIndex;
+    const newReview = this.currentVenueReviews[newIndex];
+    const newReviewer = this.content.rats[newReview.reviewerId];
+    this.currentReviewerId = newReview.reviewerId;
+
+    const venue = this.content.venues[this.currentVenueId];
+    const container = this.root.querySelector('.review-content');
+    if (container && venue && newReviewer) {
+      this.populateReviewContent(container, venue, newReviewer, newReview);
+    }
+
+    // Update tab strip active state
+    const tabs = this.root.querySelectorAll('.reviewer-tab');
+    tabs.forEach((tab) => {
+      const idx = parseInt(tab.dataset.reviewIndex, 10);
+      const active = idx === newIndex;
+      tab.classList.toggle('is-active', active);
+      tab.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+
+    // Re-fire onOpen so main.js rebinds the PLAY button + audio
+    // wiring to the new review. handleModalOpen is idempotent for
+    // same-venue calls (markVisited / startVenueBed both no-op) and
+    // intentionally releases its modal-side ratGen reference, letting
+    // any previously-playing rat continue in the engine registry.
+    this.onOpen?.(this.currentVenueId, { review: newReview, reviewer: newReviewer });
+  }
+
   buildCardShell(ariaLabel) {
     const card = document.createElement('div');
     card.className = 'modal-card';
@@ -252,13 +302,62 @@ export class Modal {
     return wrap;
   }
 
-  buildReviewCard(venue, reviewer, review) {
+  buildReviewerTabs(allReviews) {
+    const wrap = document.createElement('div');
+    wrap.className = 'reviewer-tabs';
+    wrap.setAttribute('role', 'tablist');
+
+    allReviews.forEach((rev, idx) => {
+      const reviewer = this.content.rats[rev.reviewerId];
+      if (!reviewer) return;
+      const tab = document.createElement('button');
+      tab.type = 'button';
+      tab.className = 'reviewer-tab';
+      tab.setAttribute('role', 'tab');
+      tab.dataset.reviewIndex = String(idx);
+      const isActive = idx === this.currentReviewIndex;
+      if (isActive) tab.classList.add('is-active');
+      tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      tab.textContent = reviewer.displayName;
+      tab.addEventListener('click', () => this.switchReview(idx));
+      wrap.appendChild(tab);
+    });
+
+    return wrap;
+  }
+
+  buildReviewCard(venue, reviewer, review, allReviews = [review]) {
     const card = this.buildCardShell(`Review of ${venue.displayName} by ${reviewer.displayName}`);
 
     const headline = document.createElement('h1');
     headline.className = 'modal-venue-headline';
     headline.textContent = venue.displayName;
     card.appendChild(headline);
+
+    if (allReviews.length >= 2) {
+      card.appendChild(this.buildReviewerTabs(allReviews));
+    }
+
+    const reviewContent = document.createElement('div');
+    reviewContent.className = 'review-content';
+    card.appendChild(reviewContent);
+    this.populateReviewContent(reviewContent, venue, reviewer, review);
+
+    return card;
+  }
+
+  populateReviewContent(container, venue, reviewer, review) {
+    // Dispose any existing oscilloscope before its DOM is replaced —
+    // otherwise the Tone.Waveform analyser leaks across tab switches.
+    if (this.oscilloscope) {
+      try {
+        this.oscilloscope.dispose();
+      } catch {
+        // already disposed
+      }
+      this.oscilloscope = null;
+    }
+    container.replaceChildren();
 
     const ratingRow = document.createElement('div');
     ratingRow.className = 'review-rating';
@@ -279,7 +378,7 @@ export class Modal {
     date.textContent = review.date;
     ratingRow.appendChild(date);
 
-    card.appendChild(ratingRow);
+    container.appendChild(ratingRow);
 
     const reviewerBlock = document.createElement('header');
     reviewerBlock.className = 'reviewer-block';
@@ -323,18 +422,22 @@ export class Modal {
     info.appendChild(this.buildPlayOscBlock('Play review (audio loading)'));
 
     reviewerBlock.appendChild(info);
-    card.appendChild(reviewerBlock);
+    container.appendChild(reviewerBlock);
 
     const body = document.createElement('p');
     body.className = 'review-body';
     const wordCount = appendReviewBodyWithWordSpans(body, review.text);
-    card.appendChild(body);
+    container.appendChild(body);
 
     const squeaks = document.createElement('p');
     squeaks.className = 'review-squeaks';
     squeaks.textContent = `${wordCount} squeaks`;
-    card.appendChild(squeaks);
+    container.appendChild(squeaks);
 
+    container.appendChild(this.buildReactions(review));
+  }
+
+  buildReactions(review) {
     const reviewId = review.reviewerId;
     const reactions = document.createElement('div');
     reactions.className = 'review-reactions';
@@ -364,9 +467,7 @@ export class Modal {
       });
       reactions.appendChild(btn);
     });
-    card.appendChild(reactions);
-
-    return card;
+    return reactions;
   }
 
   buildAmbientCard(venue) {
