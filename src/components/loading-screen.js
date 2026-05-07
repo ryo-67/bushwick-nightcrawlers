@@ -93,9 +93,14 @@ export class LoadingScreen {
     el.appendChild(this.buildFooter({ ctaLabel: LOADING_NARRATIVE.cta }));
 
     // Tap anywhere on the overlay (outside CTA / skip) advances cards.
+    // A card that was just dragged sets dragJustEnded on itself; we
+    // honor that flag so a drag-release click doesn't double as an
+    // advance trigger.
     this.advanceClickHandler = (e) => {
       if (e.target.closest('.loading-cta')) return;
       if (e.target.closest('.loading-skip')) return;
+      const card = e.target.closest('.loading-card');
+      if (card && card.dataset.dragJustEnded === 'true') return;
       this.advanceCard();
     };
     el.addEventListener('click', this.advanceClickHandler);
@@ -198,6 +203,10 @@ export class LoadingScreen {
     cardEl.className = 'loading-card';
     cardEl.dataset.cardIndex = String(idx);
     cardEl.dataset.state = 'hidden';
+    // Drag offsets are folded into the transform; default 0 until the
+    // user moves the card via pointer drag.
+    cardEl.style.setProperty('--drag-x', '0px');
+    cardEl.style.setProperty('--drag-y', '0px');
 
     const labelEl = document.createElement('header');
     labelEl.className = 'loading-card-label';
@@ -220,7 +229,110 @@ export class LoadingScreen {
       body.appendChild(p);
     }
     cardEl.appendChild(body);
+
+    this.makeCardDraggable(cardEl);
     return cardEl;
+  }
+
+  // Pointer drag: tap-without-movement still advances (the existing
+  // overlay click handler runs on the synthetic click that fires
+  // after pointerup). A drag past the threshold sets dragJustEnded
+  // so the overlay handler bails out, leaving the card at its new
+  // offset. Dragging is gated on data-state='visible' so reveal-time
+  // pointer slips don't displace cards mid-animation.
+  makeCardDraggable(cardEl) {
+    let dragging = false;
+    let dragMoved = false;
+    let pointerId = null;
+    let startX = 0;
+    let startY = 0;
+    let baseDeltaX = 0;
+    let baseDeltaY = 0;
+
+    const DRAG_THRESHOLD_PX = 5;
+
+    const onPointerDown = (e) => {
+      if (cardEl.dataset.state !== 'visible') return;
+      if (this.entered) return;
+
+      dragging = true;
+      dragMoved = false;
+      pointerId = e.pointerId;
+      startX = e.clientX;
+      startY = e.clientY;
+
+      // Resume from the card's current drag offsets so successive
+      // drags accumulate rather than snapping back to origin.
+      const xRaw = cardEl.style.getPropertyValue('--drag-x') || '0px';
+      const yRaw = cardEl.style.getPropertyValue('--drag-y') || '0px';
+      baseDeltaX = parseFloat(xRaw) || 0;
+      baseDeltaY = parseFloat(yRaw) || 0;
+
+      try {
+        cardEl.setPointerCapture(pointerId);
+      } catch {
+        // setPointerCapture can throw on older Safari; harmless.
+      }
+
+      cardEl.style.zIndex = String(this.bumpCardZIndex());
+    };
+
+    const onPointerMove = (e) => {
+      if (!dragging || e.pointerId !== pointerId) return;
+
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+
+      if (
+        !dragMoved &&
+        (Math.abs(dx) > DRAG_THRESHOLD_PX || Math.abs(dy) > DRAG_THRESHOLD_PX)
+      ) {
+        dragMoved = true;
+        cardEl.classList.add('is-dragging');
+      }
+
+      if (dragMoved) {
+        cardEl.style.setProperty('--drag-x', `${baseDeltaX + dx}px`);
+        cardEl.style.setProperty('--drag-y', `${baseDeltaY + dy}px`);
+      }
+    };
+
+    const onPointerUp = (e) => {
+      if (!dragging || e.pointerId !== pointerId) return;
+      dragging = false;
+
+      try {
+        cardEl.releasePointerCapture(pointerId);
+      } catch {
+        // already released — fine
+      }
+      pointerId = null;
+
+      if (dragMoved) {
+        cardEl.classList.remove('is-dragging');
+        // Block the synthetic click that fires after pointerup so
+        // the advance handler doesn't run after a drag. Cleared in
+        // the next task tick — by then the click event has already
+        // dispatched (click fires within the same task as pointerup
+        // on every browser tested), so a follow-up tap-no-drag still
+        // advances normally.
+        cardEl.dataset.dragJustEnded = 'true';
+        setTimeout(() => {
+          delete cardEl.dataset.dragJustEnded;
+        }, 0);
+      }
+    };
+
+    cardEl.addEventListener('pointerdown', onPointerDown);
+    cardEl.addEventListener('pointermove', onPointerMove);
+    cardEl.addEventListener('pointerup', onPointerUp);
+    cardEl.addEventListener('pointercancel', onPointerUp);
+  }
+
+  bumpCardZIndex() {
+    if (typeof this._cardZCounter !== 'number') this._cardZCounter = 10;
+    this._cardZCounter += 1;
+    return this._cardZCounter;
   }
 
   buildRat() {
