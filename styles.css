@@ -1558,7 +1558,8 @@ footer a:focus-visible {
 .page-title {
   position: fixed;
   top: 1.25rem;
-  left: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 50;
   font-family: var(--font-editorial);
   font-style: italic;
@@ -1568,13 +1569,13 @@ footer a:focus-visible {
   opacity: 0.65;
   pointer-events: none;
   user-select: none;
+  text-align: center;
 }
 
 @media (max-width: 768px) {
   .page-title {
     font-size: 0.9375rem;
     top: 0.875rem;
-    left: 1rem;
   }
 }
 
