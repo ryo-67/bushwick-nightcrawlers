@@ -95,20 +95,32 @@ export async function initBeds() {
   startBedsPlayback();
 }
 
+function playTrainNow() {
+  if (!trainPlayer) return;
+  try {
+    if (trainPlayer.state === 'started') trainPlayer.stop();
+    trainPlayer.start();
+  } catch {
+    // player may have been disposed mid-schedule; harmless
+  }
+}
+
 function scheduleNextTrainPass() {
   const range = TRAIN_INTERVAL_MAX_SEC - TRAIN_INTERVAL_MIN_SEC;
   const delaySec = TRAIN_INTERVAL_MIN_SEC + Math.random() * range;
   trainTimerId = setTimeout(() => {
-    if (trainPlayer) {
-      try {
-        if (trainPlayer.state === 'started') trainPlayer.stop();
-        trainPlayer.start();
-      } catch {
-        // player may have been disposed mid-schedule; harmless
-      }
-    }
+    playTrainNow();
     scheduleNextTrainPass();
   }, delaySec * 1000);
+}
+
+// Fires a train pass immediately. Site-wide intermittent schedule
+// continues running in parallel — this is an additive trigger for
+// pin-open hooks (e.g., clicking jmz-platform). If a pass is already
+// in flight, it's restarted from the top so the user gets a clear
+// "train arriving" event tied to their click.
+export function triggerTrainPass() {
+  playTrainNow();
 }
 
 async function ensureBed(venueId) {

@@ -237,6 +237,24 @@ function handleModalOpen(venueId, ctx) {
     });
   }
 
+  // jmz-platform: fire an immediate train pass so visiting the
+  // platform reliably triggers a "train arriving" event. The
+  // site-wide intermittent train schedule keeps running in parallel
+  // for ambient feel under any pin. Recheck modal state after
+  // engine ready so we don't fire a pass after the user navigated
+  // away.
+  if (venueId === 'jmz-platform') {
+    if (engine.isReady()) {
+      beds.triggerTrainPass();
+    } else {
+      engine.onReady(() => {
+        if (modalRef?.isOpen() && modalRef.currentVenueId === 'jmz-platform') {
+          beds.triggerTrainPass();
+        }
+      });
+    }
+  }
+
   // Alley: no review-card path. Sync the mini-card visuals to
   // whatever's currently in the registry (returning visitors might
   // have rats still playing from before).
