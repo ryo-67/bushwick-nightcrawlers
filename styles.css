@@ -80,6 +80,33 @@ main {
   cursor: pointer;
   pointer-events: auto;
   box-shadow: 0 0 0 2px var(--color-bg), 0 0 12px rgba(184, 255, 0, 0.5);
+  transition: transform 120ms ease, box-shadow 200ms ease;
+}
+
+.pin:hover,
+.pin:focus-visible {
+  transform: scale(1.15);
+  box-shadow: 0 0 0 2px var(--color-bg), 0 0 18px rgba(184, 255, 0, 0.85);
+}
+
+.pin:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+.pin:active {
+  transform: scale(0.92);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pin {
+    transition: none;
+  }
+  .pin:hover,
+  .pin:focus-visible,
+  .pin:active {
+    transform: none;
+  }
 }
 
 .pin[data-pin-id='market-hotel']         { top: 40%; left: 35%; }

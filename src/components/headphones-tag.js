@@ -55,6 +55,7 @@ export class HeadphonesTag {
     button.type = 'button';
     button.className = 'headphones-overlay-button';
     button.textContent = 'Got it';
+    button.setAttribute('aria-label', 'Dismiss headphones recommendation');
     button.addEventListener('click', () => this.dismissOverlay());
 
     card.append(title, text, button);
@@ -76,7 +77,7 @@ export class HeadphonesTag {
     const badge = document.createElement('button');
     badge.type = 'button';
     badge.className = 'headphones-badge';
-    badge.setAttribute('aria-label', 'Headphones recommended. Dismiss for this session.');
+    badge.setAttribute('aria-label', 'Headphones recommended');
     badge.textContent = '🎧 headphones recommended';
     badge.addEventListener('click', () => this.dismissBadge());
     this.root.appendChild(badge);

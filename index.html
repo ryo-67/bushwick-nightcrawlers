@@ -10,21 +10,22 @@
 </head>
 <body>
   <main>
-    <div class="map-wrapper">
+    <div class="map-wrapper" role="region" aria-label="Map of Myrtle and Broadway intersection. Click pins to hear rat reviews of each venue.">
       <video class="map-bg" autoplay loop muted playsinline aria-hidden="true">
         <source src="assets/map.mp4" type="video/mp4">
       </video>
+      <!-- Pin tab order matches the venue declaration order in src/content/venues.js. -->
       <div class="pin-layer">
-        <div class="pin" data-pin-id="market-hotel" aria-label="Market Hotel"></div>
-        <div class="pin" data-pin-id="mr-kiwi" aria-label="Mr. Kiwi"></div>
-        <div class="pin" data-pin-id="trifecta" aria-label="The Trifecta"></div>
-        <div class="pin" data-pin-id="jmz-platform" aria-label="JMZ platform"></div>
-        <div class="pin" data-pin-id="alley" aria-label="The alley"></div>
-        <div class="pin" data-pin-id="rash" aria-label="Rash (closed)"></div>
-        <div class="pin" data-pin-id="ornithology" aria-label="Ornithology"></div>
-        <div class="pin" data-pin-id="mood-ring" aria-label="Mood Ring"></div>
-        <div class="pin" data-pin-id="bossa-nova" aria-label="Bossa Nova Civic Club"></div>
-        <div class="pin" data-pin-id="caffeine-underground" aria-label="Caffeine Underground"></div>
+        <div class="pin" data-pin-id="market-hotel"         role="button" tabindex="0" aria-label="Market Hotel"></div>
+        <div class="pin" data-pin-id="mr-kiwi"              role="button" tabindex="0" aria-label="Mr. Kiwi"></div>
+        <div class="pin" data-pin-id="trifecta"             role="button" tabindex="0" aria-label="The Trifecta"></div>
+        <div class="pin" data-pin-id="jmz-platform"         role="button" tabindex="0" aria-label="JMZ platform"></div>
+        <div class="pin" data-pin-id="alley"                role="button" tabindex="0" aria-label="alley between Mr Kiwi and JMZ (ambient only)"></div>
+        <div class="pin" data-pin-id="rash"                 role="button" tabindex="0" aria-label="Rash (closed February 2026)"></div>
+        <div class="pin" data-pin-id="ornithology"          role="button" tabindex="0" aria-label="Ornithology Jazz Club"></div>
+        <div class="pin" data-pin-id="mood-ring"            role="button" tabindex="0" aria-label="Mood Ring"></div>
+        <div class="pin" data-pin-id="bossa-nova"           role="button" tabindex="0" aria-label="Bossa Nova Civic Club"></div>
+        <div class="pin" data-pin-id="caffeine-underground" role="button" tabindex="0" aria-label="Caffeine Underground"></div>
       </div>
     </div>
   </main>

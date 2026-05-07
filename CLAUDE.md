@@ -37,7 +37,7 @@ For the asset checklist and citations: `docs/ASSETS.md`.
 │   ├── main.js             # Bootstrap
 │   ├── audio/              # engine.js, rat-generator.js, rat-profiles.js,
 │   │                       # venue-beds.js, effects.js, keyword-scanner.js
-│   ├── ui/                 # map.js, modal.js, oscilloscope.js,
+│   ├── components/         # map.js, modal.js, oscilloscope.js,
 │   │                       # subtitles.js, headphones-tag.js
 │   └── content/            # rats.js, reviews.js, venues.js
 ├── assets/
