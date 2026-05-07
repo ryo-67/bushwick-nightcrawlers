@@ -111,9 +111,25 @@ export class Modal {
     });
 
     document.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape' && this.isOpen()) {
+      if (!this.isOpen()) return;
+      if (event.key === 'Escape') {
         event.preventDefault();
         this.close();
+        return;
+      }
+      // Arrow keys page through reviews when the modal is multi-reviewer.
+      // Defensive: don't steal arrows from input/textarea (none currently
+      // exist in the modal but future additions shouldn't break here).
+      if (this.currentVenueReviews && this.currentVenueReviews.length >= 2) {
+        const activeTag = (document.activeElement?.tagName || '').toLowerCase();
+        if (activeTag === 'input' || activeTag === 'textarea') return;
+        if (event.key === 'ArrowRight') {
+          event.preventDefault();
+          this.switchReviewBy(1);
+        } else if (event.key === 'ArrowLeft') {
+          event.preventDefault();
+          this.switchReviewBy(-1);
+        }
       }
     });
   }
@@ -226,7 +242,7 @@ export class Modal {
       .forEach((el) => el.classList.remove('is-active'));
   }
 
-  // Tab-switch: UI only. Does NOT touch audio state — any playing rat
+  // Page-switch: UI only. Does NOT touch audio state — any playing rat
   // continues in the engine's registry; the new review's PLAY button,
   // when pressed, registers a new rat alongside per cumulative voicing.
   switchReview(newIndex) {
@@ -250,14 +266,13 @@ export class Modal {
       this.populateReviewContent(container, venue, newReviewer, newReview);
     }
 
-    // Update tab strip active state
-    const tabs = this.root.querySelectorAll('.reviewer-tab');
-    tabs.forEach((tab) => {
-      const idx = parseInt(tab.dataset.reviewIndex, 10);
-      const active = idx === newIndex;
-      tab.classList.toggle('is-active', active);
-      tab.setAttribute('aria-selected', active ? 'true' : 'false');
-    });
+    // Update pagination counter text. The reviewer name is intentionally
+    // NOT shown here — the counter is the only navigation surface, so
+    // cameo reveals stay surprising until the card renders.
+    const counter = this.root.querySelector('.pagination-counter');
+    if (counter) {
+      counter.textContent = `${newIndex + 1} of ${this.currentVenueReviews.length}`;
+    }
 
     // Re-fire onOpen so main.js rebinds the PLAY button + audio
     // wiring to the new review. handleModalOpen is idempotent for
@@ -265,6 +280,15 @@ export class Modal {
     // intentionally releases its modal-side ratGen reference, letting
     // any previously-playing rat continue in the engine registry.
     this.onOpen?.(this.currentVenueId, { review: newReview, reviewer: newReviewer });
+  }
+
+  switchReviewBy(delta) {
+    if (!this.currentVenueReviews) return;
+    const len = this.currentVenueReviews.length;
+    if (len < 2) return;
+    // Wrap negatives correctly: ((-1 % 2) + 2) % 2 === 1
+    const next = ((this.currentReviewIndex + delta) % len + len) % len;
+    this.switchReview(next);
   }
 
   buildCardShell(ariaLabel) {
@@ -302,27 +326,34 @@ export class Modal {
     return wrap;
   }
 
-  buildReviewerTabs(allReviews) {
+  buildReviewPagination(allReviews) {
     const wrap = document.createElement('div');
-    wrap.className = 'reviewer-tabs';
-    wrap.setAttribute('role', 'tablist');
+    wrap.className = 'review-pagination';
+    wrap.setAttribute('role', 'group');
+    wrap.setAttribute('aria-label', 'Review navigation');
 
-    allReviews.forEach((rev, idx) => {
-      const reviewer = this.content.rats[rev.reviewerId];
-      if (!reviewer) return;
-      const tab = document.createElement('button');
-      tab.type = 'button';
-      tab.className = 'reviewer-tab';
-      tab.setAttribute('role', 'tab');
-      tab.dataset.reviewIndex = String(idx);
-      const isActive = idx === this.currentReviewIndex;
-      if (isActive) tab.classList.add('is-active');
-      tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
-      tab.textContent = reviewer.displayName;
-      tab.addEventListener('click', () => this.switchReview(idx));
-      wrap.appendChild(tab);
-    });
+    const prev = document.createElement('button');
+    prev.type = 'button';
+    prev.className = 'pagination-arrow';
+    prev.dataset.direction = 'prev';
+    prev.setAttribute('aria-label', 'Previous review');
+    prev.textContent = '←';
+    prev.addEventListener('click', () => this.switchReviewBy(-1));
 
+    const counter = document.createElement('span');
+    counter.className = 'pagination-counter';
+    counter.setAttribute('aria-live', 'polite');
+    counter.textContent = `${this.currentReviewIndex + 1} of ${allReviews.length}`;
+
+    const next = document.createElement('button');
+    next.type = 'button';
+    next.className = 'pagination-arrow';
+    next.dataset.direction = 'next';
+    next.setAttribute('aria-label', 'Next review');
+    next.textContent = '→';
+    next.addEventListener('click', () => this.switchReviewBy(1));
+
+    wrap.append(prev, counter, next);
     return wrap;
   }
 
@@ -335,7 +366,7 @@ export class Modal {
     card.appendChild(headline);
 
     if (allReviews.length >= 2) {
-      card.appendChild(this.buildReviewerTabs(allReviews));
+      card.appendChild(this.buildReviewPagination(allReviews));
     }
 
     const reviewContent = document.createElement('div');
