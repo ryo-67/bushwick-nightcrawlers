@@ -69,7 +69,7 @@ const banks = {
   'usvs-cocaine': [],
 };
 
-const EFFECT_NAMES = ['chime', 'cough', 'fizz', 'vibrate'];
+const EFFECT_NAMES = ['chime', 'cough', 'fizz', 'vibrate', 'camera', 'linkedin'];
 const effectBuffers = new Map();
 
 let ready = false;

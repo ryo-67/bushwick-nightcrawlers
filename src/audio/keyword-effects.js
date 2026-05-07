@@ -25,6 +25,10 @@ export const KEYWORD_EFFECTS = {
   fizzy: { effect: 'fizz', volume: -10, offset: 0 },
   subscribe: { effect: 'vibrate', volume: -14 },
   following: { effect: 'vibrate', volume: -14 },
+  linkedin:   { effect: 'linkedin', volume: -10 },
+  brimfield:  { effect: 'camera', volume: -10 },
+  sniffs:     { effect: 'cough', volume: -12 },
+  followers:  { effect: 'vibrate', volume: -14 },
 };
 
 export function matchKeyword(word) {

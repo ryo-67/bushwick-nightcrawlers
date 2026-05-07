@@ -511,13 +511,14 @@ main {
 }
 
 .review-body {
-  font-family: var(--font-data);
-  font-size: 0.9375rem;
-  line-height: 1.6;
-  margin: var(--space-md) 0 0;
-  padding-top: var(--space-md);
-  border-top: 1px solid rgba(184, 255, 0, 0.15);
-  white-space: pre-wrap;
+  height: 280px;
+  overflow-y: auto;
+  padding-right: 12px; /* clearance for scrollbar */
+}
+
+/* Optional: subtle gradient hint that more text is below */
+.review-body {
+  mask-image: linear-gradient(to bottom, black calc(100% - 24px), transparent);
 }
 
 .review-squeaks {
