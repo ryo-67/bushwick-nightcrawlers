@@ -25,6 +25,7 @@
 import * as engine from './engine.js';
 import { getMode } from './playback-mode.js';
 import { matchKeyword } from './keyword-effects.js';
+import { matchProcessor } from './keyword-processors.js';
 
 function fnv1a(str) {
   let h = 2166136261;
@@ -133,6 +134,15 @@ export class RatGenerator {
     this.perRatGain = null;
     this.perRatLPF = null;
     this.perRatReverbSend = null;
+    // §12.4c processor nodes — created only if profile.processors
+    // declares them. Sit upstream of perRatLPF so processor-modulated
+    // voice still rides the recency-ladder spatial treatment.
+    this.kHolePhaser = null;
+    this.kHolePingPong = null;
+    this.kHoleLPF = null;
+    this.glitchDelay = null;
+    this.glitchVibrato = null;
+    this._chainHead = null;
     // Lazy Map<effectName, Tone.Player> created on first keyword fire.
     // Players connect to perRatLPF so effects ride the same spatial
     // treatment as the rat at its current rank.
@@ -142,11 +152,13 @@ export class RatGenerator {
 
   ensurePerRatChain() {
     if (this._disposed) return null;
-    if (this.perRatGain && this.perRatLPF && this.perRatReverbSend) return this.perRatLPF;
+    if (this._chainHead) return this._chainHead;
     const Tone = window.Tone;
     const ratGain = engine.getRatGain();
     const reverb = engine.getSharedRatReverb();
     if (!ratGain || !reverb) return null;
+
+    // Always-present part of the chain (recency-ladder + reverb send).
     // Initial values match foreground (rank 0). Engine.recomputeLadder
     // ramps to the correct rank within RAT_LADDER_RAMP_SEC of registration.
     this.perRatLPF = new Tone.Filter(20000, 'lowpass');
@@ -154,7 +166,55 @@ export class RatGenerator {
     this.perRatReverbSend = new Tone.Gain(0).connect(reverb);
     this.perRatLPF.connect(this.perRatGain);
     this.perRatLPF.connect(this.perRatReverbSend);
-    return this.perRatLPF;
+
+    // Optional processor chain upstream of perRatLPF. Each processor
+    // is per-rat opt-in via profile.processors. Sample-effect Players
+    // (keyword-effects.js) bypass the processor by connecting directly
+    // to perRatLPF — chimes/coughs aren't k-holed.
+    let head = this.perRatLPF;
+    const processors = (this.profile && this.profile.processors) || [];
+
+    if (processors.includes('k-hole')) {
+      this.kHolePhaser = new Tone.Phaser({
+        frequency: 0.4,
+        octaves: 4,
+        baseFrequency: 350,
+        wet: 0,
+      });
+      this.kHolePingPong = new Tone.PingPongDelay({
+        delayTime: 0.18,
+        feedback: 0.35,
+        wet: 0,
+      });
+      this.kHoleLPF = new Tone.Filter({
+        type: 'lowpass',
+        frequency: 20000,
+        rolloff: -24,
+      });
+      this.kHolePhaser.connect(this.kHolePingPong);
+      this.kHolePingPong.connect(this.kHoleLPF);
+      this.kHoleLPF.connect(head);
+      head = this.kHolePhaser;
+    }
+
+    if (processors.includes('time-glitch')) {
+      this.glitchDelay = new Tone.FeedbackDelay({
+        delayTime: 0.04,
+        feedback: 0.6,
+        wet: 0,
+      });
+      this.glitchVibrato = new Tone.Vibrato({
+        frequency: 11,
+        depth: 0,
+        type: 'sine',
+      });
+      this.glitchDelay.connect(this.glitchVibrato);
+      this.glitchVibrato.connect(head);
+      head = this.glitchDelay;
+    }
+
+    this._chainHead = head;
+    return head;
   }
 
   isPlaying() {
@@ -212,11 +272,21 @@ export class RatGenerator {
       }
 
       // Keyword-triggered effect: layers on top of the USV at the
-      // same time. Routed through perRatLPF (chainHead) so the
-      // effect inherits the rat's current rank treatment.
+      // same time. Routed through perRatLPF so the effect inherits
+      // the rat's current rank treatment but bypasses any processor
+      // chain (chimes don't get k-holed).
       const effectSpec = matchKeyword(word.raw);
       if (effectSpec) {
         this.scheduleEffect(effectSpec, cursor);
+      }
+
+      // Keyword-triggered processor: automates the rat's own audio
+      // chain. Per-rat opt-in via profile.processors; the processor
+      // function bails silently for rats without the relevant chain,
+      // so common-word false positives ("now", "then") cost a check.
+      const processor = matchProcessor(word.raw);
+      if (processor) {
+        processor(this, cursor);
       }
 
       const wordTime = cursor;
@@ -312,7 +382,16 @@ export class RatGenerator {
       this.effectPlayers.clear();
       this.effectPlayers = null;
     }
-    for (const node of [this.perRatLPF, this.perRatGain, this.perRatReverbSend]) {
+    for (const node of [
+      this.perRatLPF,
+      this.perRatGain,
+      this.perRatReverbSend,
+      this.kHolePhaser,
+      this.kHolePingPong,
+      this.kHoleLPF,
+      this.glitchDelay,
+      this.glitchVibrato,
+    ]) {
       if (!node) continue;
       try {
         node.dispose();
@@ -323,6 +402,12 @@ export class RatGenerator {
     this.perRatLPF = null;
     this.perRatGain = null;
     this.perRatReverbSend = null;
+    this.kHolePhaser = null;
+    this.kHolePingPong = null;
+    this.kHoleLPF = null;
+    this.glitchDelay = null;
+    this.glitchVibrato = null;
+    this._chainHead = null;
     this.modal = null;
     this.onComplete = null;
   }

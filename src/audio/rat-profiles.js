@@ -53,11 +53,15 @@ export const ratProfiles = {
     cocaineRatio: 0.3,
     tierSkew: 'chaotic',
     keywordTriggers: SHARED_TRIGGERS,
+    // §12.4c: phaser + ping-pong + LPF dip on "ketamine".
+    processors: ['k-hole'],
   },
   'edible-eddie': {
     cocaineRatio: 0.18,
     tierSkew: 'mixed',
     keywordTriggers: SHARED_TRIGGERS,
+    // §12.4c: feedback-delay stutter + vibrato wobble on time-words.
+    processors: ['time-glitch'],
   },
   'old-cheese': {
     cocaineRatio: 0.0,
