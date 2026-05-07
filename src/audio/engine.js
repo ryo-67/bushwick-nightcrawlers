@@ -27,7 +27,7 @@ import { venues } from '../content/venues.js';
 import { applyOnEngineStart as applyMasterControls } from './master-controls.js';
 
 // Master foreground level for the most-recent rat. Tune by ear.
-export const RAT_FOREGROUND_GAIN = 0.32;
+export const RAT_FOREGROUND_GAIN = 0.25;
 
 // Spatial recency ladder. Three parallel curves, applied per rank:
 //   - gain: how loud each rat is at its rank
