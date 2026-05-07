@@ -95,6 +95,7 @@ export class Modal {
     this.onOpen = hooks.onOpen || null;
     this.onClose = hooks.onClose || null;
     this.currentVenueId = null;
+    this.currentReviewerId = null;
     this.previousFocus = null;
     this.oscilloscope = null;
     this.bind();
@@ -127,6 +128,7 @@ export class Modal {
 
     const review = findReviewForVenue(venue.id, this.content.reviews);
     const reviewer = review ? this.content.rats[review.reviewerId] : null;
+    this.currentReviewerId = review ? review.reviewerId : null;
 
     this.root.replaceChildren();
 
@@ -170,6 +172,7 @@ export class Modal {
 
     this.oscilloscope = null;
     this.currentVenueId = null;
+    this.currentReviewerId = null;
 
     if (this.previousFocus) {
       this.previousFocus.focus();
@@ -195,14 +198,20 @@ export class Modal {
     }
   }
 
-  highlightWord(index) {
+  // Gated by reviewerId so cumulative-voicing background rats can't
+  // hit the currently-displayed review's word spans. Stale callbacks
+  // from a closed-modal rat (or a rat from a previous modal instance)
+  // pass a reviewerId that no longer matches and no-op out.
+  highlightWord(index, fromReviewerId) {
+    if (fromReviewerId !== this.currentReviewerId) return;
     const active = this.root.querySelectorAll('.word.is-active');
     active.forEach((el) => el.classList.remove('is-active'));
     const target = this.root.querySelector(`.word[data-index="${index}"]`);
     if (target) target.classList.add('is-active');
   }
 
-  clearHighlights() {
+  clearHighlights(fromReviewerId) {
+    if (fromReviewerId !== this.currentReviewerId) return;
     this.root
       .querySelectorAll('.word.is-active')
       .forEach((el) => el.classList.remove('is-active'));

@@ -192,7 +192,7 @@ export class RatGenerator {
       const wordTime = cursor;
       Tone.Draw.schedule(() => {
         if (myId !== this.playbackId) return;
-        this.modal?.highlightWord?.(i);
+        this.modal?.highlightWord?.(i, this.reviewerId);
       }, wordTime);
 
       const dur = sample ? sample.duration : 0.2;
@@ -206,7 +206,7 @@ export class RatGenerator {
     Tone.Draw.schedule(() => {
       if (myId !== this.playbackId) return;
       this._isPlaying = false;
-      this.modal?.clearHighlights?.();
+      this.modal?.clearHighlights?.(this.reviewerId);
       this.onComplete?.();
     }, endTime);
   }
@@ -223,7 +223,7 @@ export class RatGenerator {
       }
     }
     this.activeSources = [];
-    this.modal?.clearHighlights?.();
+    this.modal?.clearHighlights?.(this.reviewerId);
   }
 
   dispose() {
