@@ -24,9 +24,9 @@
  */
 
 const VENUE_BED_MAP = {
-  'caffeine-underground': { file: 'cafe.m4a', gainDb: -13 },
+  'caffeine-underground': { file: 'cafe.m4a', gainDb: -11 },
   'mood-ring': { file: 'bar.m4a', gainDb: -13 },
-  'bossa-nova': { file: 'rave.m4a', gainDb: -13 },
+  'bossa-nova': { file: 'rave.m4a', gainDb: -11 },
   // Rash is permanently closed — the firetruck siren persists as
   // ambient layer once the user has visited. Active level while
   // modal open, reduced level after close (kept playing, just
