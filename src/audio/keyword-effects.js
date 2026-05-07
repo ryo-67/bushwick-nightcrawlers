@@ -20,7 +20,7 @@ export const KEYWORD_EFFECTS = {
   tagged:     { effect: 'chime', volume: -8, layered: ['vibrate'] },
   immaculate: { effect: 'chime', volume: -8, layered: ['vibrate'] },
   iconic:     { effect: 'chime', volume: -8, layered: ['vibrate'] },
-  inkedin:    { effect: 'chime', volume: -8, layered: ['vibrate'] },
+  inkedin:    { effect: 'linkedin', volume: -10 },
   yelp:       { effect: 'chime', volume: -8, layered: ['vibrate'] },
   viral:      { effect: 'cough', volume: -12 },
   sniff:      { effect: 'cough', volume: -12 },
