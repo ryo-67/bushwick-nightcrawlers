@@ -79,6 +79,10 @@ const readyListeners = [];
 // First entry = oldest active rat, last entry = foreground.
 const ratRegistry = new Map();
 
+// Listeners notified after every register/unregister so UI surfaces
+// (currently the alley modal's mini-cards) can reflect rank changes.
+const activeRatsListeners = new Set();
+
 function tierForDuration(d) {
   if (d < 0.4) return 'short';
   if (d < 0.9) return 'medium';
@@ -203,6 +207,32 @@ function recomputeLadder() {
   }
 }
 
+function notifyActiveRatsListeners() {
+  const snapshot = getActiveRatRanks();
+  for (const fn of activeRatsListeners) {
+    try {
+      fn(snapshot);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error(e);
+    }
+  }
+}
+
+export function getActiveRatRanks() {
+  const entries = Array.from(ratRegistry.entries());
+  const total = entries.length;
+  return entries.map(([reviewerId], idx) => ({
+    reviewerId,
+    rank: total - 1 - idx,
+  }));
+}
+
+export function onActiveRatsChange(fn) {
+  activeRatsListeners.add(fn);
+  return () => activeRatsListeners.delete(fn);
+}
+
 export function registerRat(reviewerId, ratGen) {
   // Displace any rat with the same id (modal-reopen of an active rat).
   // Immediate stop + dispose; the new instance will play fresh.
@@ -223,6 +253,7 @@ export function registerRat(reviewerId, ratGen) {
 
   ratRegistry.set(reviewerId, ratGen);
   recomputeLadder();
+  notifyActiveRatsListeners();
 }
 
 export function unregisterRat(reviewerId) {
@@ -231,6 +262,7 @@ export function unregisterRat(reviewerId) {
   ratRegistry.delete(reviewerId);
   rg.fadeOutAndDispose(RAT_FADE_OUT_SEC);
   recomputeLadder();
+  notifyActiveRatsListeners();
 }
 
 export function activeRats() {

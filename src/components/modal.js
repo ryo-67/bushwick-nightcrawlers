@@ -2,6 +2,9 @@ import { Oscilloscope } from './oscilloscope.js';
 
 const REVIEWER_LOCATION = 'Bushwick, Brooklyn';
 const ALLEY_FRAMING = 'the alley between Mr Kiwi and the JMZ';
+// Alley modal framing line — describes the alley's social function,
+// not its location. Edit this single line to change the framing copy.
+const ALLEY_MEET_FRAMING = 'where the rats meet';
 const RASH_CLOSED_NOTE = '[closed February 2026]';
 const REACTIONS = [
   { type: 'helpful', label: 'Helpful' },
@@ -96,6 +99,7 @@ export class Modal {
     this.content = content;
     this.onOpen = hooks.onOpen || null;
     this.onClose = hooks.onClose || null;
+    this.onAlleyCardClick = hooks.onAlleyCardClick || null;
     this.currentVenueId = null;
     this.currentReviewerId = null;
     this.currentVenueReviews = null;
@@ -157,7 +161,7 @@ export class Modal {
 
     let card;
     if (venue.id === 'alley') {
-      card = this.buildAmbientCard(venue);
+      card = this.buildAlleyCard(venue);
     } else if (venue.reviewerId === null) {
       card = this.buildTombstoneCard(venue);
     } else if (reviewer && review) {
@@ -502,6 +506,8 @@ export class Modal {
   }
 
   buildAmbientCard(venue) {
+    // Retained for any future ambient-only venue. Currently unreached
+    // because alley routes to buildAlleyCard.
     const card = this.buildCardShell(`${venue.displayName} (ambient)`);
 
     const name = document.createElement('h1');
@@ -518,6 +524,102 @@ export class Modal {
     card.appendChild(framing);
 
     return card;
+  }
+
+  buildAlleyCard(venue) {
+    const card = this.buildCardShell(`${venue.displayName} — where the rats meet`);
+    card.classList.add('alley-modal');
+
+    const name = document.createElement('h1');
+    name.className = 'modal-venue-headline';
+    name.textContent = venue.displayName;
+    card.appendChild(name);
+
+    const photo = buildVenuePhoto(venue);
+    if (photo) card.appendChild(photo);
+
+    const framing = document.createElement('p');
+    framing.className = 'venue-framing';
+    framing.textContent = ALLEY_MEET_FRAMING;
+    card.appendChild(framing);
+
+    const oneLiners = this.content.alleyOneLiners || [];
+    const cards = document.createElement('div');
+    cards.className = 'alley-cards';
+    for (const oneLiner of oneLiners) {
+      const reviewer = this.content.rats[oneLiner.reviewerId];
+      if (!reviewer) continue;
+      cards.appendChild(this.buildAlleyMiniCard(oneLiner, reviewer));
+    }
+    card.appendChild(cards);
+
+    return card;
+  }
+
+  buildAlleyMiniCard(oneLiner, reviewer) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'alley-card';
+    btn.dataset.reviewerId = oneLiner.reviewerId;
+    btn.setAttribute(
+      'aria-label',
+      `Play ${reviewer.displayName}'s alley one-liner`
+    );
+
+    const selfie = document.createElement('img');
+    selfie.className = 'alley-card-selfie';
+    selfie.src = reviewer.selfiePath;
+    selfie.alt = '';
+    selfie.loading = 'lazy';
+    selfie.addEventListener('error', () => {
+      selfie.style.display = 'none';
+    });
+    btn.appendChild(selfie);
+
+    const body = document.createElement('div');
+    body.className = 'alley-card-body';
+
+    const name = document.createElement('div');
+    name.className = 'alley-card-name';
+    name.textContent = reviewer.displayName;
+    body.appendChild(name);
+
+    const stars = document.createElement('div');
+    stars.className = 'alley-card-stars';
+    stars.setAttribute('aria-label', `${oneLiner.rating} out of 5 stars`);
+    stars.textContent = '★'.repeat(oneLiner.rating);
+    body.appendChild(stars);
+
+    const text = document.createElement('div');
+    text.className = 'alley-card-text';
+    text.textContent = oneLiner.text;
+    body.appendChild(text);
+
+    btn.appendChild(body);
+
+    btn.addEventListener('click', () => {
+      this.onAlleyCardClick?.(oneLiner.reviewerId);
+    });
+
+    return btn;
+  }
+
+  // Called by main.js whenever the engine's active-rats registry
+  // changes. rankMap: { [reviewerId]: rank }, rank 0 = foreground.
+  // Cards not in the map return to idle state.
+  setAlleyCardStates(rankMap) {
+    const cards = this.root.querySelectorAll('.alley-card');
+    cards.forEach((cardEl) => {
+      const id = cardEl.dataset.reviewerId;
+      const rank = rankMap[id];
+      if (typeof rank === 'number') {
+        cardEl.dataset.rank = String(rank);
+        cardEl.classList.add('is-active');
+      } else {
+        delete cardEl.dataset.rank;
+        cardEl.classList.remove('is-active');
+      }
+    });
   }
 
   buildTombstoneCard(venue) {

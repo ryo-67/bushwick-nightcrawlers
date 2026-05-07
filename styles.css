@@ -338,6 +338,102 @@ main {
   color: var(--color-accent);
 }
 
+.alley-cards {
+  display: flex;
+  flex-direction: column;
+  margin-top: var(--space-md);
+}
+
+.alley-card {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  width: 100%;
+  padding: 12px 14px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(184, 255, 0, 0.15);
+  text-align: left;
+  cursor: pointer;
+  color: var(--color-text);
+  transition: background 120ms linear;
+}
+
+.alley-card:last-child {
+  border-bottom: none;
+}
+
+.alley-card:hover,
+.alley-card:focus-visible {
+  background: rgba(184, 255, 0, 0.04);
+  outline: none;
+}
+
+.alley-card:focus-visible {
+  outline: 1px solid var(--color-accent);
+  outline-offset: -1px;
+}
+
+.alley-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--color-accent);
+  opacity: 0;
+  transition: opacity 250ms ease;
+}
+
+.alley-card.is-active::before { opacity: 1; }
+.alley-card.is-active[data-rank='1']::before { opacity: 0.7; }
+.alley-card.is-active[data-rank='2']::before { opacity: 0.5; }
+.alley-card.is-active[data-rank='3']::before { opacity: 0.3; }
+.alley-card.is-active[data-rank='4']::before { opacity: 0.15; }
+
+.alley-card-selfie {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(184, 255, 0, 0.3);
+  object-fit: cover;
+  background: rgba(197, 191, 174, 0.05);
+  display: block;
+}
+
+.alley-card-body {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.alley-card-name {
+  font-family: var(--font-editorial);
+  font-style: italic;
+  font-size: 1rem;
+  color: var(--color-text);
+}
+
+.alley-card-stars {
+  font-size: 0.875rem;
+  color: var(--color-stars);
+  letter-spacing: 1px;
+  line-height: 1;
+}
+
+.alley-card-text {
+  font-family: var(--font-data);
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: var(--color-text);
+  opacity: 0.85;
+}
+
 .review-pagination {
   display: inline-flex;
   align-items: center;

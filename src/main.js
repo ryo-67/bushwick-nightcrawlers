@@ -3,6 +3,7 @@ import { Modal } from './components/modal.js';
 import { rats } from './content/rats.js';
 import { venues } from './content/venues.js';
 import { reviews } from './content/reviews.js';
+import { alleyOneLiners } from './content/alley-oneliners.js';
 import * as engine from './audio/engine.js';
 import { ratProfiles } from './audio/rat-profiles.js';
 import { RatGenerator } from './audio/rat-generator.js';
@@ -196,8 +197,16 @@ function handleModalOpen(venueId, ctx) {
     });
   }
 
+  // Alley: no review-card path. Sync the mini-card visuals to
+  // whatever's currently in the registry (returning visitors might
+  // have rats still playing from before).
+  if (venueId === 'alley') {
+    syncAlleyCardStates();
+    return;
+  }
+
   const review = ctx?.review;
-  if (!review) return; // alley/rash — no rat generator
+  if (!review) return; // rash — no rat generator
 
   // Mark this venue as visited (review-bearing only).
   engine.markVisited(venueId);
@@ -253,6 +262,30 @@ function handleModalOpen(venueId, ctx) {
     }
   };
   playBtn.addEventListener('click', playClickHandler);
+}
+
+function spawnAlleyOneLiner(reviewerId) {
+  if (!engine.isReady()) return;
+  const oneLiner = alleyOneLiners.find((o) => o.reviewerId === reviewerId);
+  if (!oneLiner) return;
+  const profile = ratProfiles[reviewerId];
+  if (!profile) return;
+  // Null modal — alley voices don't drive word highlighting (the
+  // alley modal has no word-span DOM; the cards are static text).
+  // The rat's own onComplete handles unregister; the engine's
+  // displacement logic handles same-id click-while-playing.
+  const ratGen = new RatGenerator(profile, oneLiner.text, reviewerId, null);
+  ratGen.onComplete = () => engine.unregisterRat(reviewerId);
+  engine.registerRat(reviewerId, ratGen);
+  ratGen.start();
+}
+
+function syncAlleyCardStates() {
+  if (!modalRef?.setAlleyCardStates) return;
+  const ranks = engine.getActiveRatRanks();
+  const rankMap = {};
+  for (const { reviewerId, rank } of ranks) rankMap[reviewerId] = rank;
+  modalRef.setAlleyCardStates(rankMap);
 }
 
 function handleModalClose() {
@@ -324,9 +357,24 @@ document.addEventListener('DOMContentLoaded', () => {
   tag.init();
 
   const modalRoot = document.getElementById('modal-root');
-  modalRef = new Modal(modalRoot, { rats, venues, reviews }, {
-    onOpen: handleModalOpen,
-    onClose: handleModalClose,
+  modalRef = new Modal(
+    modalRoot,
+    { rats, venues, reviews, alleyOneLiners },
+    {
+      onOpen: handleModalOpen,
+      onClose: handleModalClose,
+      onAlleyCardClick: spawnAlleyOneLiner,
+    }
+  );
+
+  // Engine fires this after every register / unregister. Modal
+  // updates its alley mini-card border opacities from the rank map.
+  // Listener stays subscribed for the page lifetime; the modal-side
+  // bail-out (only update when alley is open) keeps it cheap.
+  engine.onActiveRatsChange(() => {
+    if (modalRef?.isOpen() && modalRef.currentVenueId === 'alley') {
+      syncAlleyCardStates();
+    }
   });
 
   const tooltip = setupPinTooltip();
