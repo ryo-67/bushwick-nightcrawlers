@@ -6,3 +6,7 @@ node_modules/
 dist/
 build/
 *.log
+
+# Local-only — see prior session notes
+assets/source-pins/
+scripts/rename-usvs.sh
