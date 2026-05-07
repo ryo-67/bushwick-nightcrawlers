@@ -132,6 +132,33 @@ let currentRatGenVenueId = null;
 let playClickHandler = null;
 let pendingAlleyReveal = false;
 
+// Read the video's natural dimensions and lock the pin-layer to the
+// same aspect ratio. Pin percentages are relative to the layer; the
+// layer must match the map exactly or pins drift off venues.
+// Falls back to a defensive setTimeout in case loadedmetadata never
+// fires (rare, but the static aspect-ratio in CSS won't catch any
+// future map.mp4 with a different ratio).
+function syncPinLayerToMapDimensions() {
+  const video = document.querySelector('.map-bg');
+  const layer = document.querySelector('.pin-layer');
+  if (!video || !layer) return;
+
+  function apply() {
+    const w = video.videoWidth;
+    const h = video.videoHeight;
+    if (w > 0 && h > 0) {
+      layer.style.aspectRatio = `${w} / ${h}`;
+    }
+  }
+
+  if (video.readyState >= 1) {
+    apply();
+  } else {
+    video.addEventListener('loadedmetadata', apply, { once: true });
+    setTimeout(apply, 100);
+  }
+}
+
 function setupPinPositions() {
   // Apply mapCoordinates from venues.js as inline top/left on each
   // static pin in index.html. venues.js is the single source of
@@ -429,6 +456,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  syncPinLayerToMapDimensions();
   setupPinPositions();
   const tooltip = setupPinTooltip();
   setupHeaderModeToggle();
