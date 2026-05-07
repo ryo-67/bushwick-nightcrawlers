@@ -24,17 +24,18 @@
  */
 
 const VENUE_BED_MAP = {
-  'caffeine-underground': { file: 'cafe.m4a', gainDb: -18 },
-  'mood-ring': { file: 'bar.m4a', gainDb: -18 },
-  'bossa-nova': { file: 'rave.m4a', gainDb: -18 },
+  'caffeine-underground': { file: 'cafe.m4a', gainDb: -15 },
+  'mood-ring': { file: 'bar.m4a', gainDb: -15 },
+  'bossa-nova': { file: 'rave.m4a', gainDb: -15 },
   // Rash is permanently closed — the firetruck siren persists as
-  // ambient layer once the user has visited. -22 dB while modal
-  // open, -28 dB after close (kept playing, just receded).
+  // ambient layer once the user has visited. Active level while
+  // modal open, reduced level after close (kept playing, just
+  // receded).
   'rash': {
     file: 'firetruck.m4a',
-    gainDb: -22,
+    gainDb: -19,
     persistent: true,
-    persistentGainDb: -28,
+    persistentGainDb: -25,
   },
 };
 
@@ -42,8 +43,8 @@ const BED_DIR = 'assets/sounds/effects';
 const JMZ_FILE = 'assets/sounds/jmz-rumble.m4a';
 const TRAIN_FILE = 'assets/sounds/effects/train.m4a';
 
-const JMZ_GAIN_DB = -27;
-const TRAIN_GAIN_DB = -20;
+const JMZ_GAIN_DB = -24;
+const TRAIN_GAIN_DB = -17;
 const TRAIN_INTERVAL_MIN_SEC = 90;
 const TRAIN_INTERVAL_MAX_SEC = 180;
 const BED_FADE_IN = 2.5;
