@@ -542,35 +542,68 @@ function setupHeaderModeToggle() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  const loading = new LoadingScreen(document.body, {
-    onEnter: () => {
-      // Gesture-bound: must be called synchronously from inside the
-      // Enter button click handler. engine.start() captures
-      // Tone.start() sync internally; the await chain after that is
-      // safe to detach from the gesture frame.
-      engine.start().catch((e) => {
-        // eslint-disable-next-line no-console
-        console.error('Audio engine failed to start:', e);
-      });
-
-      // iOS Safari often refuses to honor the autoplay attribute
-      // on <video> even with muted + playsinline. An explicit
-      // play() call from inside the click handler is trusted.
-      // Failures are non-fatal — the map will pause-frame on the
-      // first frame, which is acceptable.
-      const mapVideo = document.querySelector('.map-bg');
-      if (mapVideo && typeof mapVideo.play === 'function') {
-        const playPromise = mapVideo.play();
-        if (playPromise && typeof playPromise.catch === 'function') {
-          playPromise.catch(() => {
-            // Autoplay rejection — silent. The video element will
-            // hold its current frame; the audio carries the piece.
-          });
-        }
+  // Audio + map-video boot. Used by the loading-screen onEnter
+  // callback AND by the session-resume gesture handler (when the
+  // user navigates back from /about and the loading screen is
+  // skipped). Both paths need a user gesture for Tone.start();
+  // the gesture chain is preserved by calling this synchronously
+  // inside the click/keydown/touchstart handler.
+  const bootAudioAndVideo = () => {
+    engine.start().catch((e) => {
+      // eslint-disable-next-line no-console
+      console.error('Audio engine failed to start:', e);
+    });
+    const mapVideo = document.querySelector('.map-bg');
+    if (mapVideo && typeof mapVideo.play === 'function') {
+      const playPromise = mapVideo.play();
+      if (playPromise && typeof playPromise.catch === 'function') {
+        playPromise.catch(() => {});
       }
-    },
-  });
-  loading.init();
+    }
+  };
+
+  // V10: loading screen fires only on a genuine cold-start. Once
+  // the user has entered the intersection in this browser session,
+  // navigating away (e.g. to /about) and back skips the loading
+  // sequence entirely. sessionStorage clears when the tab closes
+  // so a fresh browser session sees the entrance ritual again.
+  let sessionEntered = false;
+  try {
+    sessionEntered = sessionStorage.getItem('intersection-entered') === '1';
+  } catch {
+    // Private mode / storage disabled — falls back to showing the
+    // loading screen on every navigation, which is the prior
+    // behavior. Acceptable.
+  }
+
+  if (!sessionEntered) {
+    const loading = new LoadingScreen(document.body, {
+      onEnter: () => {
+        try {
+          sessionStorage.setItem('intersection-entered', '1');
+        } catch {
+          // private mode — no flag persists; next navigation will
+          // re-show the loading screen.
+        }
+        bootAudioAndVideo();
+      },
+    });
+    loading.init();
+  } else {
+    // Returning to the map mid-session: bind audio/video boot to
+    // the next user gesture (any click, keydown, or touchstart).
+    // Tone.start() needs a gesture and pre-loading the audio
+    // context without one fails silently on iOS.
+    const start = () => {
+      document.removeEventListener('click', start, true);
+      document.removeEventListener('keydown', start, true);
+      document.removeEventListener('touchstart', start, true);
+      bootAudioAndVideo();
+    };
+    document.addEventListener('click', start, true);
+    document.addEventListener('keydown', start, true);
+    document.addEventListener('touchstart', start, true);
+  }
 
   const modalRoot = document.getElementById('modal-root');
   modalRef = new Modal(

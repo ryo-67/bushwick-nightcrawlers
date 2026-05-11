@@ -235,30 +235,36 @@ main {
     alleyPulse 2s ease-in-out 1.2s infinite;
 }
 
+/* V11 fix: every keyframe transform preserves the parent .pin's
+   translate(-50%, -50%) centering. CSS animations replace the
+   entire transform property during keyframes — declaring only
+   scale() un-translated the pin to its top-left origin, causing
+   the visible location shift between locked (static) and unlocked
+   (animated) states. */
 @keyframes alleyPulse {
   0%,
   100% {
     filter: drop-shadow(0 0 4px rgba(180, 255, 100, 0.3));
-    transform: scale(1);
+    transform: translate(-50%, -50%) scale(1);
   }
   50% {
     filter: drop-shadow(0 0 18px rgba(180, 255, 100, 0.7));
-    transform: scale(1.04);
+    transform: translate(-50%, -50%) scale(1.04);
   }
 }
 
 @keyframes alleyUnlockBurst {
   0% {
     filter: drop-shadow(0 0 0 rgba(180, 255, 100, 0));
-    transform: scale(1);
+    transform: translate(-50%, -50%) scale(1);
   }
   40% {
     filter: drop-shadow(0 0 30px rgba(180, 255, 100, 1));
-    transform: scale(1.18);
+    transform: translate(-50%, -50%) scale(1.18);
   }
   100% {
     filter: drop-shadow(0 0 18px rgba(180, 255, 100, 0.7));
-    transform: scale(1.04);
+    transform: translate(-50%, -50%) scale(1.04);
   }
 }
 
@@ -528,13 +534,31 @@ main {
   padding: 0 var(--space-lg) var(--space-lg);
 }
 
-/* Alley header (photo + framing) now sits as normal scrollable
-   content under the sticky .modal-venue-headline. No longer carries
-   title/close — those moved into the headline (which is the actual
-   sticky region; see .modal-card.alley-modal .modal-venue-headline
-   above). */
+/* Alley header (photo + framing) sits as normal scrollable content
+   under the sticky .modal-venue-headline. The title/close moved
+   into the headline (which is the sticky region; see
+   .modal-card.alley-modal .modal-venue-headline above). V11
+   restores the desktop sticky behavior on .alley-header itself
+   so the photo + tagline stay visible while rat cards scroll
+   below — this is the affordance that makes the recency-of-play
+   reordering visible.
+   Mobile keeps the headline-only sticky pattern since the sheet
+   body has limited height and a large sticky region would crowd
+   the visible cards. */
 .alley-header {
   padding: 0 0 var(--space-md);
+}
+
+@media (min-width: 769px) {
+  .modal-card.alley-modal .alley-header {
+    position: sticky;
+    top: 3.25rem;
+    background: var(--color-bg);
+    z-index: 4;
+    padding-bottom: var(--space-md);
+    border-bottom: 1px solid rgba(184, 255, 0, 0.08);
+    margin-bottom: var(--space-sm);
+  }
 }
 
 .alley-cards {
@@ -1619,19 +1643,21 @@ main {
     margin: 0.5rem 0;
   }
 
-  /* Tombstone (Rash) photo: V9 drops the forced 16:9 aspect.
-     V8's aspect+cover produced visible black banding because the
-     source photo doesn't naturally fit 16:9. Letting the image
-     display at natural ratio eliminates the letterbox/banding
-     entirely. Keeps the module-scope rotation + border for the
-     paste-up feel; only overrides aspect + height behavior. The
-     1rem horizontal inset matches location sheets via the
-     universal child-padding rule. */
+  /* Tombstone (Rash) photo: V9 dropped aspect-ratio. V11 also
+     removes the module-scope wrapper's rotation/border/bg since
+     those are stylistic chrome that doesn't fit a tombstone
+     marker. The photo displays at natural ratio with the same
+     1rem horizontal inset as other sheet content (via the
+     universal child-padding rule). Accent border on the img
+     itself rather than the wrapper. */
   .modal-card-tombstone .modal-venue-photo {
     aspect-ratio: auto;
     width: 100%;
     overflow: visible;
-    margin: 0.5rem 0;
+    margin: 0.5rem 0 1rem;
+    transform: none;
+    border: none;
+    background: none;
   }
 
   .modal-card-tombstone .modal-venue-photo img {
@@ -1641,6 +1667,16 @@ main {
     border-radius: 0;
     margin: 0;
     display: block;
+    border: 1px solid var(--color-accent);
+  }
+
+  /* V11: Rash tombstone sheet sizes to content, not full viewport.
+     Slides up from bottom but stops where content ends. Feels
+     like a card rather than a full-height interactive sheet. */
+  .modal-card.modal-card-tombstone {
+    height: auto;
+    min-height: auto;
+    max-height: 100dvh;
   }
 
   /* Larger touch targets for the reaction buttons. */
@@ -1687,14 +1723,28 @@ main {
     opacity: 0.7;
   }
 
-  /* Alley photo: shift visible region downward to crop the dark
-     underside-of-the-JMZ-bridge band at the top of the source
-     image. */
-  .alley-modal .modal-venue-photo img,
+  /* V11: alley photo displays at natural ratio. V10's 16/9
+     forced ratio caused black banding because the source isn't
+     16/9. object-position keeps the JMZ-bridge underside cropped
+     out of the top of the visible area. */
+  .alley-modal .modal-venue-photo,
   .alley-photo,
   .alley-hero-image {
+    aspect-ratio: auto;
+    overflow: visible;
+  }
+
+  .alley-modal .modal-venue-photo img {
+    width: 100%;
+    height: auto;
+    object-fit: initial;
     object-position: center 30%;
-    aspect-ratio: 16 / 9;
+  }
+
+  /* V11: clearance between alley photo and the "where the rats
+     meet" framing line below. Matches location-sheet rhythm. */
+  .alley-modal .modal-venue-photo {
+    margin-bottom: 1.5rem;
   }
 
   /* Tombstone epitaph: tighter type for the sheet width. */
@@ -1927,14 +1977,13 @@ main {
   text-decoration-color: var(--color-accent);
 }
 
-/* About page links across body content + citations + epigraph
-   resolve to accent green. Explicit values for unvisited AND
-   visited because browsers default unvisited to blue and restrict
-   :visited styling — V6's `a:visited { color: inherit }` alone
-   wasn't enough; unvisited links rendered browser-default blue. */
+/* About page links: V10 reverted from accent-green default to
+   body-text-colored default. The all-green treatment from V7 was
+   visually overwhelming. Underline is the affordance; accent
+   green only on hover/focus. */
 .about-page a,
 .about-page a:visited {
-  color: var(--color-accent);
+  color: var(--color-text);
   text-decoration: underline;
   text-decoration-thickness: 1px;
   text-underline-offset: 2px;
@@ -1942,6 +1991,7 @@ main {
 
 .about-page a:hover,
 .about-page a:focus-visible {
+  color: var(--color-accent);
   text-decoration-thickness: 2px;
   outline: none;
 }
@@ -1952,7 +2002,25 @@ main {
 .about-page .credit-list a:visited,
 .about-page .about-back,
 .about-page .about-back:visited {
+  color: var(--color-text);
+}
+
+.about-page .credit-list a:hover,
+.about-page .about-back:hover {
   color: var(--color-accent);
+}
+
+/* V10: subheader spacing — paragraph above section headers needed
+   more clearance. ~2rem top margin on h2/h3 inside about content. */
+.about-section h2,
+.about-section h3,
+.freesound-subhead {
+  margin-top: 2rem;
+}
+
+.about-section > h2:first-child,
+.about-section > h3:first-child {
+  margin-top: 0;
 }
 
 .footnote {
@@ -2492,5 +2560,31 @@ main {
   .loading-rat.is-running[data-direction="ltr"] svg,
   .loading-rat.is-running[data-direction="rtl"] svg {
     animation-duration: 9s;
+  }
+}
+
+/* ===== V11 desktop-only overrides ===== */
+@media (min-width: 769px) {
+  /* Locked-alley toast: desktop has hover tooltip carrying the
+     same gating message — toast on click is redundant. Suppress
+     on wide viewports; mobile keeps it (no hover state). */
+  .alley-locked-toast {
+    display: none !important;
+  }
+
+  /* Tombstone (Rash) sheet on desktop: content-sized with a max
+     cap so the natural-aspect photo doesn't blow out the modal. */
+  .modal-card.modal-card-tombstone {
+    height: auto;
+    max-height: 80vh;
+  }
+
+  .modal-card-tombstone .modal-venue-photo {
+    margin: 0 auto 1rem auto;
+  }
+
+  .modal-card-tombstone .modal-venue-photo img {
+    max-height: 60vh;
+    object-fit: contain;
   }
 }
