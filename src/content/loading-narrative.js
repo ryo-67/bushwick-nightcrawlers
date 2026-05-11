@@ -32,7 +32,7 @@ export const LOADING_NARRATIVE = {
   // the component will render each as a separate <p> or <span>.
   cards: [
     {
-      label: 'FIELD NOTE 01 / SCALE',
+      label: 'field note 01 / scale',
       body: [
         '3 million rats in NYC.',
         'About one for every three humans.',
@@ -40,7 +40,7 @@ export const LOADING_NARRATIVE = {
       ],
     },
     {
-      label: 'FIELD NOTE 02 / DISCOVERY',
+      label: 'field note 02 / discovery',
       body: [
         'A recent preprint study tracked them with thermal cameras and ultrasonic mics.',
         "They're screaming to each other constantly.",
@@ -48,7 +48,7 @@ export const LOADING_NARRATIVE = {
       ],
     },
     {
-      label: 'FIELD NOTE 03 / THIS PIECE',
+      label: 'field note 03 / this piece',
       body: [
         'A scientist recorded one rat soliloquizing inside a garbage bag,',
         '"perhaps offering a Yelp review for passing comrades."',
@@ -76,7 +76,7 @@ export const LOADING_NARRATIVE = {
   // the Enter button activates.
   readyMessage: 'the rats are ready.',
 
-  cta: 'Enter the intersection',
+  cta: 'enter the intersection',
 
   // Returning visitor variant. Skips the card sequence and shows a
   // compressed greeting + Enter button immediately (still gated on
@@ -86,6 +86,6 @@ export const LOADING_NARRATIVE = {
   //   - "Welcome back. The alley's been waiting."
   //   - "You've been here before. They remember."
   //   - "The alley's been quiet without you. (lie. always loud.)"
-  returningGreeting: 'The rats clocked you coming.',
-  returningCta: 'Step back in',
+  returningGreeting: 'the rats clocked you coming.',
+  returningCta: 'step back in',
 };

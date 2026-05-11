@@ -470,8 +470,7 @@ main {
   display: inline-block;
   margin-top: 0.6rem;
   font-family: var(--font-ui);
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.02em;
   font-size: 0.6875rem;
   padding: 0.15rem 0.5rem;
   border: 1px solid var(--color-accent);
@@ -697,8 +696,7 @@ main {
 
 .pagination-counter {
   font-family: var(--font-ui);
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.02em;
   font-size: 0.6875rem;
   color: var(--color-text);
   font-variant-numeric: tabular-nums;
@@ -753,8 +751,7 @@ main {
 
 .review-squeaks {
   font-family: var(--font-ui);
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.02em;
   font-size: 0.6875rem;
   margin: var(--space-md) 0 0;
   padding-top: var(--space-md);
@@ -773,8 +770,7 @@ main {
 
 .review-reaction {
   font-family: var(--font-ui);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.02em;
   font-size: 0.6875rem;
   padding: 0.4rem 0.75rem;
   background: transparent;
@@ -836,8 +832,7 @@ main {
 
 .venue-closed-note {
   font-family: var(--font-ui);
-  text-transform: uppercase;
-  letter-spacing: 0.15em;
+  letter-spacing: 0.02em;
   font-size: 0.8125rem;
   margin: 0;
   opacity: 0.6;
@@ -893,8 +888,7 @@ main {
 
 .play-button {
   font-family: var(--font-ui);
-  text-transform: uppercase;
-  letter-spacing: 0.15em;
+  letter-spacing: 0.04em;
   background: transparent;
   color: var(--color-accent);
   border: 1px solid var(--color-accent);
@@ -954,8 +948,7 @@ main {
   align-items: center;
   gap: 0.875rem;
   font-family: var(--font-ui);
-  text-transform: uppercase;
-  letter-spacing: 0.15em;
+  letter-spacing: 0.02em;
   font-size: 0.75rem;
 }
 
@@ -1581,8 +1574,7 @@ main {
 
 .headphones-overlay-button {
   font-family: var(--font-ui);
-  text-transform: uppercase;
-  letter-spacing: 0.15em;
+  letter-spacing: 0.02em;
   font-size: 0.875rem;
   background: transparent;
   color: var(--color-text);
@@ -1636,8 +1628,7 @@ main {
 .about-back {
   display: inline-block;
   font-family: var(--font-ui);
-  text-transform: uppercase;
-  letter-spacing: 0.15em;
+  letter-spacing: 0.02em;
   font-size: 0.75rem;
   color: var(--color-text);
   text-decoration: none;
@@ -1701,8 +1692,7 @@ main {
 
 .about-section h2 {
   font-family: var(--font-ui);
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.02em;
   font-size: 0.8125rem;
   font-weight: normal;
   color: var(--color-accent);
@@ -1736,8 +1726,7 @@ main {
   color: var(--color-accent);
   font-family: var(--font-ui);
   font-size: 0.85rem;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  letter-spacing: 0.02em;
   margin-top: 1.5rem;
   margin-bottom: 0.4rem;
 }
@@ -1776,8 +1765,7 @@ main {
   color: var(--color-accent);
   font-family: var(--font-ui);
   font-size: 0.75rem;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  letter-spacing: 0.02em;
   margin-top: 1rem;
   margin-bottom: 0.4rem;
   opacity: 0.85;
@@ -2006,8 +1994,7 @@ main {
 .loading-card-label {
   font-family: var(--font-data);
   font-size: 0.6875rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
+  letter-spacing: 0.04em;
   opacity: 0.65;
   margin-bottom: 0.875rem;
   border-bottom: 1px solid rgba(10, 10, 10, 0.18);

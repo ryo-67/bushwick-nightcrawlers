@@ -54,7 +54,7 @@ export class HeadphonesTag {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'headphones-overlay-button';
-    button.textContent = 'Got it';
+    button.textContent = 'got it';
     button.setAttribute('aria-label', 'Dismiss headphones recommendation');
     button.addEventListener('click', () => this.dismissOverlay());
 

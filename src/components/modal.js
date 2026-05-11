@@ -7,9 +7,9 @@ const ALLEY_FRAMING = 'the alley between Mr Kiwi and the JMZ';
 const ALLEY_MEET_FRAMING = 'where the rats meet';
 const RASH_CLOSED_NOTE = '[closed February 2026]';
 const REACTIONS = [
-  { type: 'helpful', label: 'Helpful' },
-  { type: 'funny', label: 'Funny' },
-  { type: 'cool', label: 'Cool' },
+  { type: 'helpful', label: 'helpful' },
+  { type: 'funny', label: 'funny' },
+  { type: 'cool', label: 'cool' },
 ];
 
 // First-visit hint above the alley mini-cards. Auto-dismisses on
@@ -238,15 +238,15 @@ export class Modal {
     if (!btn) return;
     if (state === 'loading') {
       btn.disabled = true;
-      btn.textContent = 'Loading…';
+      btn.textContent = 'loading…';
       btn.title = 'audio loading…';
     } else if (state === 'idle') {
       btn.disabled = false;
-      btn.textContent = 'Play';
+      btn.textContent = 'play';
       btn.title = '';
     } else if (state === 'playing') {
       btn.disabled = false;
-      btn.textContent = 'Pause';
+      btn.textContent = 'pause';
       btn.title = '';
     }
   }
@@ -374,7 +374,7 @@ export class Modal {
     play.disabled = true;
     play.title = 'audio loading…';
     play.setAttribute('aria-label', ariaLabel);
-    play.textContent = 'Play';
+    play.textContent = 'play';
     wrap.appendChild(play);
 
     this.oscilloscope = new Oscilloscope();
@@ -500,7 +500,7 @@ export class Modal {
     if (reviewer.elite) {
       const elite = document.createElement('span');
       elite.className = 'reviewer-elite';
-      elite.textContent = 'Elite';
+      elite.textContent = 'elite';
       meta.appendChild(elite);
     }
 

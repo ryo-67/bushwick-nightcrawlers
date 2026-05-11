@@ -48,7 +48,7 @@ export const venues = {
   },
   'alley': {
     id: 'alley',
-    displayName: 'The alley',
+    displayName: 'The Alley',
     address: 'Behind Market Hotel',
     reviewerId: null,
     photoPath: 'assets/photos/alley.webp',
