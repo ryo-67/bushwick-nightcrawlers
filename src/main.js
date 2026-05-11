@@ -41,6 +41,19 @@ function setupPinTooltip() {
   function populate(venue) {
     tooltip.replaceChildren();
 
+    // Locked alley: show only the gating message, no photo / no CTA.
+    // Same copy as the mobile tap toast so messaging is consistent.
+    const lockedAlley = venue.id === 'alley' && !isAlleyUnlocked();
+    if (lockedAlley) {
+      tooltip.classList.add('pin-tooltip-locked');
+      const msg = document.createElement('div');
+      msg.className = 'pin-tooltip-locked-message';
+      msg.textContent = ALLEY_LOCKED_MESSAGE;
+      tooltip.appendChild(msg);
+      return;
+    }
+    tooltip.classList.remove('pin-tooltip-locked');
+
     if (venue.photoPath) {
       const img = document.createElement('img');
       img.className = 'pin-tooltip-photo';
@@ -130,7 +143,57 @@ let modalRef = null;
 let currentRatGen = null;
 let currentRatGenVenueId = null;
 let playClickHandler = null;
-let pendingAlleyReveal = false;
+
+// Alley pin is always rendered. Locked (greyed) until the user has
+// visited 5 other venues; then unlocks with a subtle pulsing glow.
+// The threshold lives here so it can be tuned in one place. The
+// gating copy is shared between the desktop hover tooltip and the
+// mobile tap toast so messaging is consistent across surfaces.
+const ALLEY_UNLOCK_THRESHOLD = 5;
+const ALLEY_LOCKED_MESSAGE =
+  "the rats don't know you yet. come back when you've met more of us.";
+
+function getVisitedVenuesCount() {
+  try {
+    let count = 0;
+    for (const key of Object.keys(localStorage)) {
+      if (
+        key.startsWith('bushwick.visited.') &&
+        key !== 'bushwick.visited.alley'
+      ) {
+        count++;
+      }
+    }
+    return count;
+  } catch {
+    return 0;
+  }
+}
+
+function isAlleyUnlocked() {
+  return getVisitedVenuesCount() >= ALLEY_UNLOCK_THRESHOLD;
+}
+
+function updateAlleyPinState() {
+  const alleyPin = document.querySelector('.pin[data-pin-id="alley"]');
+  if (!alleyPin) return;
+  alleyPin.dataset.alleyState = isAlleyUnlocked() ? 'unlocked' : 'locked';
+}
+
+function showAlleyLockedToast() {
+  let toast = document.querySelector('.alley-locked-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.className = 'alley-locked-toast';
+    toast.textContent = ALLEY_LOCKED_MESSAGE;
+    document.body.appendChild(toast);
+  }
+  toast.dataset.state = 'visible';
+  clearTimeout(toast._hideTimer);
+  toast._hideTimer = setTimeout(() => {
+    toast.dataset.state = 'hidden';
+  }, 3600);
+}
 
 // Read the video's natural dimensions and lock the pin-layer to the
 // same aspect ratio. Pin percentages are relative to the layer; the
@@ -149,6 +212,10 @@ function syncPinLayerToMapDimensions() {
     if (w > 0 && h > 0) {
       layer.style.aspectRatio = `${w} / ${h}`;
     }
+    // Re-center the mobile scroll viewport now that the aspect ratio
+    // is locked — the layer's resolved height may differ from the
+    // CSS fallback, so the centroid calculation needs a fresh run.
+    centerMapOnVenueCluster();
   }
 
   if (video.readyState >= 1) {
@@ -163,51 +230,49 @@ function setupPinPositions() {
   // Apply mapCoordinates from venues.js as inline top/left on each
   // static pin in index.html. venues.js is the single source of
   // truth for pin placement; tuning a pin is a one-file change.
+  // Also attach a venue-name label per pin — hidden on desktop via
+  // CSS, shown on mobile only. Alley is excluded; its locked/
+  // unlocked styling carries the visual meaning there.
   for (const pin of document.querySelectorAll('.pin')) {
     const venue = venues[pin.dataset.pinId];
     if (!venue || !venue.mapCoordinates) continue;
     const { x, y } = venue.mapCoordinates;
     pin.style.left = `${x}%`;
     pin.style.top = `${y}%`;
+
+    if (venue.id !== 'alley' && !pin.querySelector('.pin-label')) {
+      const label = document.createElement('span');
+      label.className = 'pin-label';
+      label.textContent = venue.displayName;
+      pin.appendChild(label);
+    }
   }
 }
 
-function getAlleyPin() {
-  return document.querySelector('.pin[data-pin-id="alley"]');
-}
+// Mobile-only: the .map-wrapper is overflow:auto with the map at 200%
+// width. Scroll the viewport to the centroid of the venue cluster on
+// first paint so the user sees the action area immediately rather
+// than the upper-left corner.
+function centerMapOnVenueCluster() {
+  const wrapper = document.querySelector('.map-wrapper');
+  if (!wrapper) return;
+  if (!window.matchMedia('(max-width: 768px)').matches) return;
 
-function setupAlleyPinReveal() {
-  const alleyPin = getAlleyPin();
-  if (!alleyPin) return;
-
-  // Returning visitor: alley already unlocked, render visible immediately.
-  // First-time / partial visitor: hide until threshold crosses.
-  if (engine.hasVisitedAllReviewVenues()) {
-    alleyPin.classList.remove('is-hidden');
-  } else {
-    alleyPin.classList.add('is-hidden');
-  }
-
-  // Listener arms the reveal; the actual fade-in is deferred to modal-close
-  // so the user is looking at the map when it happens.
-  window.addEventListener('bushwick:all-venues-visited', () => {
-    pendingAlleyReveal = true;
+  requestAnimationFrame(() => {
+    const sw = wrapper.scrollWidth;
+    const sh = wrapper.scrollHeight;
+    const cw = wrapper.clientWidth;
+    const ch = wrapper.clientHeight;
+    // Centroid of the 10-venue spread: roughly 45% x, 58% y of the
+    // map. Updated if venues.js coordinates shift significantly.
+    const centerX = sw * 0.45 - cw / 2;
+    const centerY = sh * 0.58 - ch / 2;
+    wrapper.scrollTo({
+      left: Math.max(0, centerX),
+      top: Math.max(0, centerY),
+      behavior: 'instant',
+    });
   });
-}
-
-function revealAlleyPin() {
-  const alleyPin = getAlleyPin();
-  if (!alleyPin) return;
-  alleyPin.classList.remove('is-hidden');
-  // Force reflow so the next class addition triggers the animation
-  // even if both class changes happen in the same frame.
-  void alleyPin.offsetWidth;
-  alleyPin.classList.add('is-revealing');
-  alleyPin.addEventListener(
-    'animationend',
-    () => alleyPin.classList.remove('is-revealing'),
-    { once: true }
-  );
 }
 
 function syncPlayState() {
@@ -356,10 +421,10 @@ function handleModalClose() {
   modalRef?.oscilloscope?.dispose();
   beds.stopActiveBed();
 
-  if (pendingAlleyReveal) {
-    pendingAlleyReveal = false;
-    revealAlleyPin();
-  }
+  // Refresh alley state: visiting a venue may have just crossed
+  // the unlock threshold. The state attribute drives both the
+  // pin's locked/unlocked CSS and the tooltip text on next hover.
+  updateAlleyPinState();
 }
 
 function setupHeaderAudioControls() {
@@ -476,11 +541,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   syncPinLayerToMapDimensions();
   setupPinPositions();
+  updateAlleyPinState();
+  centerMapOnVenueCluster();
   const tooltip = setupPinTooltip();
   setupHeaderModeToggle();
   setupHeaderAudioControls();
   setupHeaderReset();
-  setupAlleyPinReveal();
 
   const mapWrapper = document.querySelector('.map-wrapper') || document.body;
   mapWrapper.addEventListener('click', (event) => {
@@ -488,6 +554,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!pin) return;
     const pinId = pin.dataset.pinId;
     if (!pinId) return;
+
+    // Locked alley: surface the gating message via toast instead of
+    // opening the modal. Desktop hover tooltip carries the same copy
+    // (handled in setupPinTooltip).
+    if (pinId === 'alley' && !isAlleyUnlocked()) {
+      tooltip.hide();
+      showAlleyLockedToast();
+      return;
+    }
+
     tooltip.hide();
     modalRef.open(pinId);
   });
