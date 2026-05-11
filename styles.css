@@ -21,6 +21,16 @@
 
 html,
 body {
+  /* Explicit bg so iOS Safari elastic-scroll overscroll doesn't
+     reveal the layer behind the wrapper. The map-wrapper's
+     overflow:auto on mobile is the actual scroll surface; without
+     this, hard upward pan bleeds the map content above the
+     header. */
+  background-color: var(--color-bg);
+}
+
+html,
+body {
   margin: 0;
   padding: 0;
 }
@@ -181,12 +191,23 @@ main {
    `data-alley-just-unlocked` flag set in main.js when state
    transitions live), then a steady pulse takes over. On reload
    the flag isn't present so only the pulse runs — preserves the
-   pulse without re-playing the dramatic moment. */
+   pulse without re-playing the dramatic moment.
+   Explicit filter:none + opacity:1 + cursor:pointer clear the
+   locked state's grayscale + dimmed cursor when the state flips
+   live (some browsers cache the previous filter value until
+   reflow). main.js forces a reflow on the transition as a
+   belt-and-suspenders. */
 .pin[data-pin-id='alley'][data-alley-state='unlocked'] {
+  filter: none;
+  opacity: 1;
+  cursor: pointer;
   animation: alleyPulse 2s ease-in-out infinite;
 }
 
 .pin[data-pin-id='alley'][data-alley-state='unlocked'][data-alley-just-unlocked='true'] {
+  filter: none;
+  opacity: 1;
+  cursor: pointer;
   animation:
     alleyUnlockBurst 1.2s ease-out 1,
     alleyPulse 2s ease-in-out 1.2s infinite;
@@ -433,7 +454,7 @@ main {
   width: 240px;
   height: 240px;
   aspect-ratio: 1 / 1;
-  border-radius: 4px;
+  border-radius: 0;
   object-fit: cover;
   object-position: center;
   flex-shrink: 0;
@@ -562,7 +583,7 @@ main {
   width: 64px;
   height: 64px;
   flex-shrink: 0;
-  border-radius: 50%;
+  border-radius: 0;
   border: 1px solid rgba(184, 255, 0, 0.3);
   object-fit: cover;
   background: rgba(197, 191, 174, 0.05);
@@ -1198,7 +1219,12 @@ main {
     height: 100dvh;
     max-height: 100dvh;
     margin: 0;
-    padding: var(--space-md);
+    /* No horizontal padding — each section (headline, review
+       body, alley header, etc.) carries its own 1rem inset so
+       the sticky headline's opaque background can extend to the
+       sheet edges without leaving a strip of card content
+       visible alongside it. */
+    padding: 0;
     background: var(--color-bg);
     border-radius: 1rem 1rem 0 0;
     border-left: none;
@@ -1215,6 +1241,22 @@ main {
     transform: translateY(0);
   }
 
+  /* With .modal-card padding zeroed, each non-sticky child gets
+     its own 1rem horizontal inset so the sticky headline's
+     opaque background can run edge-to-edge without a card-
+     padding strip beside it. .modal-venue-headline carries its
+     own 1rem padding via its mobile rule. */
+  .modal-card > *:not(.modal-venue-headline) {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  /* Bottom padding for the last child so content doesn't hug the
+     sheet bottom edge. */
+  .modal-card > *:last-child {
+    padding-bottom: 1rem;
+  }
+
   /* Drag handle is now a real DOM element inside .modal-venue-
      headline (built in modal.js). Pseudo-element approach removed
      because it competed with the sticky headline for top:0 and
@@ -1223,7 +1265,10 @@ main {
   /* Sticky title bar — carries drag handle, venue name, AND close
      button. All three pin to the top of the scrolling sheet. The
      headline is a flex column on mobile so the drag handle sits
-     above the title/close row. */
+     above the title/close row. Explicit horizontal padding matches
+     other sheet content (.modal-card has 1rem horizontal); without
+     this, photos that pad to the card edges would bleed past the
+     title's right edge. */
   .modal-venue-headline {
     position: sticky;
     top: 0;
@@ -1231,8 +1276,7 @@ main {
     background: var(--color-bg);
     flex-direction: column;
     margin: 0 0 0.5rem;
-    padding-top: 0.75rem;
-    padding-bottom: 0.5rem;
+    padding: 0.75rem 1rem 0.5rem;
     font-size: 1.375rem;
     line-height: 1.15;
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
@@ -1272,12 +1316,17 @@ main {
     margin-top: -0.25rem;
   }
 
-  .alley-header {
-    padding: 0 0 var(--space-sm);
+  /* Alley card padding aligned with other mobile sheets. The
+     module-scope rule sets 2rem on desktop; this override gives
+     mobile alley zero padding so the universal child-padding
+     rule above handles the 1rem inset for headline + alley-
+     header + cards + hint identically. */
+  .modal-card.alley-modal {
+    padding: 0;
   }
 
-  .alley-cards {
-    padding: 0;
+  .alley-header {
+    padding-bottom: var(--space-sm);
   }
 
   /* Sheet fills the viewport; remove the page header from layout
@@ -1321,14 +1370,10 @@ main {
     text-align: center;
   }
 
-  /* Tombstone sheet sizes to content rather than filling 100dvh —
-     Rash has a short photo + closure label + epitaph and looks
-     stranded in a full-viewport sheet. */
-  .modal-card.modal-card-tombstone {
-    height: auto;
-    max-height: 100dvh;
-    min-height: 50vh;
-  }
+  /* V7: removed tombstone height overrides — with the Rash
+     epitaph added in V6, the sheet fills 100dvh naturally via
+     the default .modal-card rule. The .modal-card-tombstone
+     class remains on the element for any future variant styling. */
 
   /* Full-bleed PLAY button: chunky touch target across the sheet
      width with comfortable vertical padding. */
@@ -1467,16 +1512,15 @@ main {
     width: 100%;
   }
 
-  /* Rat photo: 70% sheet width centered, square aspect, modest
-     radius. Replaces the prior fixed 160x160 which felt cramped
-     in the bottom-sheet layout. */
+  /* Rat photo: 70% sheet width centered, square aspect, no
+     radius (V7: rounded corners removed across photos). */
   .rat-selfie {
     width: 70%;
     max-width: 70%;
     height: auto;
     aspect-ratio: 1 / 1;
     object-fit: cover;
-    border-radius: 0.5rem;
+    border-radius: 0;
     margin: 0.5rem auto;
     display: block;
   }
@@ -1499,13 +1543,14 @@ main {
     height: 70px;
   }
 
-  /* Alley + tombstone photos go full-width on mobile. */
+  /* Alley + tombstone photos go full-width on mobile. Square
+     corners per V7. */
   .modal-venue-photo,
   .modal-venue-photo img {
     width: 100%;
     max-width: 100%;
     height: auto;
-    border-radius: 0.5rem;
+    border-radius: 0;
     margin: 0.5rem 0;
   }
 
@@ -1518,6 +1563,49 @@ main {
     padding: 0.625rem 0.875rem;
     font-size: 0.75rem;
     min-height: 2.5rem;
+  }
+
+  /* Pagination row stretches edge-to-edge with chunky touch
+     targets on the arrows and the counter centered between. */
+  .review-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0.75rem 0;
+    margin: 0.5rem 0;
+    gap: 1rem;
+  }
+
+  .pagination-arrow {
+    min-width: 3rem;
+    min-height: 3rem;
+    font-size: 1.25rem;
+    padding: 0.5rem 1rem;
+    background: transparent;
+    color: var(--color-accent);
+    border: 1px solid var(--color-accent);
+    border-radius: 0;
+  }
+
+  .pagination-arrow:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+
+  .pagination-counter {
+    font-size: 0.75rem;
+    opacity: 0.7;
+  }
+
+  /* Alley photo: shift visible region downward to crop the dark
+     underside-of-the-JMZ-bridge band at the top of the source
+     image. */
+  .alley-modal .modal-venue-photo img,
+  .alley-photo,
+  .alley-hero-image {
+    object-position: center 30%;
+    aspect-ratio: 16 / 9;
   }
 
   /* Tombstone epitaph: tighter type for the sheet width. */
@@ -1741,6 +1829,34 @@ main {
   color: var(--color-text);
   text-decoration: underline;
   text-decoration-color: var(--color-accent);
+}
+
+/* About page links across body content + citations + epigraph
+   resolve to accent green. Explicit values for unvisited AND
+   visited because browsers default unvisited to blue and restrict
+   :visited styling — V6's `a:visited { color: inherit }` alone
+   wasn't enough; unvisited links rendered browser-default blue. */
+.about-page a,
+.about-page a:visited {
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+.about-page a:hover,
+.about-page a:focus-visible {
+  text-decoration-thickness: 2px;
+  outline: none;
+}
+
+/* Override .credit-list and .about-back which set their own color
+   so the about-page rule above is the single source of truth. */
+.about-page .credit-list a,
+.about-page .credit-list a:visited,
+.about-page .about-back,
+.about-page .about-back:visited {
+  color: var(--color-accent);
 }
 
 .footnote {
@@ -2202,6 +2318,9 @@ main {
     padding: 0.75rem 0 0;
   }
 
+  /* V7: tightened the three loading cards so they fit on
+     iPhone-13-class viewports without the user needing to scroll.
+     Scroll is still available as fallback on smaller devices. */
   .loading-card {
     position: relative;
     --card-rotate: 0deg;
@@ -2214,15 +2333,35 @@ main {
     --drag-y: 0px;
     width: min(380px, 100%);
     transform: translateY(12px);
-    padding: 1.25rem 1.25rem;
+    padding: 1rem 1.25rem;
+    margin-bottom: 0.5rem;
   }
 
   .loading-card[data-state="visible"] {
     transform: translateY(0);
   }
 
+  .loading-card-label {
+    font-size: 0.625rem;
+    letter-spacing: 0.06em;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+
   .loading-card-body p {
     font-size: 0.875rem;
+    line-height: 1.45;
+    margin-bottom: 0.5rem;
+  }
+
+  .loading-card-body p:last-child {
+    margin-bottom: 0;
+  }
+
+  .loading-card-body p.is-quote {
+    font-size: 0.8125rem;
+    margin: 0.5rem 0;
+    padding-left: 0.75rem;
   }
 
   .loading-rat {

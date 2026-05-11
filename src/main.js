@@ -188,6 +188,12 @@ function updateAlleyPinState() {
   // without the flag, so only the steady pulse runs.
   if (prevState === 'locked' && newState === 'unlocked') {
     alleyPin.dataset.alleyJustUnlocked = 'true';
+    // Force a reflow so the locked state's filter:grayscale(1)
+    // is cleanly released — some browsers cache the prior filter
+    // value until the next layout pass. The CSS already declares
+    // filter:none in the unlocked rule, but a reflow guarantees
+    // the cascade re-evaluates after the attribute flip.
+    void alleyPin.offsetHeight;
     setTimeout(() => {
       if (alleyPin.dataset.alleyJustUnlocked === 'true') {
         delete alleyPin.dataset.alleyJustUnlocked;

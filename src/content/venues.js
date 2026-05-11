@@ -7,9 +7,9 @@ export const venues = {
     photoPath: 'assets/photos/market-hotel.webp',
     bedComponents: ['solo-cup-hits', 'piano-trio-bleed'],
     mapCoordinates: { x: 34, y: 54 },
-    // Right of the pin to avoid colliding with the Mr. Kiwi /
-    // Trifecta cluster sitting just below-left at 250% map scale.
-    labelPosition: 'right',
+    // V7: above the pin (changed from 'right'). Right placement
+    // collided with neighboring labels at 250% scale.
+    labelPosition: 'top',
   },
   'mr-kiwi': {
     id: 'mr-kiwi',
@@ -19,9 +19,9 @@ export const venues = {
     photoPath: 'assets/photos/mr-kiwi.webp',
     bedComponents: ['refrigerator-hum', 'fluorescent-buzz', 'spanish-radio', 'door-bell', 'conversation-murmur'],
     mapCoordinates: { x: 28, y: 60 },
-    // Above the pin so the label doesn't push down onto Trifecta
-    // (x:20, y:62 — directly below-left).
-    labelPosition: 'top',
+    // V7: default bottom placement (changed from 'top'). Top
+    // collided with Market Hotel's new top label.
+    labelPosition: 'bottom',
   },
   'trifecta': {
     id: 'trifecta',
