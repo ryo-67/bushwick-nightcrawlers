@@ -186,27 +186,17 @@ function updateAlleyPinState() {
   // that CSS reads to play the burst animation, then clear after
   // the burst completes (1.2s). Reloads find the pin unlocked but
   // without the flag, so only the steady pulse runs.
-  //
-  // Safari iOS has been observed retaining the locked state's
-  // filter:grayscale(1) composite even after the cascade clears.
-  // The single-reflow approach from V7 wasn't enough. V8 escalates
-  // to a two-phase update: briefly clear the state attribute so
-  // no alley-state rule applies, reflow, then re-apply 'unlocked'
-  // in the next frame. The intermediate "no state" reflow forces
-  // Safari to release any cached filter compositing.
+  // V9: V7/V8's filter-related defensive reflows are gone since
+  // the lock state is now driven by a two-asset swap (alley.webp
+  // vs alley-gray.webp via display toggle), not CSS filter. No
+  // compositing cache to defeat.
   if (prevState === 'locked' && newState === 'unlocked') {
-    delete alleyPin.dataset.alleyState;
-    void alleyPin.offsetHeight;
-    requestAnimationFrame(() => {
-      alleyPin.dataset.alleyState = 'unlocked';
-      alleyPin.dataset.alleyJustUnlocked = 'true';
-      void alleyPin.offsetHeight;
-      setTimeout(() => {
-        if (alleyPin.dataset.alleyJustUnlocked === 'true') {
-          delete alleyPin.dataset.alleyJustUnlocked;
-        }
-      }, 1300);
-    });
+    alleyPin.dataset.alleyJustUnlocked = 'true';
+    setTimeout(() => {
+      if (alleyPin.dataset.alleyJustUnlocked === 'true') {
+        delete alleyPin.dataset.alleyJustUnlocked;
+      }
+    }, 1300);
   }
 }
 

@@ -176,15 +176,39 @@ main {
 /* Alley pin: locked (visited < threshold) and unlocked states. The
    pin is always rendered; visual treatment indicates whether the
    experience is available. Locked taps surface a toast (mobile) or
-   the gating message in the hover tooltip (desktop). */
+   the gating message in the hover tooltip (desktop).
+   V9: switched from CSS filter:grayscale(1) (which persisted on
+   Safari iOS even after the rule no longer matched — V7/V8 CSS-
+   level fixes didn't take) to a two-asset swap. The pin renders
+   both alley.webp (color) and alley-gray.webp (grayscale); CSS
+   toggles display:none between them based on data-alley-state.
+   Pre-baked grayscale defeats every form of filter compositing
+   cache. */
 .pin[data-pin-id='alley'][data-alley-state='locked'] {
   opacity: 0.4;
-  filter: grayscale(1);
   cursor: not-allowed;
 }
 
 .pin[data-pin-id='alley'][data-alley-state='locked']:hover {
   opacity: 0.45;
+}
+
+/* Default + locked: show the pre-baked grayscale image. */
+.pin[data-pin-id='alley'] .pin-img-color {
+  display: none;
+}
+
+.pin[data-pin-id='alley'] .pin-img-gray {
+  display: block;
+}
+
+/* Unlocked: swap to the color image, hide grayscale. */
+.pin[data-pin-id='alley'][data-alley-state='unlocked'] .pin-img-color {
+  display: block;
+}
+
+.pin[data-pin-id='alley'][data-alley-state='unlocked'] .pin-img-gray {
+  display: none;
 }
 
 /* Unlocked alley: a one-shot burst plays first (driven by the
@@ -198,31 +222,17 @@ main {
    reflow). main.js forces a reflow on the transition as a
    belt-and-suspenders. */
 .pin[data-pin-id='alley'][data-alley-state='unlocked'] {
-  filter: none;
-  -webkit-filter: none;
   opacity: 1;
   cursor: pointer;
   animation: alleyPulse 2s ease-in-out infinite;
 }
 
 .pin[data-pin-id='alley'][data-alley-state='unlocked'][data-alley-just-unlocked='true'] {
-  filter: none;
-  -webkit-filter: none;
   opacity: 1;
   cursor: pointer;
   animation:
     alleyUnlockBurst 1.2s ease-out 1,
     alleyPulse 2s ease-in-out 1.2s infinite;
-}
-
-/* Belt-and-suspenders: explicit filter:none on the img child too.
-   The grayscale filter is declared on the .pin parent, which
-   composites all descendants — but Safari iOS has been observed
-   retaining the composite even after the cascade clears. This
-   rule defeats any cached/composed filter at the image level. */
-.pin[data-pin-id='alley'][data-alley-state='unlocked'] img {
-  filter: none;
-  -webkit-filter: none;
 }
 
 @keyframes alleyPulse {
@@ -1360,15 +1370,21 @@ main {
     padding: 0;
   }
 
-  .alley-header,
-  .alley-cards,
-  .alley-cards-hint {
-    padding-left: 1rem;
-    padding-right: 1rem;
+  /* V9: rewrote as shorthand padding declarations to defeat any
+     module-scope shorthand override (V8's longhand padding-left/
+     right should have won by cascade order but ship reports
+     showed alley still edge-to-edge — using shorthand makes the
+     full padding rectangle explicit). */
+  .alley-header {
+    padding: 0 1rem var(--space-sm);
   }
 
-  .alley-header {
-    padding-bottom: var(--space-sm);
+  .alley-cards {
+    padding: 0 1rem var(--space-lg);
+  }
+
+  .alley-cards-hint {
+    padding: 0 1rem;
   }
 
   /* Photo inside alley-header fills the padded container width
@@ -1603,24 +1619,28 @@ main {
     margin: 0.5rem 0;
   }
 
-  /* Tombstone (Rash) photo: 16:9 wrapper with object-fit:cover
-     so the firetruck/fire source fills edge-to-edge without
-     letterboxing. The wrapper gets the same 1rem horizontal
-     inset as the rest of the sheet body — no green border
-     bleed past the sheet edge. */
+  /* Tombstone (Rash) photo: V9 drops the forced 16:9 aspect.
+     V8's aspect+cover produced visible black banding because the
+     source photo doesn't naturally fit 16:9. Letting the image
+     display at natural ratio eliminates the letterbox/banding
+     entirely. Keeps the module-scope rotation + border for the
+     paste-up feel; only overrides aspect + height behavior. The
+     1rem horizontal inset matches location sheets via the
+     universal child-padding rule. */
   .modal-card-tombstone .modal-venue-photo {
-    aspect-ratio: 16 / 9;
+    aspect-ratio: auto;
     width: 100%;
-    overflow: hidden;
+    overflow: visible;
     margin: 0.5rem 0;
   }
 
   .modal-card-tombstone .modal-venue-photo img {
     width: 100%;
-    height: 100%;
-    object-fit: cover;
+    height: auto;
+    object-fit: initial;
     border-radius: 0;
     margin: 0;
+    display: block;
   }
 
   /* Larger touch targets for the reaction buttons. */
@@ -1772,6 +1792,13 @@ main {
 .about-page {
   background: var(--color-bg);
   color: var(--color-text);
+  /* Belt-and-suspenders for the iPhone notch: pad the body itself
+     so the about-title (which sits in .about-main, NOT inside the
+     sticky .about-header) clears the status bar. .about-header
+     ALSO has its own safe-area padding-top, but applying to body
+     too guarantees title content stays below the status bar even
+     if the header is empty / hidden / has unexpected height. */
+  padding-top: env(safe-area-inset-top);
 }
 
 .about-header {
@@ -2361,8 +2388,9 @@ main {
   }
 
   /* Cards area scrolls independently; status + CTA stay fixed at
-     bottom. mask-image fades the bottom edge so content doesn't
-     bump abruptly against the footer. */
+     bottom. V9: removed the mask-image fade — V8 sizing made
+     all three cards fit without scrolling, so the fade is now
+     misleading (suggests scrollable content where none exists). */
   .loading-cards {
     flex: 1 1 auto;
     flex-direction: column;
@@ -2372,18 +2400,8 @@ main {
     padding: 1rem 0 1rem;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    mask-image: linear-gradient(
-      to bottom,
-      black 0%,
-      black calc(100% - 1.5rem),
-      transparent 100%
-    );
-    -webkit-mask-image: linear-gradient(
-      to bottom,
-      black 0%,
-      black calc(100% - 1.5rem),
-      transparent 100%
-    );
+    mask-image: none;
+    -webkit-mask-image: none;
   }
 
   /* Footer is the fixed bottom strip; opaque background prevents
