@@ -335,6 +335,35 @@ export class Modal {
     return card;
   }
 
+  // Build a sticky-header h1 wrapping the title text, the close
+  // button, and (on mobile) a drag-handle affordance. Each builder
+  // calls this instead of constructing the headline inline so the
+  // structure stays consistent across review / ambient / alley /
+  // tombstone variants. Caller is responsible for appending the
+  // returned node to the card.
+  buildModalHeadline(card, titleText) {
+    const headline = document.createElement('h1');
+    headline.className = 'modal-venue-headline';
+
+    const handle = document.createElement('div');
+    handle.className = 'modal-sheet-handle';
+    handle.setAttribute('aria-hidden', 'true');
+    headline.appendChild(handle);
+
+    const row = document.createElement('div');
+    row.className = 'modal-venue-headline-row';
+    const text = document.createElement('span');
+    text.className = 'modal-venue-headline-text';
+    text.textContent = titleText;
+    row.appendChild(text);
+
+    const close = card.querySelector('.modal-close');
+    if (close) row.appendChild(close);
+
+    headline.appendChild(row);
+    return headline;
+  }
+
   buildPlayOscBlock(ariaLabel) {
     const wrap = document.createElement('div');
     wrap.className = 'play-osc-block';
@@ -388,15 +417,7 @@ export class Modal {
   buildReviewCard(venue, reviewer, review, allReviews = [review]) {
     const card = this.buildCardShell(`Review of ${venue.displayName} by ${reviewer.displayName}`);
 
-    const headline = document.createElement('h1');
-    headline.className = 'modal-venue-headline';
-    headline.textContent = venue.displayName;
-    // Move the close button into the headline so the sticky title
-    // bar carries both on mobile (sheet variant). On desktop the
-    // close is flex-positioned at the row's end — same visual
-    // result as the prior absolute positioning.
-    const close = card.querySelector('.modal-close');
-    if (close) headline.appendChild(close);
+    const headline = this.buildModalHeadline(card, venue.displayName);
     card.appendChild(headline);
 
     if (allReviews.length >= 2) {
@@ -540,11 +561,7 @@ export class Modal {
     // because alley routes to buildAlleyCard.
     const card = this.buildCardShell(`${venue.displayName} (ambient)`);
 
-    const name = document.createElement('h1');
-    name.className = 'modal-venue-headline';
-    name.textContent = venue.displayName;
-    const close = card.querySelector('.modal-close');
-    if (close) name.appendChild(close);
+    const name = this.buildModalHeadline(card, venue.displayName);
     card.appendChild(name);
 
     const photo = buildVenuePhoto(venue);
@@ -562,17 +579,13 @@ export class Modal {
     const card = this.buildCardShell(`${venue.displayName} — where the rats meet`);
     card.classList.add('alley-modal');
 
-    // Sticky title bar: headline + close, direct child of card so
-    // position:sticky pins it across the full scroll range. Photo +
-    // framing live in .alley-header below — they scroll out with
-    // the rest of the body content. On mobile this gives a single
-    // scroll context (the modal card) with only the title region
-    // staying anchored.
-    const name = document.createElement('h1');
-    name.className = 'modal-venue-headline';
-    name.textContent = venue.displayName;
-    const close = card.querySelector('.modal-close');
-    if (close) name.appendChild(close);
+    // Sticky title bar: headline + close + (mobile) drag handle,
+    // direct child of card so position:sticky pins it across the
+    // full scroll range. Photo + framing live in .alley-header
+    // below — they scroll out with the rest of the body content.
+    // On mobile this gives a single scroll context (the modal
+    // card) with only the title region staying anchored.
+    const name = this.buildModalHeadline(card, venue.displayName);
     card.appendChild(name);
 
     const header = document.createElement('div');
@@ -790,12 +803,13 @@ export class Modal {
 
   buildTombstoneCard(venue) {
     const card = this.buildCardShell(`${venue.displayName} (closed)`);
+    // Tombstone variant: short content (photo + closure label +
+    // optional epitaph), so the mobile sheet sizes to content
+    // rather than filling 100dvh. Hook via the modifier class —
+    // mobile CSS overrides height/max-height for this class.
+    card.classList.add('modal-card-tombstone');
 
-    const name = document.createElement('h1');
-    name.className = 'modal-venue-headline';
-    name.textContent = venue.displayName;
-    const close = card.querySelector('.modal-close');
-    if (close) name.appendChild(close);
+    const name = this.buildModalHeadline(card, venue.displayName);
     card.appendChild(name);
 
     const photo = buildVenuePhoto(venue);
@@ -805,6 +819,21 @@ export class Modal {
     closed.className = 'venue-closed-note';
     closed.textContent = RASH_CLOSED_NOTE;
     card.appendChild(closed);
+
+    // Optional epitaph (Rash currently the only tombstone). Array
+    // of strings → one <p> per paragraph; the last paragraph
+    // renders at full opacity (the punchline closer), others at
+    // 0.85 — see .tombstone-epitaph p:last-child in styles.css.
+    if (Array.isArray(venue.tombstoneEpitaph) && venue.tombstoneEpitaph.length) {
+      const epitaph = document.createElement('div');
+      epitaph.className = 'tombstone-epitaph';
+      for (const para of venue.tombstoneEpitaph) {
+        const p = document.createElement('p');
+        p.textContent = para;
+        epitaph.appendChild(p);
+      }
+      card.appendChild(epitaph);
+    }
 
     return card;
   }

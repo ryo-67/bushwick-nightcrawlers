@@ -35,6 +35,14 @@ body {
   overflow-x: hidden;
 }
 
+/* Visited links: project-wide override. Default browser purple
+   reads as unreadable on the dark background — keep visited
+   links the same off-white as unvisited; hover/focus uses the
+   accent green (handled by per-component a:hover rules). */
+a:visited {
+  color: inherit;
+}
+
 body::after {
   content: '';
   position: fixed;
@@ -68,6 +76,11 @@ main {
   height: calc(100vh - 3.5rem);
   overflow: hidden;
   margin: 0 auto;
+  /* z-index + isolation creates a stacking context below the page
+     header (z-index 100) so the 250% mobile scroll content can't
+     visually escape past the wrapper edge during momentum scroll. */
+  z-index: 1;
+  isolation: isolate;
 }
 
 .map-bg {
@@ -164,17 +177,45 @@ main {
   opacity: 0.45;
 }
 
+/* Unlocked alley: a one-shot burst plays first (driven by the
+   `data-alley-just-unlocked` flag set in main.js when state
+   transitions live), then a steady pulse takes over. On reload
+   the flag isn't present so only the pulse runs — preserves the
+   pulse without re-playing the dramatic moment. */
 .pin[data-pin-id='alley'][data-alley-state='unlocked'] {
-  animation: alleyPulse 2.4s ease-in-out infinite;
+  animation: alleyPulse 2s ease-in-out infinite;
+}
+
+.pin[data-pin-id='alley'][data-alley-state='unlocked'][data-alley-just-unlocked='true'] {
+  animation:
+    alleyUnlockBurst 1.2s ease-out 1,
+    alleyPulse 2s ease-in-out 1.2s infinite;
 }
 
 @keyframes alleyPulse {
   0%,
   100% {
-    filter: drop-shadow(0 0 6px rgba(180, 255, 100, 0.25));
+    filter: drop-shadow(0 0 4px rgba(180, 255, 100, 0.3));
+    transform: scale(1);
   }
   50% {
-    filter: drop-shadow(0 0 14px rgba(180, 255, 100, 0.55));
+    filter: drop-shadow(0 0 18px rgba(180, 255, 100, 0.7));
+    transform: scale(1.04);
+  }
+}
+
+@keyframes alleyUnlockBurst {
+  0% {
+    filter: drop-shadow(0 0 0 rgba(180, 255, 100, 0));
+    transform: scale(1);
+  }
+  40% {
+    filter: drop-shadow(0 0 30px rgba(180, 255, 100, 1));
+    transform: scale(1.18);
+  }
+  100% {
+    filter: drop-shadow(0 0 18px rgba(180, 255, 100, 0.7));
+    transform: scale(1.04);
   }
 }
 
@@ -327,11 +368,13 @@ main {
   outline-offset: 2px;
 }
 
+/* Headline is a flex column: drag handle (mobile only) on top,
+   title-row (title text + close button) below. Desktop keeps the
+   handle hidden via .modal-sheet-handle { display: none } so the
+   visual layout matches the prior single-row look. */
 .modal-venue-headline {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 0.75rem;
+  flex-direction: column;
   font-family: var(--font-editorial);
   font-style: italic;
   font-weight: normal;
@@ -339,6 +382,20 @@ main {
   line-height: 1.1;
   margin: 0 0 var(--space-sm) 0;
   color: var(--color-text);
+}
+
+.modal-venue-headline-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+/* Drag handle: rendered in the DOM for every sheet but hidden
+   on desktop. Mobile media query un-hides and adds pill styling. */
+.modal-sheet-handle {
+  display: none;
 }
 
 /* Alley title bar stays anchored at top of the scrolling card so
@@ -786,6 +843,28 @@ main {
   opacity: 0.6;
 }
 
+/* Tombstone epitaph: a few paragraphs that follow the [CLOSED]
+   label. Body serif, slightly muted; the last paragraph lands at
+   full weight as the closing punchline (see :last-child rule). */
+.tombstone-epitaph {
+  margin-top: 1.5rem;
+  max-width: 36rem;
+}
+
+.tombstone-epitaph p {
+  font-family: var(--font-editorial);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--color-text);
+  opacity: 0.85;
+  margin: 0 0 1rem 0;
+}
+
+.tombstone-epitaph p:last-child {
+  margin-bottom: 0;
+  opacity: 1;
+}
+
 .modal-card .oscilloscope {
   display: block;
   width: 100%;
@@ -844,7 +923,10 @@ main {
 .page-header {
   position: sticky;
   top: 0;
-  z-index: 50;
+  /* z-index 100: above .map-wrapper (z-index 1) so the 250%-wide
+     scrolling map can't bleed past the wrapper edge into the
+     header area on momentum-scroll overshoot. */
+  z-index: 100;
   background: var(--color-bg);
   border-bottom: 1px solid rgba(184, 255, 0, 0.15);
   padding: 0.875rem 1.5rem;
@@ -1140,35 +1222,55 @@ main {
     transform: translateY(0);
   }
 
-  /* Drag-handle affordance. Pseudo-element on .modal-card so we
-     don't need to change builder DOM. */
-  .modal-card::before {
-    content: '';
-    position: sticky;
-    top: 0;
-    display: block;
-    width: 2.5rem;
-    height: 0.25rem;
-    margin: -0.25rem auto 0.5rem;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 999px;
-  }
+  /* Drag handle is now a real DOM element inside .modal-venue-
+     headline (built in modal.js). Pseudo-element approach removed
+     because it competed with the sticky headline for top:0 and
+     caused visible jitter / disappearance on body scroll. */
 
-  /* Sticky title bar — carries the venue name AND the close button
-     (close is now a flex child of .modal-venue-headline; see the
-     universal rule above). Opaque background prevents body content
-     bleeding through during scroll. */
+  /* Sticky title bar — carries drag handle, venue name, AND close
+     button. All three pin to the top of the scrolling sheet. The
+     headline is a flex column on mobile so the drag handle sits
+     above the title/close row. */
   .modal-venue-headline {
     position: sticky;
     top: 0;
-    z-index: 5;
+    z-index: 10;
     background: var(--color-bg);
+    flex-direction: column;
     margin: 0 0 0.5rem;
-    padding-top: 0.25rem;
+    padding-top: 0.75rem;
     padding-bottom: 0.5rem;
     font-size: 1.375rem;
     line-height: 1.15;
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  /* Drag handle sits at the top of the sticky title bar (above the
+     title/close row). Inert (no pointer-events) — it's an
+     affordance signaling drag-to-dismiss, not an interactive
+     control. Gesture dismissal itself is Phase 2. Display block
+     overrides the module-scope display:none that keeps the handle
+     hidden on desktop. */
+  .modal-sheet-handle {
+    display: block;
+    flex-shrink: 0;
+    width: 2.5rem;
+    height: 0.25rem;
+    margin: 0 auto 0.5rem;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 999px;
+    pointer-events: none;
+  }
+
+  /* The title text + close button form the second row of the
+     headline flex column. Inner flex row aligns title-left,
+     close-right. */
+  .modal-venue-headline-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.75rem;
+    width: 100%;
   }
 
   .modal-close {
@@ -1206,6 +1308,35 @@ main {
     line-height: 1.55;
   }
 
+  /* Review body: cancel the desktop fixed-height + inner scroll.
+     The sheet body (.modal-card) is the only scroll container on
+     mobile, so the review text scrolls with the rest of the body. */
+  .review-body {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+    mask-image: none;
+    -webkit-mask-image: none;
+  }
+
+  /* Rat metadata centers under the centered rat photo. Body text
+     stays left-aligned (long prose reads better that way) — only
+     name/handle/location/elite cluster. */
+  .reviewer-info,
+  .reviewer-meta {
+    text-align: center;
+  }
+
+  /* Tombstone sheet sizes to content rather than filling 100dvh —
+     Rash has a short photo + closure label + epitaph and looks
+     stranded in a full-viewport sheet. */
+  .modal-card.modal-card-tombstone {
+    height: auto;
+    max-height: 100dvh;
+    min-height: 50vh;
+  }
+
   /* Full-bleed PLAY button: chunky touch target across the sheet
      width with comfortable vertical padding. */
   .play-button {
@@ -1225,14 +1356,23 @@ main {
     font-size: 0.6875rem;
   }
 
-  /* Pin labels (mobile only); alley pin stays unlabeled. */
+  /* Pin labels (mobile only); alley pin stays unlabeled. Label
+     z-index sits above neighbor pins (z-index 1) so it doesn't get
+     obscured. Active pin (hover/focus) jumps to z-index 3 above
+     everything. */
   .pin {
     overflow: visible;
+    z-index: 1;
+  }
+
+  .pin:hover,
+  .pin:focus-visible {
+    z-index: 3;
   }
 
   /* Pill-style label: dark background, thin border, blurred
-     backdrop. Reads as a discrete annotation against the hand-
-     drawn map rather than floating text. */
+     backdrop. Serif body to read as hand-drawn annotation rather
+     than UI chrome. */
   .pin-label {
     display: block;
     position: absolute;
@@ -1241,19 +1381,52 @@ main {
     transform: translateX(-50%);
     margin-top: 0.3rem;
     white-space: nowrap;
-    font-family: var(--font-ui);
-    font-size: 0.5625rem;
+    font-family: var(--font-editorial);
+    font-style: normal;
+    font-weight: normal;
+    font-size: 0.6875rem;
     line-height: 1;
     color: var(--color-text);
     background: rgba(10, 10, 10, 0.85);
-    padding: 0.2rem 0.5rem;
+    padding: 0.25rem 0.55rem;
     border-radius: 999px;
     border: 1px solid rgba(255, 255, 255, 0.08);
-    letter-spacing: 0.02em;
-    text-transform: lowercase;
+    letter-spacing: 0;
+    text-transform: none;
     pointer-events: none;
     backdrop-filter: blur(2px);
     -webkit-backdrop-filter: blur(2px);
+    z-index: 2;
+  }
+
+  /* Per-venue position overrides via data-position attribute set
+     in setupPinPositions(). Default (no attribute) keeps the
+     bottom layout above. */
+  .pin-label[data-position='top'] {
+    top: auto;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-top: 0;
+    margin-bottom: 0.3rem;
+  }
+
+  .pin-label[data-position='left'] {
+    top: 50%;
+    bottom: auto;
+    left: auto;
+    right: calc(100% + 0.3rem);
+    transform: translateY(-50%);
+    margin: 0;
+  }
+
+  .pin-label[data-position='right'] {
+    top: 50%;
+    bottom: auto;
+    left: calc(100% + 0.3rem);
+    right: auto;
+    transform: translateY(-50%);
+    margin: 0;
   }
 
   .pin[data-pin-id='alley'] .pin-label {
@@ -1353,6 +1526,17 @@ main {
     font-size: 0.75rem;
     min-height: 2.5rem;
   }
+
+  /* Tombstone epitaph: tighter type for the sheet width. */
+  .tombstone-epitaph {
+    max-width: 100%;
+    margin-top: 1.25rem;
+  }
+
+  .tombstone-epitaph p {
+    font-size: 0.875rem;
+    line-height: 1.55;
+  }
 }
 
 .headphones-overlay {
@@ -1442,10 +1626,10 @@ main {
 }
 
 .about-header {
-  padding: var(--space-md) var(--space-lg);
+  padding: 0.75rem 1rem;
   position: sticky;
   top: 0;
-  z-index: 50;
+  z-index: 100;
   background: var(--color-bg);
 }
 

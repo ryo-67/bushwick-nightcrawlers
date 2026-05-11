@@ -177,7 +177,30 @@ function isAlleyUnlocked() {
 function updateAlleyPinState() {
   const alleyPin = document.querySelector('.pin[data-pin-id="alley"]');
   if (!alleyPin) return;
-  alleyPin.dataset.alleyState = isAlleyUnlocked() ? 'unlocked' : 'locked';
+  const newState = isAlleyUnlocked() ? 'unlocked' : 'locked';
+  const prevState = alleyPin.dataset.alleyState;
+  if (prevState === newState) return;
+  alleyPin.dataset.alleyState = newState;
+
+  // First-time unlock in this session: tag with a one-shot flag
+  // that CSS reads to play the burst animation, then clear after
+  // the burst completes (1.2s). Reloads find the pin unlocked but
+  // without the flag, so only the steady pulse runs.
+  if (prevState === 'locked' && newState === 'unlocked') {
+    alleyPin.dataset.alleyJustUnlocked = 'true';
+    setTimeout(() => {
+      if (alleyPin.dataset.alleyJustUnlocked === 'true') {
+        delete alleyPin.dataset.alleyJustUnlocked;
+      }
+    }, 1300);
+  }
+}
+
+function hideAlleyLockedToast() {
+  const toast = document.querySelector('.alley-locked-toast');
+  if (!toast || toast.dataset.state !== 'visible') return;
+  toast.dataset.state = 'hidden';
+  clearTimeout(toast._hideTimer);
 }
 
 function showAlleyLockedToast() {
@@ -244,6 +267,11 @@ function setupPinPositions() {
       const label = document.createElement('span');
       label.className = 'pin-label';
       label.textContent = venue.displayName;
+      // Optional per-venue position override (top / left / right);
+      // venues default to 'bottom' if no labelPosition is set.
+      if (venue.labelPosition) {
+        label.dataset.position = venue.labelPosition;
+      }
       pin.appendChild(label);
     }
   }
@@ -290,6 +318,12 @@ function handleModalOpen(venueId, ctx) {
   // continues playing in the engine's registry as a background voice.
   currentRatGen = null;
   currentRatGenVenueId = null;
+
+  // If the user tapped the locked alley and saw the toast, then
+  // immediately tapped a different (unlocked) pin, the toast is
+  // now stale — dismiss it so it doesn't linger over the new
+  // modal.
+  hideAlleyLockedToast();
 
   // Kick off venue bed (no-op for unmapped venues).
   if (engine.isReady()) {
