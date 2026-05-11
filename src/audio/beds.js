@@ -34,24 +34,24 @@
 const VENUE_BED_MAP = {
   'caffeine-underground': {
     components: [
-      { file: 'cafe.m4a', gainDb: -11 },              // primary
-      { file: 'leaky-pipe.m4a', gainDb: -25 },        // secondary
-      { file: 'foil.m4a', gainDb: -30 },              // tertiary
+      { file: 'cafe.webm', gainDb: -11 },              // primary
+      { file: 'leaky-pipe.webm', gainDb: -25 },        // secondary
+      { file: 'foil.webm', gainDb: -30 },              // tertiary
     ],
   },
   'mood-ring': {
     components: [
-      { file: 'bar.m4a', gainDb: -13 },               // primary
+      { file: 'bar.webm', gainDb: -13 },               // primary
     ],
   },
   'bossa-nova': {
     components: [
-      { file: 'rave.m4a', gainDb: -11 },              // primary
+      { file: 'rave.webm', gainDb: -11 },              // primary
     ],
   },
   'rash': {
     components: [
-      { file: 'firetruck.m4a', gainDb: -19 },         // primary, persistent
+      { file: 'firetruck.webm', gainDb: -19 },         // primary, persistent
     ],
     persistent: true,
     persistentGainDb: -25,
@@ -61,47 +61,47 @@ const VENUE_BED_MAP = {
   // samples sum to a comparable presence. Tune by ear.
   'market-hotel': {
     components: [
-      { file: 'punk-ambience.m4a', gainDb: -13 },     // primary
+      { file: 'punk-ambience.webm', gainDb: -13 },     // primary
     ],
   },
   'mr-kiwi': {
     components: [
-      { file: 'fridge-hum.m4a', gainDb: -20 },        // primary character
-      { file: 'fluoro-hum.m4a', gainDb: -25 },        // secondary
-      { file: 'spanish-radio.m4a', gainDb: -23 },     // secondary, distinct content
+      { file: 'fridge-hum.webm', gainDb: -20 },        // primary character
+      { file: 'fluoro-hum.webm', gainDb: -25 },        // secondary
+      { file: 'spanish-radio.webm', gainDb: -23 },     // secondary, distinct content
     ],
   },
   'trifecta': {
     components: [
-      { file: 'fryer.m4a', gainDb: -20 },             // primary character
-      { file: 'fluoro-hum.m4a', gainDb: -24 },        // secondary
-      { file: 'fridge-hum.m4a', gainDb: -27 },        // tertiary
-      { file: 'ambulance.m4a', gainDb: -32 },         // distant siren
+      { file: 'fryer.webm', gainDb: -20 },             // primary character
+      { file: 'fluoro-hum.webm', gainDb: -24 },        // secondary
+      { file: 'fridge-hum.webm', gainDb: -27 },        // tertiary
+      { file: 'ambulance.webm', gainDb: -32 },         // distant siren
     ],
   },
   'jmz-platform': {
     components: [
-      { file: 'pigeon-family.m4a', gainDb: -22 },     // primary
-      { file: 'ambulance.m4a', gainDb: -32 },         // distant siren
+      { file: 'pigeon-family.webm', gainDb: -22 },     // primary
+      { file: 'ambulance.webm', gainDb: -32 },         // distant siren
     ],
   },
   'alley': {
     components: [
-      { file: 'water-drip.m4a', gainDb: -24 },        // primary (was secondary)
-      { file: 'leaky-pipe.m4a', gainDb: -28 },        // secondary (was tertiary)
+      { file: 'water-drip.webm', gainDb: -24 },        // primary (was secondary)
+      { file: 'leaky-pipe.webm', gainDb: -28 },        // secondary (was tertiary)
     ],
   },
   'ornithology': {
     components: [
-      { file: 'jazz.m4a', gainDb: -16 },              // primary — jazz IS the venue
+      { file: 'jazz.webm', gainDb: -16 },              // primary — jazz IS the venue
     ],
   },
 };
 
 const BED_DIR = 'assets/sounds/effects';
-const JMZ_FILE = 'assets/sounds/ambient/jmz-rumble.m4a';
-const MYRTLE_TRAFFIC_FILE = 'assets/sounds/ambient/myrtle-broadway-traffic.m4a';
-const TRAIN_FILE = 'assets/sounds/effects/train.m4a';
+const JMZ_FILE = 'assets/sounds/ambient/jmz-rumble.webm';
+const MYRTLE_TRAFFIC_FILE = 'assets/sounds/ambient/myrtle-broadway-traffic.webm';
+const TRAIN_FILE = 'assets/sounds/effects/train.webm';
 
 const JMZ_GAIN_DB = -12;
 // Anchored 18 dB below JMZ as a true noise floor — the intersection's

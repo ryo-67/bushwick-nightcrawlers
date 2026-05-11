@@ -23,7 +23,7 @@ function listAudio(relativeDir) {
   const full = path.join(ROOT, relativeDir);
   return fs
     .readdirSync(full)
-    .filter((f) => f.endsWith('.m4a'))
+    .filter((f) => f.endsWith('.webm'))
     .sort();
 }
 
