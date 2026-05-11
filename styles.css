@@ -298,16 +298,21 @@ main {
   padding: var(--space-lg);
 }
 
+/* Close button lives inside .modal-venue-headline as a flex item.
+   Static positioning (not absolute) on all viewports — the flex
+   layout in .modal-venue-headline aligns it to the row end. The
+   mobile sticky-title pattern (V5) thus carries the close with it
+   automatically. */
 .modal-close {
-  position: absolute;
-  top: var(--space-sm);
-  right: var(--space-sm);
+  position: static;
+  flex-shrink: 0;
   background: none;
   border: none;
   color: var(--color-text);
   font-size: 1.75rem;
   line-height: 1;
   padding: var(--space-sm);
+  margin: -0.25rem -0.25rem 0 0;
   cursor: pointer;
   transition: color 150ms ease;
 }
@@ -323,13 +328,29 @@ main {
 }
 
 .modal-venue-headline {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
   font-family: var(--font-editorial);
   font-style: italic;
   font-weight: normal;
   font-size: 2.25rem;
   line-height: 1.1;
-  margin: 0 var(--space-lg) var(--space-sm) 0;
+  margin: 0 0 var(--space-sm) 0;
   color: var(--color-text);
+}
+
+/* Alley title bar stays anchored at top of the scrolling card so
+   the user always sees what venue they're in and how to close it,
+   regardless of how far down the rat list they scroll. */
+.modal-card.alley-modal .modal-venue-headline {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--color-bg);
+  padding: 0.5rem 0;
+  margin-bottom: 0.5rem;
 }
 
 .reviewer-block {
@@ -405,16 +426,16 @@ main {
    is zeroed so the header's own padding controls the visible chrome
    at the top once content has scrolled past. */
 .modal-card.alley-modal {
-  padding: 0;
+  padding: 0 var(--space-lg) var(--space-lg);
 }
 
+/* Alley header (photo + framing) now sits as normal scrollable
+   content under the sticky .modal-venue-headline. No longer carries
+   title/close — those moved into the headline (which is the actual
+   sticky region; see .modal-card.alley-modal .modal-venue-headline
+   above). */
 .alley-header {
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  background: var(--color-bg);
-  padding: var(--space-lg) var(--space-lg) var(--space-md);
-  border-bottom: 1px solid rgba(184, 255, 0, 0.15);
+  padding: 0 0 var(--space-md);
 }
 
 .alley-cards {
@@ -1077,7 +1098,9 @@ main {
 
   .map-bg,
   .pin-layer {
-    width: 200%;
+    /* 250% (up from 200%) gives pin labels enough breathing room
+       to read as discrete pills without overlapping neighbors. */
+    width: 250%;
   }
 
   /* Modal becomes a bottom sheet on mobile. Backdrop is dimmer
@@ -1086,15 +1109,22 @@ main {
   .modal {
     align-items: flex-end;
     padding: 0;
-    background: rgba(10, 10, 10, 0.65);
+    /* Sheet fills the viewport so no backdrop is visible; the dark
+       fallback is for the brief slide-in window only. */
+    background: rgba(10, 10, 10, 0.95);
   }
 
   .modal-card {
     width: 100%;
     max-width: 100%;
-    max-height: 88vh;
+    /* Full viewport height. 100dvh accounts for mobile address-bar
+       collapse; 100vh is the fallback for browsers without dvh. */
+    height: 100vh;
+    height: 100dvh;
+    max-height: 100dvh;
     margin: 0;
     padding: var(--space-md);
+    background: var(--color-bg);
     border-radius: 1rem 1rem 0 0;
     border-left: none;
     border-right: none;
@@ -1124,9 +1154,10 @@ main {
     border-radius: 999px;
   }
 
-  /* Sticky title within the scroll container — close button stays
-     positioned absolutely relative to .modal-card; the headline
-     anchors to the top while body scrolls below. */
+  /* Sticky title bar — carries the venue name AND the close button
+     (close is now a flex child of .modal-venue-headline; see the
+     universal rule above). Opaque background prevents body content
+     bleeding through during scroll. */
   .modal-venue-headline {
     position: sticky;
     top: 0;
@@ -1140,18 +1171,24 @@ main {
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   }
 
+  .modal-close {
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+    margin-top: -0.25rem;
+  }
+
   .alley-header {
-    padding: var(--space-md) var(--space-md) var(--space-sm);
+    padding: 0 0 var(--space-sm);
   }
 
   .alley-cards {
-    padding: 0 var(--space-md) var(--space-md);
+    padding: 0;
   }
 
-  /* Hide the page header while a sheet is open so nothing bleeds
-     through the sticky title region. */
+  /* Sheet fills the viewport; remove the page header from layout
+     entirely so the sheet sits flush at the top edge. */
   body:has(.modal[data-state='open']) .page-header {
-    visibility: hidden;
+    display: none;
   }
 
   /* Tighten body typography for the sheet. */
@@ -1169,9 +1206,12 @@ main {
     line-height: 1.55;
   }
 
+  /* Full-bleed PLAY button: chunky touch target across the sheet
+     width with comfortable vertical padding. */
   .play-button {
-    font-size: 0.8125rem;
-    padding: 0.5rem 1.25rem;
+    width: 100%;
+    padding: 0.875rem 1rem;
+    font-size: 0.9375rem;
     letter-spacing: 0.04em;
   }
 
@@ -1190,25 +1230,30 @@ main {
     overflow: visible;
   }
 
+  /* Pill-style label: dark background, thin border, blurred
+     backdrop. Reads as a discrete annotation against the hand-
+     drawn map rather than floating text. */
   .pin-label {
     display: block;
     position: absolute;
     top: 100%;
     left: 50%;
     transform: translateX(-50%);
-    margin-top: 0.2rem;
+    margin-top: 0.3rem;
     white-space: nowrap;
     font-family: var(--font-ui);
-    font-size: 0.625rem;
-    line-height: 1.1;
+    font-size: 0.5625rem;
+    line-height: 1;
     color: var(--color-text);
-    opacity: 0.65;
-    pointer-events: none;
-    text-shadow:
-      0 1px 3px rgba(0, 0, 0, 0.9),
-      0 0 6px rgba(0, 0, 0, 0.7);
+    background: rgba(10, 10, 10, 0.85);
+    padding: 0.2rem 0.5rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
     letter-spacing: 0.02em;
     text-transform: lowercase;
+    pointer-events: none;
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
   }
 
   .pin[data-pin-id='alley'] .pin-label {
@@ -1241,6 +1286,11 @@ main {
   color: var(--color-text);
 }
 
+/* Second mobile media block: review-card body + pin chrome.
+   Originally lost its enclosing @media wrapper at some point in
+   the file's history; wrapped explicitly here so the rules apply
+   only on mobile as intended. */
+@media (max-width: 768px) {
   .reviewer-block {
     flex-direction: column;
     align-items: flex-start;
@@ -1251,9 +1301,18 @@ main {
     width: 100%;
   }
 
+  /* Rat photo: 70% sheet width centered, square aspect, modest
+     radius. Replaces the prior fixed 160x160 which felt cramped
+     in the bottom-sheet layout. */
   .rat-selfie {
-    width: 160px;
-    height: 160px;
+    width: 70%;
+    max-width: 70%;
+    height: auto;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    border-radius: 0.5rem;
+    margin: 0.5rem auto;
+    display: block;
   }
 
   .reviewer-name {
@@ -1272,6 +1331,27 @@ main {
   .pin img {
     width: 70px;
     height: 70px;
+  }
+
+  /* Alley + tombstone photos go full-width on mobile. */
+  .modal-venue-photo,
+  .modal-venue-photo img {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.5rem;
+    margin: 0.5rem 0;
+  }
+
+  /* Larger touch targets for the reaction buttons. */
+  .review-reactions {
+    gap: 0.5rem;
+  }
+
+  .review-reaction {
+    padding: 0.625rem 0.875rem;
+    font-size: 0.75rem;
+    min-height: 2.5rem;
   }
 }
 
@@ -1387,9 +1467,6 @@ main {
   outline: none;
 }
 
-.about-back-bottom {
-  margin-top: var(--space-lg);
-}
 
 .about-main {
   /* Override the global `main { display: flex }` rule (which the

@@ -391,6 +391,12 @@ export class Modal {
     const headline = document.createElement('h1');
     headline.className = 'modal-venue-headline';
     headline.textContent = venue.displayName;
+    // Move the close button into the headline so the sticky title
+    // bar carries both on mobile (sheet variant). On desktop the
+    // close is flex-positioned at the row's end — same visual
+    // result as the prior absolute positioning.
+    const close = card.querySelector('.modal-close');
+    if (close) headline.appendChild(close);
     card.appendChild(headline);
 
     if (allReviews.length >= 2) {
@@ -537,6 +543,8 @@ export class Modal {
     const name = document.createElement('h1');
     name.className = 'modal-venue-headline';
     name.textContent = venue.displayName;
+    const close = card.querySelector('.modal-close');
+    if (close) name.appendChild(close);
     card.appendChild(name);
 
     const photo = buildVenuePhoto(venue);
@@ -554,24 +562,21 @@ export class Modal {
     const card = this.buildCardShell(`${venue.displayName} — where the rats meet`);
     card.classList.add('alley-modal');
 
-    // Sticky header carries the title, photo, framing, AND the close
-    // button (relocated from card root). With modal-card scrolling
-    // and 11 mini-cards stacked below, the header would otherwise
-    // leave the viewport — and so would the close button, since
-    // position:absolute children of an overflow:auto container scroll
-    // with the content. Putting close inside the sticky header
-    // (sticky establishes a positioning context for absolute children)
-    // keeps both visible at all scroll depths.
-    const header = document.createElement('div');
-    header.className = 'alley-header';
-
-    const close = card.querySelector('.modal-close');
-    if (close) header.appendChild(close);
-
+    // Sticky title bar: headline + close, direct child of card so
+    // position:sticky pins it across the full scroll range. Photo +
+    // framing live in .alley-header below — they scroll out with
+    // the rest of the body content. On mobile this gives a single
+    // scroll context (the modal card) with only the title region
+    // staying anchored.
     const name = document.createElement('h1');
     name.className = 'modal-venue-headline';
     name.textContent = venue.displayName;
-    header.appendChild(name);
+    const close = card.querySelector('.modal-close');
+    if (close) name.appendChild(close);
+    card.appendChild(name);
+
+    const header = document.createElement('div');
+    header.className = 'alley-header';
 
     const photo = buildVenuePhoto(venue);
     if (photo) header.appendChild(photo);
@@ -789,6 +794,8 @@ export class Modal {
     const name = document.createElement('h1');
     name.className = 'modal-venue-headline';
     name.textContent = venue.displayName;
+    const close = card.querySelector('.modal-close');
+    if (close) name.appendChild(close);
     card.appendChild(name);
 
     const photo = buildVenuePhoto(venue);
