@@ -186,19 +186,27 @@ function updateAlleyPinState() {
   // that CSS reads to play the burst animation, then clear after
   // the burst completes (1.2s). Reloads find the pin unlocked but
   // without the flag, so only the steady pulse runs.
+  //
+  // Safari iOS has been observed retaining the locked state's
+  // filter:grayscale(1) composite even after the cascade clears.
+  // The single-reflow approach from V7 wasn't enough. V8 escalates
+  // to a two-phase update: briefly clear the state attribute so
+  // no alley-state rule applies, reflow, then re-apply 'unlocked'
+  // in the next frame. The intermediate "no state" reflow forces
+  // Safari to release any cached filter compositing.
   if (prevState === 'locked' && newState === 'unlocked') {
-    alleyPin.dataset.alleyJustUnlocked = 'true';
-    // Force a reflow so the locked state's filter:grayscale(1)
-    // is cleanly released — some browsers cache the prior filter
-    // value until the next layout pass. The CSS already declares
-    // filter:none in the unlocked rule, but a reflow guarantees
-    // the cascade re-evaluates after the attribute flip.
+    delete alleyPin.dataset.alleyState;
     void alleyPin.offsetHeight;
-    setTimeout(() => {
-      if (alleyPin.dataset.alleyJustUnlocked === 'true') {
-        delete alleyPin.dataset.alleyJustUnlocked;
-      }
-    }, 1300);
+    requestAnimationFrame(() => {
+      alleyPin.dataset.alleyState = 'unlocked';
+      alleyPin.dataset.alleyJustUnlocked = 'true';
+      void alleyPin.offsetHeight;
+      setTimeout(() => {
+        if (alleyPin.dataset.alleyJustUnlocked === 'true') {
+          delete alleyPin.dataset.alleyJustUnlocked;
+        }
+      }, 1300);
+    });
   }
 }
 
@@ -554,6 +562,22 @@ document.addEventListener('DOMContentLoaded', () => {
         // eslint-disable-next-line no-console
         console.error('Audio engine failed to start:', e);
       });
+
+      // iOS Safari often refuses to honor the autoplay attribute
+      // on <video> even with muted + playsinline. An explicit
+      // play() call from inside the click handler is trusted.
+      // Failures are non-fatal — the map will pause-frame on the
+      // first frame, which is acceptable.
+      const mapVideo = document.querySelector('.map-bg');
+      if (mapVideo && typeof mapVideo.play === 'function') {
+        const playPromise = mapVideo.play();
+        if (playPromise && typeof playPromise.catch === 'function') {
+          playPromise.catch(() => {
+            // Autoplay rejection — silent. The video element will
+            // hold its current frame; the audio carries the piece.
+          });
+        }
+      }
     },
   });
   loading.init();
