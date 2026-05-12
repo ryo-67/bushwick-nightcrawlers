@@ -586,11 +586,29 @@ document.addEventListener('DOMContentLoaded', () => {
     console.error('Audio preload failed:', e);
   });
 
-  // V10: loading screen fires only on a genuine cold-start. Once
-  // the user has entered the intersection in this browser session,
-  // navigating away (e.g. to /about) and back skips the loading
-  // sequence entirely. sessionStorage clears when the tab closes
-  // so a fresh browser session sees the entrance ritual again.
+  // Loading screen visibility — three signals decide whether it
+  // renders on this page load:
+  //   1. Navigation type (performance.getEntriesByType('navigation')):
+  //      - 'reload' (browser refresh) → show loading screen
+  //      - 'back_forward' (browser back/forward) → skip
+  //      - 'navigate' (typed URL, clicked link) → depend on signal #2
+  //   2. sessionStorage 'intersection-entered' flag:
+  //      - set → user already entered this session; skip on 'navigate'
+  //      - unset → first time in this tab; show
+  //   3. localStorage 'bushwick.hasEntered' (read inside the loading
+  //      screen itself) picks cards vs returning variant.
+  //
+  // Net behavior:
+  //   - Cold start (new tab): show loading screen (variant per
+  //     localStorage — cards if first ever visit, returning otherwise)
+  //   - Click Enter: sessionStorage flag set, audio boots
+  //   - Browser refresh: navigation type 'reload', loading screen
+  //     renders again as a cover for asset reload
+  //   - About → /: navigation type 'navigate', sessionStorage flag
+  //     present → skip
+  //   - Back/forward between map and about: 'back_forward' → skip
+  //   - Forget: clears both flags, reload, cards variant returns
+
   let sessionEntered = false;
   try {
     sessionEntered = sessionStorage.getItem('intersection-entered') === '1';
@@ -600,7 +618,24 @@ document.addEventListener('DOMContentLoaded', () => {
     // behavior. Acceptable.
   }
 
-  if (!sessionEntered) {
+  let navType = 'navigate';
+  try {
+    const navEntries = performance.getEntriesByType('navigation');
+    if (navEntries && navEntries.length && navEntries[0].type) {
+      navType = navEntries[0].type;
+    }
+  } catch {
+    // performance API unavailable — fall through to default 'navigate'
+  }
+
+  // Show loading screen on: reload always, OR on initial-navigate
+  // when no session flag is set. Skip on: back_forward navigation,
+  // OR on navigate when session flag is already set (internal nav).
+  const shouldShowLoadingScreen =
+    navType === 'reload' ||
+    (navType === 'navigate' && !sessionEntered);
+
+  if (shouldShowLoadingScreen) {
     const loading = new LoadingScreen(document.body, {
       onEnter: () => {
         try {
