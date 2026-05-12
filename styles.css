@@ -1491,21 +1491,62 @@ main {
     transform: translateY(0);
   }
 
-  /* V23: inert scrollable padding at the card bottom equal to the
-     URL-bar zone size. With height:100lvh and overflow-y:auto, the
-     effective scroll area = lvh - padding-bottom = 100dvh. When the
-     user scrolls to the end, the last content sits at y=100dvh
-     (just above the URL-bar pill); the padding zone fills
-     y=100dvh → y=100lvh — the pill obscures only inert padding,
-     never content.
-     calc(100lvh - 100dvh) resolves to 0 on every viewport without a
-     floating URL bar (chromium, desktop, PWA standalone, iOS
-     landscape) so the rule is invisible everywhere except iOS Safari
-     portrait. Scoped to non-tombstone so the content-sized tombstone
-     card isn't visually expanded by empty padding below its
-     epitaph. */
+  /* V24 supersedes V23: V23's premise (paint reaches lvh) was
+     wrong — iOS Safari clips position:fixed paint to innerHeight
+     (= dvh) regardless of declared height. V24 fades the visible
+     card bottom via mask-image (below) and uses fixed 64px
+     padding-bottom (16 base + 48 fade clearance) so the last
+     content sits clear of the fade zone. 64px fixed across
+     viewports; chromium's bottom 32px softens harmlessly.
+     Scoped away from .alley-modal: alley's content lives in
+     .alley-cards which gets matching clearance via its own
+     padding-bottom rule (see .modal-card.alley-modal .alley-cards
+     below). Modal-card itself stays at padding:0 for alley so the
+     scrolling rat list runs flush. */
+  .modal-card:not(.modal-card-tombstone):not(.alley-modal) {
+    padding-bottom: calc(var(--space-md) + 48px);
+  }
+
+  /* V24: camouflage the iOS Safari position:fixed paint clip at
+     dvh. The card's bounding box extends to lvh (V23) but Safari
+     clips paint to dvh, creating a hard horizontal transition at
+     the dvh line that reads as a broken sheet edge above the URL
+     chrome. The mask fades the card's visible bottom 32px into
+     body bg, so the transition reads as "content recedes into
+     chrome" rather than "sheet cut off at hard line."
+
+     Mask coord system spans the card's lvh-height bounding box;
+     stops computed in dvh so the fade lands at the visible-bottom
+     position regardless of layout extent. On chromium/desktop
+     where lvh === dvh, the fade lands at the card's bottom edge
+     (small visual softening; not a regression).
+
+     border-bottom:none is idempotent (mobile rule above already
+     drops it). Restated here for V24's record.
+
+     V24 is camouflage, NOT fix. Paint still stops at dvh on iOS.
+     The architectural fix (switch .modal to position:absolute) is
+     deferred — see "Mobile sheet sizing" in CLAUDE.md.
+
+     References:
+     - MUI material-ui#46953 (root cause)
+     - Devon Govett, Sept 2025 (architectural fix recommendation)
+     - Apple Community thread 256138682 (workaround landscape)
+     - Safari 26.1 release notes radar 158055568 (partial fix) */
   .modal-card:not(.modal-card-tombstone) {
-    padding-bottom: calc(100lvh - 100dvh);
+    border-bottom: none;
+    mask-image: linear-gradient(
+      to bottom,
+      black 0,
+      black calc(100dvh - 32px),
+      transparent calc(100dvh)
+    );
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      black 0,
+      black calc(100dvh - 32px),
+      transparent calc(100dvh)
+    );
   }
 
   /* With .modal-card padding zeroed, each non-sticky child gets
@@ -1619,9 +1660,12 @@ main {
      the photo and title above (all at 1rem from sheet edge).
      Bumped to .modal-card.alley-modal .alley-cards (specificity
      0,3,0) to beat the universal `.modal-card > *:not(.modal-
-     venue-headline) { padding-left/right: 1rem }` rule (0,2,0). */
+     venue-headline) { padding-left/right: 1rem }` rule (0,2,0).
+     V24: bottom value bumped from var(--space-lg) (32px) to 64px
+     to match the non-alley fade-clearance buffer. Last mini-card
+     now ends above the V24 mask's fade zone. */
   .modal-card.alley-modal .alley-cards {
-    padding: 0 0 var(--space-lg);
+    padding: 0 0 calc(var(--space-md) + 48px);
   }
 
   .alley-card {

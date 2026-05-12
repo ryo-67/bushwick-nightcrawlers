@@ -76,6 +76,8 @@ Full-extending mobile sheets (review, alley) extend visually into that strip via
 
 The Rash tombstone variant (`.modal-card.modal-card-tombstone`) is content-sized (`height: auto; max-height: 100dvh`) and stays bottom-anchored at `innerHeight`. The `:not(.modal-card-tombstone)` scoping above keeps it out of the lvh extension so its short last line doesn't get pushed into the URL-bar zone.
 
+V24 update: V22/V23's lvh extension didn't visibly help on iOS — Safari clips `position: fixed` element paint to `innerHeight` (= dvh) regardless of declared height (MUI #46953, Apple radar 158055568, Safari 26.1 release notes; persists through 26.4.2). V24 added a `mask-image` gradient that fades the card's visible bottom 32px into body bg, dissolving the hard line at the paint-clip boundary. V24 is camouflage — paint still stops at dvh. The architectural fix ("Option A": switch `.modal` from `position: fixed` to `position: absolute`, pin `.map-wrapper` instead, add `position: sticky` on the card, unwind the body lock) is deferred pending evaluation of whether the ~40px paint gain justifies undoing V20's body lock.
+
 ## Audio rules (load-bearing)
 
 - `Tone.start()` must be called inside a user-gesture handler before any audio plays. The headphones tag at the top of the page is the gesture target. Until clicked, no AudioContext.
