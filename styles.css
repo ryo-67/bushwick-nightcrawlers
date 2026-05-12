@@ -1609,11 +1609,17 @@ main {
 
   /* The title text + close button form the second row of the
      headline flex column. Inner flex row aligns title-left,
-     close-right. */
+     close-right.
+     V25: align-items:center vertically centers the title text
+     against the close button. With title at ~25px tall (1.375rem
+     × 1.15 line-height) and close box at ~44px tall (1.75rem font
+     + 16px padding, min-height 40px), flex-start aligned tops but
+     left visual centers ~9.5px apart — title read low against the
+     X glyph. center aligns the visual midlines. */
   .modal-venue-headline-row {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
     gap: 0.75rem;
     width: 100%;
   }
