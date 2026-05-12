@@ -628,8 +628,11 @@ main {
      text align with the title above. The row itself spans the full
      card width (.alley-cards has padding:0) so hover/focus tints
      and the bottom rule run edge-to-edge — the full-bleed-with-
-     inset-content pattern from the mobile sheet. */
-  padding: 12px var(--space-lg);
+     inset-content pattern from the mobile sheet. Vertical padding
+     gives the selfie + name + stars + text block breathing room
+     against the row above and below; 12px read as cramped against
+     the ~40px selfie height. */
+  padding: 1rem var(--space-lg);
   background: transparent;
   border: none;
   border-bottom: 1px solid rgba(184, 255, 0, 0.15);
@@ -1491,7 +1494,7 @@ main {
   }
 
   .alley-card {
-    padding: 12px 1rem;
+    padding: 1rem;
   }
 
   .alley-cards-hint {
