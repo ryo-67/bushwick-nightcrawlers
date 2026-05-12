@@ -539,7 +539,12 @@ main {
    align at 32px from the card edge — matching the inset that
    location modals inherit from uniform card padding. */
 .modal-card.alley-modal {
-  padding: var(--space-lg) 0;
+  /* No bottom padding: with the desktop flex partition, .alley-
+     cards is the scroll region and runs flush to the card's
+     bottom edge. A bottom inset here exposed a 32px black band
+     under the last visible card whenever the list scrolled past
+     the container height. */
+  padding: var(--space-lg) 0 0;
 }
 
 /* Alley header (photo + framing). margin-top: 1.5rem matches the
@@ -587,6 +592,12 @@ main {
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
+    /* Low-contrast accent line marks the boundary between the
+       fixed top region (title + photo + framing + hint) and the
+       scrolling list. The border lives on the scroll container's
+       box, not on the inner content, so it stays anchored at the
+       boundary as the list scrolls. */
+    border-top: 1px solid rgba(184, 255, 0, 0.12);
   }
 }
 
