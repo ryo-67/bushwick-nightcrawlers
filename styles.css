@@ -1997,13 +1997,23 @@ main {
      content lands cleanly under the status bar. */
 }
 
-/* Desktop about-header: a plain in-flow element. No sticky, no
-   bg band, no compositor layer — the back-to-map link just sits
-   at the top of the document and scrolls with the rest. Mobile
-   media query restores sticky + bg so the link stays anchored
-   during long-page scroll on phones. */
+/* About-header stays sticky on desktop too so the back-to-map
+   link is always reachable during long-page scroll, but with no
+   background — the user wanted no black band over scrolling
+   content. The V17 ::before pseudo inherits the parent bg
+   (transparent here on desktop) so it paints nothing visible.
+   Mobile adds the var(--color-bg) so the link reads clearly
+   against scrolling phone content and the safe-area-inset-top
+   keeps the link clear of the iPhone status bar. */
 .about-header {
   padding: 0.75rem 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  /* Compositor-layer promotion: see .page-header rule for full
+     rationale. Same hard-flick flicker risk applies. */
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 .about-back {
@@ -2829,18 +2839,11 @@ main {
     overscroll-behavior: none;
   }
 
-  /* Mobile about-header: restores the sticky + bg + compositor
-     promotion that desktop drops. The about page is a long scroll
-     on mobile so the back-to-map link needs to stay anchored
-     during scroll. Includes safe-area-inset-top in padding so the
-     link clears the iPhone status bar. */
+  /* Mobile about-header: adds the var(--color-bg) and safe-area
+     padding that desktop drops. Sticky/z-index/compositor are
+     inherited from the module-scope rule. */
   .about-header {
     padding: calc(0.75rem + env(safe-area-inset-top)) 1rem 0.75rem;
-    position: sticky;
-    top: 0;
-    z-index: 100;
     background: var(--color-bg);
-    transform: translateZ(0);
-    will-change: transform;
   }
 }
