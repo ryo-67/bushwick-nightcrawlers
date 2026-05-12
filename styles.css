@@ -592,12 +592,15 @@ main {
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
-    /* Low-contrast accent line marks the boundary between the
-       fixed top region (title + photo + framing + hint) and the
-       scrolling list. The border lives on the scroll container's
-       box, not on the inner content, so it stays anchored at the
+    /* Boundary divider between the fixed top region (title +
+       photo + framing + hint) and the scrolling list. Matches
+       the site-wide subtle-divider weight used by .alley-card
+       inter-row borders, .review-content section dividers, and
+       .page-header bottom — so the boundary reads as part of the
+       same divider system, not a one-off rule. Border lives on
+       the scroll container's box so it stays anchored at the
        boundary as the list scrolls. */
-    border-top: 1px solid rgba(184, 255, 0, 0.12);
+    border-top: 1px solid rgba(184, 255, 0, 0.15);
   }
 }
 
