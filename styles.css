@@ -2342,6 +2342,16 @@ main {
   font-style: italic;
 }
 
+/* Credit-list footnotes (e.g. "Real Bushwick venue names are
+   used. Reviews and rat personae are fictional.") need a real
+   paragraph gap above. The preceding line is inline (no margin-
+   bottom), and .about-section p has margin-top: 0 — without an
+   explicit top margin here, the footnote reads as one more line
+   in the same credit entry rather than a separate paragraph. */
+.credit-list .footnote {
+  margin-top: 1.5rem;
+}
+
 .freesound-list ul {
   list-style: none;
   padding-left: 0;
