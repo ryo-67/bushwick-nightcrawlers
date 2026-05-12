@@ -2828,7 +2828,7 @@ main {
   }
   .review-content > .review-reactions {
     margin: 0;
-    padding: 0.75rem 0;
+    padding: var(--space-md) 0;
   }
 }
 
