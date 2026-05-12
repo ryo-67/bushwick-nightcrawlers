@@ -1308,6 +1308,11 @@ main {
     height: 100vh;
     height: 100dvh;
     max-height: 100dvh;
+    /* Prevent scroll-chaining: when the user scrolls past the sheet
+       content (especially on content-sized Rash where there's empty
+       space below the card), the scroll shouldn't propagate to the
+       body and move the map behind the sheet. */
+    overscroll-behavior: contain;
     margin: 0;
     /* No horizontal padding — each section (headline, review
        body, alley header, etc.) carries its own 1rem inset so
@@ -1455,6 +1460,21 @@ main {
      entirely so the sheet sits flush at the top edge. */
   body:has(.modal[data-state='open']) .page-header {
     display: none;
+  }
+
+  /* Lock body scroll when a modal is open. Without this, content-
+     sized sheets (Rash tombstone) leave empty space below the card
+     where touch-drag can scroll the map behind the sheet. */
+  body:has(.modal[data-state='open']) {
+    overflow: hidden;
+    touch-action: none;
+  }
+
+  /* Modal itself still accepts touch (close button taps, sheet
+     drag affordance, etc.) — the touch-action lock on body only
+     blocks the propagation path through body to .map-wrapper. */
+  body:has(.modal[data-state='open']) .modal {
+    touch-action: auto;
   }
 
   /* Tighten body typography for the sheet. */
