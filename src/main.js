@@ -518,6 +518,16 @@ function setupHeaderReset() {
     } catch {
       // localStorage unavailable — reload anyway
     }
+    // V12 P1: forget must also clear the session flag so the next
+    // page load shows the cold-start loading screen again. V10
+    // introduced sessionStorage gating but didn't wire it into
+    // the forget action, so forget no longer triggered a fresh
+    // first-time experience.
+    try {
+      sessionStorage.removeItem('intersection-entered');
+    } catch {
+      // sessionStorage unavailable — reload anyway
+    }
     window.location.reload();
   });
 }
@@ -561,6 +571,20 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   };
+
+  // V12 P1: audio + image preload runs on every map page mount,
+  // independently of loading screen visibility. Without this kickoff,
+  // preload only fires inside LoadingScreen.subscribePreload — so
+  // when the loading screen is skipped (session flag set), buffers
+  // never decode and the audio engine reinit on each pin click is
+  // visibly slow.
+  // engine.preload() is idempotent — returns the same promise on
+  // subsequent calls. The loading-screen's own subscribePreload
+  // continues to work; this just guarantees the call happens.
+  engine.preload().catch((e) => {
+    // eslint-disable-next-line no-console
+    console.error('Audio preload failed:', e);
+  });
 
   // V10: loading screen fires only on a genuine cold-start. Once
   // the user has entered the intersection in this browser session,
