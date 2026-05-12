@@ -17,6 +17,13 @@
 const ACTIVE_STROKE = 'rgba(184, 255, 0, 0.85)';
 const IDLE_STROKE = 'rgba(197, 191, 174, 0.4)';
 
+// Amplitude exaggeration for the waveform render. Tone.Waveform
+// returns samples in [-1, 1] but USV/voice content typically peaks
+// around ±0.2–0.4 — drawing those at literal scale produces a near-
+// flat line. Multiplying by 2.8 makes the wiggle dramatic; clamping
+// keeps the trace inside the canvas frame for louder transients.
+const AMPLITUDE_SCALE = 2.8;
+
 export class Oscilloscope {
   constructor() {
     this.canvas = document.createElement('canvas');
@@ -89,7 +96,8 @@ export class Oscilloscope {
     } else {
       for (let i = 0; i < len; i += 1) {
         const x = (i / (len - 1)) * width;
-        const y = ((1 - values[i]) / 2) * height;
+        const v = Math.max(-1, Math.min(1, values[i] * AMPLITUDE_SCALE));
+        const y = ((1 - v) / 2) * height;
         if (i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
       }

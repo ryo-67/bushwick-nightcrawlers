@@ -1007,7 +1007,7 @@ main {
 .play-osc-block {
   display: flex;
   flex-direction: column;
-  gap: var(--space-sm);
+  gap: var(--space-md);
 }
 
 .play-osc-block .play-button {
