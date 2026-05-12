@@ -40,9 +40,12 @@ body {
   color: var(--color-text);
   font-family: var(--font-data);
   font-variant-numeric: tabular-nums;
-  min-height: 100vh;
   position: relative;
-  overflow-x: hidden;
+  /* V21: dropped min-height:100vh and overflow-x:hidden. The map
+     page body is sized by body:not(.about-page) { height:100dvh }
+     and that rule also sets overflow:hidden. The about page lets
+     content drive body height and has no horizontal overflow
+     source. */
 }
 
 /* Map page (everything that isn't the about page) is a single-
@@ -93,14 +96,20 @@ body::after {
   background-repeat: repeat;
   mix-blend-mode: multiply;
   opacity: 0.35;
-  z-index: 9999;
+  /* V21: 10000 sits explicitly above .loading-screen (z:9999) so
+     the grain texture overlays every visual state including the
+     loading splash. Previously both were 9999 and stacking was
+     determined by DOM order — fragile. */
+  z-index: 10000;
 }
 
+/* V21: removed the module-scope min-height/flex-center on main.
+   On the map page the body:not(.about-page) main override controls
+   layout (flex:1 1 0; display:block). The about page has its own
+   .about-main rules. The original min-height:calc(100vh - 3.5rem)
+   was the source of the V11–V19 banding wars and now has no live
+   consumer. */
 main {
-  min-height: calc(100vh - 3.5rem);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   padding: 0;
 }
 
@@ -127,34 +136,39 @@ main {
   isolation: isolate;
 }
 
-/* V20: height-anchored sizing. Map and pin-layer fill the wrapper
-   vertically; width derives from each element's aspect. Map-bg
-   (a <video>) uses the .mp4's intrinsic ratio (height:100% +
-   width:auto + no CSS aspect-ratio override → browser computes
-   width from intrinsic dimensions). Pin-layer uses the 16/9
-   fallback until syncPinLayerToMapDimensions() reads the same
-   intrinsic dimensions from videoWidth/Height and overrides
-   aspect-ratio to match — so post-sync both layers have the
-   same width and pin percentages map to the same map points.
-   On portrait viewports (mobile) resulting width > wrapper width
-   → horizontal scrolling. On wide desktop, wrapper is wider than
-   the map → minor right-side gap painted by body bg (same color
-   as the surround). Vertical coverage guaranteed everywhere. */
-.map-bg {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  height: 100%;
-  width: auto;
-}
+/* V21: width-anchored on desktop, height-anchored on mobile.
+   Both share aspect-ratio: 1920 / 1334 (map.mp4's intrinsic
+   dimensions) so .map-bg and .pin-layer always render at
+   identical sizes — pin percentages from venues.js land on the
+   same map points regardless of viewport.
 
+   Desktop (width:100%, height auto via aspect-ratio): fills the
+   wrapper edge-to-edge horizontally. On viewports wider than
+   1.44:1 (every standard widescreen) the map's height exceeds
+   the wrapper, and `bottom: 0` + wrapper overflow:hidden crops
+   the top of the map. This matches the original design intent
+   (see .map-wrapper comment) — pins are calibrated to the lower
+   portion of the map, so cropping the sparser upper streets
+   brings the venues into the visible band.
+
+   Mobile portrait (height:100%, width auto via aspect-ratio):
+   produces a map wider than the wrapper, enabling the horizontal
+   pan that .map-wrapper { overflow:auto; touch-action:pan-x }
+   uses to navigate between pins.
+
+   FILE DEPENDENCY: if assets/map.mp4 is replaced with a video
+   at a different aspect ratio, update the aspect-ratio value
+   below to match the new file's intrinsic width/height. */
+.map-bg,
 .pin-layer {
   position: absolute;
   bottom: 0;
   left: 0;
-  height: 100%;
-  width: auto;
-  aspect-ratio: 16 / 9;
+  width: 100%;
+  aspect-ratio: 1920 / 1334;
+}
+
+.pin-layer {
   pointer-events: none;
 }
 
@@ -1108,15 +1122,12 @@ main {
 .page-header {
   position: sticky;
   top: 0;
-  /* Force a hardware-accelerated compositor layer so iOS Safari
-     momentum-scroll updates the header position independently of
-     the main scroll thread — eliminates the frame where content
-     briefly paints above the header during a hard-flick. The
-     ::before pseudo inherits the parent's compositor layer so
-     header + pseudo stay synchronized. */
-  transform: translateZ(0);
-  will-change: transform;
-  /* z-index 100: above .map-wrapper (z-index 1) so the 250%-wide
+  /* V21: dropped V19's transform:translateZ(0) + will-change. The
+     compositor-layer promotion fixed a hard-flick momentum-scroll
+     flicker, but the map page body is now locked (overflow:hidden;
+     height:100dvh) — nothing scrolls past the header, no flicker
+     to fix. About-header keeps its promotion. */
+  /* z-index 100: above .map-wrapper (z-index 1) so the wide
      scrolling map can't bleed past the wrapper edge into the
      header area on momentum-scroll overshoot. */
   z-index: 100;
@@ -1325,16 +1336,20 @@ main {
 .header-reset-short { display: none; }
 
 @media (max-width: 768px) {
-  main {
-    min-height: calc(100vh - 4.25rem);
-  }
+  /* V21: dropped main { min-height: calc(100vh - 4.25rem) }.
+     Map page main is sized by flex:1 1 0 inside the body lock;
+     about page main controls its own height. */
 
-  /* Two-row header: title on row 1, controls on row 2. */
+  /* Two-row header: title on row 1, controls on row 2. V21
+     restored env(safe-area-inset-top) in the top padding — the
+     prior shorthand silently overrode the base rule's safe-area
+     math, leaving the title under the iPhone notch when the body
+     lock didn't push the page down. */
   .page-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.4rem;
-    padding: 0.5rem 1rem;
+    padding: calc(0.5rem + env(safe-area-inset-top)) 1rem 0.5rem;
     min-height: auto;
   }
 
@@ -1378,12 +1393,17 @@ main {
     display: none;
   }
 
-  /* V20: removed the explicit width:250% mobile override.
-     Height-anchored sizing at module scope already produces a map
-     wider than the wrapper on portrait viewports (iPhone 14 Pro
-     844×393 wrapper → map width ≈ 844 × 16/9 ≈ 1500px, ≈ 380% of
-     wrapper width) so pin labels get even more breathing room
-     than the prior 250%, without manual sizing. */
+  /* V21: mobile portrait flips back to height-anchored sizing so
+     map width exceeds wrapper width — the horizontal-pan content
+     for .map-wrapper { overflow:auto; touch-action:pan-x }. Same
+     aspect-ratio (1920/1334) as desktop so pin coordinates stay
+     consistent. iPhone 14 Pro (393×779 wrapper) → map width ≈
+     779 × 1.44 ≈ 1122px ≈ 286% of wrapper width. */
+  .map-bg,
+  .pin-layer {
+    width: auto;
+    height: 100%;
+  }
 
   /* Modal becomes a bottom sheet on mobile. Backdrop is dimmer
      (sheet doesn't cover full viewport) and the card slides up
@@ -2855,7 +2875,11 @@ main {
    sticky/fixed) so the pseudo anchors correctly. Each has a
    shorthand `background: var(--color-bg)` parent, so
    `background: inherit` pulls the full background longhand set. */
-.page-header::before,
+/* V21: pseudo dropped from .page-header — map page body is locked
+   (overflow:hidden; height:100dvh) so the page can't rubber-band-
+   scroll past the top edge, and the upward bg extension was paint-
+   ing invisibly off-screen forever. About page still scrolls, so
+   the pseudo stays on .about-header for pull-down rubber-band. */
 .about-header::before {
   content: '';
   position: absolute;
@@ -2880,15 +2904,11 @@ main {
    Only the mobile-only overscroll-behavior-y rule from V17 stays
    in this block. */
 @media (max-width: 768px) {
-  /* V17 belt-and-suspenders: suppress iOS Safari rubber-band
-     overscroll so the V17 ::before pseudo-element doesn't even
-     get tested on iOS 16+. On older iOS this is a no-op and the
-     pseudo handles the visual. Desktop bounce stays intentional —
-     mobile-scoped only. */
-  html,
-  body {
-    overscroll-behavior: none;
-  }
+  /* V21: dropped overscroll-behavior:none on html/body. Map page
+     body has overflow:hidden so it isn't a scroll container — the
+     rule did nothing. About page main is the scroll surface; if
+     rubber-band ever needs suppression there, scope to
+     .about-page main rather than the global mobile selector. */
 
   /* Mobile about-header: adds the var(--color-bg) and safe-area
      padding that desktop drops. Sticky/z-index/compositor are

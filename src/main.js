@@ -17,6 +17,11 @@ import {
   VOLUME_MIN_DB,
   VOLUME_MAX_DB,
 } from './audio/master-controls.js';
+import { install as installViewportReadout } from './debug/viewport-readout.js';
+
+// No-op unless `?debug=viewport` is on the URL. See module header
+// in src/debug/viewport-readout.js for details.
+installViewportReadout();
 
 function ctaCopyForVenue(venue) {
   if (venue.id === 'alley') return 'step into the alley';
@@ -220,37 +225,6 @@ function showAlleyLockedToast() {
   toast._hideTimer = setTimeout(() => {
     toast.dataset.state = 'hidden';
   }, 3600);
-}
-
-// Read the video's natural dimensions and lock the pin-layer to the
-// same aspect ratio. Pin percentages are relative to the layer; the
-// layer must match the map exactly or pins drift off venues.
-// Falls back to a defensive setTimeout in case loadedmetadata never
-// fires (rare, but the static aspect-ratio in CSS won't catch any
-// future map.mp4 with a different ratio).
-function syncPinLayerToMapDimensions() {
-  const video = document.querySelector('.map-bg');
-  const layer = document.querySelector('.pin-layer');
-  if (!video || !layer) return;
-
-  function apply() {
-    const w = video.videoWidth;
-    const h = video.videoHeight;
-    if (w > 0 && h > 0) {
-      layer.style.aspectRatio = `${w} / ${h}`;
-    }
-    // Re-center the mobile scroll viewport now that the aspect ratio
-    // is locked — the layer's resolved height may differ from the
-    // CSS fallback, so the centroid calculation needs a fresh run.
-    centerMapOnVenueCluster();
-  }
-
-  if (video.readyState >= 1) {
-    apply();
-  } else {
-    video.addEventListener('loadedmetadata', apply, { once: true });
-    setTimeout(apply, 100);
-  }
 }
 
 function setupPinPositions() {
@@ -685,7 +659,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  syncPinLayerToMapDimensions();
   setupPinPositions();
   updateAlleyPinState();
   centerMapOnVenueCluster();

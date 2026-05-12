@@ -110,6 +110,12 @@ The `muted` attribute is required for autoplay; `playsinline` prevents iOS Safar
 - Calling `Tone.getTransport().start()` multiple times without checking state — schedules duplicate events
 - Case sensitivity in keyword matching — normalize tokens to lowercase and strip punctuation in the scanner
 
+## Debug flags
+
+Query-param-gated diagnostics. Production users see nothing unless the param is set.
+
+- `?debug=viewport` — attaches a live readout inside any open modal-card showing innerHeight/Width, visualViewport (height/offsetTop/scale), modal + modal-card bounding rects, computed heights, and safe-area inset values. Updates on window/visualViewport resize and scroll. Tap the readout to dismiss for the session. Used to capture iPhone Safari-specific layout state that chromium emulation can't reproduce. Implementation: `src/debug/viewport-readout.js`; wired into `src/main.js` at module top. Zero overhead when the param is absent.
+
 ## When in doubt
 
 Read `docs/STRATEGY.md` first. If the answer isn't in §10 (Tech stack and implementation patterns), ask the user before guessing. Do not infer creative or content-related decisions from code patterns.
