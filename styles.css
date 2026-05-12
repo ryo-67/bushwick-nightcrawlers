@@ -558,6 +558,38 @@ main {
   padding: 0 var(--space-lg) var(--space-md);
 }
 
+/* Desktop-only: title + photo + framing + hint stay anchored in
+   the card frame while only the rat-card list scrolls. Achieved
+   by making the card itself a flex column with overflow:hidden
+   (so the card no longer scrolls as a whole) and letting
+   .alley-cards absorb remaining vertical space with overflow:auto.
+   Replaces the V11/V13 position:sticky approach, which created
+   the double-stick scroll bug — flex partitioning gives a true
+   fixed-header region without per-element sticky offsets.
+   Mobile keeps the single-scroll-context pattern (card scrolls
+   end-to-end with a sticky headline pinning the title) since
+   sheet height is already constrained by viewport and a
+   nested scroll region inside a draggable sheet reads awkwardly. */
+@media (min-width: 769px) {
+  .modal-card.alley-modal {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .modal-card.alley-modal > .modal-venue-headline,
+  .modal-card.alley-modal > .alley-header,
+  .modal-card.alley-modal > .alley-cards-hint {
+    flex: 0 0 auto;
+  }
+
+  .modal-card.alley-modal > .alley-cards {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+}
+
 .alley-cards {
   display: flex;
   flex-direction: column;
