@@ -90,7 +90,22 @@ a:visited {
 body::after {
   content: '';
   position: fixed;
-  inset: 0;
+  /* V22: was `inset: 0`. On iOS Safari `inset: 0` on a fixed
+     element clips to the visual viewport (= innerHeight), which on
+     the body-locked map page stops above the URL-bar floating-pill
+     zone. The grain texture then ended sharply at y=innerHeight,
+     exactly where full-height sheets (.modal-card height:100dvh)
+     ended too — creating a visible band where the grain treatment
+     stopped and bare html bg began. The 100lvh extent covers the
+     largest possible viewport including the area behind the URL
+     bar pill, so grain treatment is continuous from y:0 to the
+     physical screen bottom. On viewports without a floating URL
+     bar (desktop, PWA standalone) 100lvh === innerHeight, so this
+     resolves identically to the prior inset:0. */
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100lvh;
   pointer-events: none;
   background-image: url('assets/grain.png');
   background-repeat: repeat;
