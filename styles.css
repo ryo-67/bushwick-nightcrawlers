@@ -2612,19 +2612,19 @@ main {
     display: none !important;
   }
 
-  /* Tombstone (Rash) sheet on desktop: content-sized with a max
-     cap so the natural-aspect photo doesn't blow out the modal. */
-  .modal-card.modal-card-tombstone {
-    height: auto;
-    max-height: 80vh;
-  }
-
+  /* Tombstone (Rash) on desktop: no special height override.
+     V11 added height:auto + max-height:80vh, which made the
+     sheet shorter than other modals (which use the default
+     .modal-card { max-height: 90vh }). V13 removes the override
+     so tombstone matches location modal height behavior.
+     The photo still gets a max-height cap to prevent unusually
+     tall sources from dominating the modal. */
   .modal-card-tombstone .modal-venue-photo {
     margin: 0 auto 1rem auto;
   }
 
   .modal-card-tombstone .modal-venue-photo img {
-    max-height: 60vh;
+    max-height: 50vh;
     object-fit: contain;
   }
 }
