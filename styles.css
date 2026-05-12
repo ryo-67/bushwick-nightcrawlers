@@ -2806,23 +2806,20 @@ main {
     object-fit: contain;
   }
 
-  /* Tighter desktop tail on location modals: .review-squeaks and
-     .review-reactions each had margin-top + padding-top of 16px,
-     plus the preceding <p>'s UA-default 16px margin-bottom. That
-     compounded to ~32px of breathing room between the review body
-     and each subsequent divider, pushing the modal content past
-     the 90vh max-height and adding a scroll. Zeroing all four
-     tail margins (review-body bottom, squeaks both, reactions
-     top) and relying on var(--space-sm) padding-top for the
-     visible space after each border collapses each separator to
-     8px — fits the modal within 90vh on standard desktop
-     viewports without scroll. Mobile keeps the looser rhythm so
-     touch targets stay comfortable. */
+  /* Tighter desktop tail on location modals. Per-separator gap
+     was ~32px (16 prev margin-bottom collapsed with 16 next
+     margin-top, plus 16 padding-top after border). Now ~16px:
+     8 margin-bottom on the previous element + 8 padding-top
+     after the border. Margin-top on review-body PRESERVED at
+     UA default so the gap above the review text stays intact —
+     only the AFTER-text spacing tightens, per the ask. Mobile
+     keeps the looser rhythm for comfortable touch targets. */
   .review-content > .review-body {
-    margin: 0;
+    margin-top: var(--space-md);
+    margin-bottom: var(--space-sm);
   }
   .review-content > .review-squeaks {
-    margin: 0;
+    margin: 0 0 var(--space-sm);
     padding-top: var(--space-sm);
   }
   .review-content > .review-reactions {
