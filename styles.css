@@ -1997,17 +1997,13 @@ main {
      content lands cleanly under the status bar. */
 }
 
+/* Desktop about-header: a plain in-flow element. No sticky, no
+   bg band, no compositor layer — the back-to-map link just sits
+   at the top of the document and scrolls with the rest. Mobile
+   media query restores sticky + bg so the link stays anchored
+   during long-page scroll on phones. */
 .about-header {
-  padding: calc(0.75rem + env(safe-area-inset-top)) 1rem 0.75rem;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  background: var(--color-bg);
-  /* Compositor-layer promotion: see .page-header rule for full
-     rationale. Fixes the about-header flicker during hard-flick
-     momentum scroll. */
-  transform: translateZ(0);
-  will-change: transform;
+  padding: 0.75rem 1rem;
 }
 
 .about-back {
@@ -2831,5 +2827,20 @@ main {
   html,
   body {
     overscroll-behavior: none;
+  }
+
+  /* Mobile about-header: restores the sticky + bg + compositor
+     promotion that desktop drops. The about page is a long scroll
+     on mobile so the back-to-map link needs to stay anchored
+     during scroll. Includes safe-area-inset-top in padding so the
+     link clears the iPhone status bar. */
+  .about-header {
+    padding: calc(0.75rem + env(safe-area-inset-top)) 1rem 0.75rem;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--color-bg);
+    transform: translateZ(0);
+    will-change: transform;
   }
 }
