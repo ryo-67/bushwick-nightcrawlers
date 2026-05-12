@@ -43,6 +43,20 @@ function readSafeAreaInset(which) {
   return Number.isFinite(value) ? value : 0;
 }
 
+// Measure 100lvh on the current device. V23 step 1: gate the lvh-based
+// sheet extension on whether iOS Safari actually resolves 100lvh
+// larger than 100dvh in the body-locked URL-bar-stuck state. Probe
+// element sized to 100lvh; bounding rect gives the resolved value.
+function readLvh() {
+  const probe = document.createElement('div');
+  probe.style.cssText =
+    'position:fixed;visibility:hidden;height:100lvh;left:-9999px;top:0';
+  document.body.appendChild(probe);
+  const value = probe.getBoundingClientRect().height;
+  probe.remove();
+  return value;
+}
+
 function fmt(n) {
   return typeof n === 'number' ? Math.round(n * 100) / 100 : n;
 }
@@ -100,6 +114,7 @@ function snapshot() {
     main_h_css: main ? getComputedStyle(main).height : null,
     sai_top: readSafeAreaInset('top'),
     sai_bot: readSafeAreaInset('bottom'),
+    lvh: readLvh(),
   };
 }
 
@@ -119,6 +134,7 @@ function render() {
     `body  h css:  ${s.body_h_css}`,
     `main  h css:  ${s.main_h_css}`,
     `safe-area t/b:${s.sai_top} / ${s.sai_bot}`,
+    `lvh:          ${fmt(s.lvh)}`,
     '(tap to dismiss)',
   ].join('\n');
 }
