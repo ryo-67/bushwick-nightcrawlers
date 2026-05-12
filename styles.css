@@ -45,6 +45,19 @@ body {
   overflow-x: hidden;
 }
 
+/* Map page (everything that isn't the about page) is a single-
+   screen experience: the page-header pins at the top and the
+   map-wrapper fills the rest. Locking body to 100dvh and
+   suppressing overflow prevents Safari's toolbar-collapse from
+   leaving a gap below the map and stops any incidental vertical
+   scroll. Descendant horizontal pan inside .map-wrapper still
+   works (it has its own overflow:auto on mobile). */
+body:not(.about-page) {
+  overflow: hidden;
+  height: 100vh;
+  height: 100dvh;
+}
+
 /* Visited links: project-wide override. Default browser purple
    reads as unreadable on the dark background — keep visited
    links the same off-white as unvisited; hover/focus uses the
@@ -83,7 +96,11 @@ main {
 .map-wrapper {
   position: relative;
   width: 100%;
+  /* 100vh fallback for old browsers; 100dvh dynamic viewport so
+     the wrapper's bottom edge tracks Safari's collapsing toolbar
+     instead of being stuck at the fixed toolbar-extended value. */
   height: calc(100vh - 3.5rem);
+  height: calc(100dvh - 3.5rem);
   overflow: hidden;
   margin: 0 auto;
   /* z-index + isolation creates a stacking context below the page
@@ -1065,6 +1082,14 @@ main {
 .page-header {
   position: sticky;
   top: 0;
+  /* Force a hardware-accelerated compositor layer so iOS Safari
+     momentum-scroll updates the header position independently of
+     the main scroll thread — eliminates the frame where content
+     briefly paints above the header during a hard-flick. The
+     ::before pseudo inherits the parent's compositor layer so
+     header + pseudo stay synchronized. */
+  transform: translateZ(0);
+  will-change: transform;
   /* z-index 100: above .map-wrapper (z-index 1) so the 250%-wide
      scrolling map can't bleed past the wrapper edge into the
      header area on momentum-scroll overshoot. */
@@ -1978,6 +2003,11 @@ main {
   top: 0;
   z-index: 100;
   background: var(--color-bg);
+  /* Compositor-layer promotion: see .page-header rule for full
+     rationale. Fixes the about-header flicker during hard-flick
+     momentum scroll. */
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 .about-back {
@@ -2769,31 +2799,12 @@ main {
    shorthand `background: var(--color-bg)` parent, so
    `background: inherit` pulls the full background longhand set. */
 .page-header::before,
-.about-header::before,
-.loading-screen::before {
+.about-header::before {
   content: '';
   position: absolute;
   left: 0;
   right: 0;
   bottom: 100%;
-  height: 100vh;
-  background: inherit;
-  pointer-events: none;
-}
-
-/* V18: mirror of V17's ::before, anchored at the loading-screen
-   bottom edge and extending downward. Fixes the bottom-side bleed
-   reported on iOS Safari with the expanded bottom toolbar: the
-   toolbar's translucent overlay zone was exposing the map beneath
-   the loading-screen at the bottom. Headers don't have this
-   problem (content scrolls under them naturally), so the ::after
-   is loading-screen-only. */
-.loading-screen::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 100%;
   height: 100vh;
   background: inherit;
   pointer-events: none;
@@ -2819,6 +2830,6 @@ main {
      mobile-scoped only. */
   html,
   body {
-    overscroll-behavior-y: none;
+    overscroll-behavior: none;
   }
 }
