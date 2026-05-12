@@ -2806,25 +2806,29 @@ main {
     object-fit: contain;
   }
 
-  /* Tighter desktop tail on location modals. Per-separator gap
-     was ~32px (16 prev margin-bottom collapsed with 16 next
-     margin-top, plus 16 padding-top after border). Now ~16px:
-     8 margin-bottom on the previous element + 8 padding-top
-     after the border. Margin-top on review-body PRESERVED at
-     UA default so the gap above the review text stays intact —
-     only the AFTER-text spacing tightens, per the ask. Mobile
-     keeps the looser rhythm for comfortable touch targets. */
+  /* Desktop location-modal tail rhythm: balances breathing room
+     with scroll reduction.
+       reviewer-block → review-body: 24px (more than UA-default
+         16px so the profile pic has clear separation from the
+         review text)
+       review-body → squeaks border: 12px margin-bottom
+       squeaks padding: 12/12 (both top and bottom inset around
+         the "in rat" translation line)
+       reactions padding-top: 12px after the border
+     Margins are zeroed where padding handles the gap so the
+     spacing reads as a single value rather than collapsed-margin
+     arithmetic. Mobile keeps the looser rhythm for touch targets. */
   .review-content > .review-body {
-    margin-top: var(--space-md);
-    margin-bottom: var(--space-sm);
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
   }
   .review-content > .review-squeaks {
-    margin: 0 0 var(--space-sm);
-    padding-top: var(--space-sm);
+    margin: 0;
+    padding: 0.75rem 0;
   }
   .review-content > .review-reactions {
     margin: 0;
-    padding-top: var(--space-sm);
+    padding-top: 0.75rem;
   }
 }
 
