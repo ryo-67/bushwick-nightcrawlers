@@ -2615,13 +2615,26 @@ main {
     -webkit-mask-image: none;
   }
 
-  /* Footer is the fixed bottom strip; opaque background prevents
-     scrolling cards from showing through. */
+  /* Footer is the fixed bottom strip; opaque background sits above
+     .loading-noise (z-index:2 vs noise z-index:0) and prevents
+     scrolling cards from showing through. The bg color is the
+     same var(--color-bg) as the screen, but the noise overlay
+     makes the screen read as grain-textured while the footer
+     reads as a flat, slightly darker band.
+     Negative horizontal margins pull the box out past the
+     .loading-screen's 16px horizontal padding so the flat band +
+     top border run edge-to-edge. padding-left/right restore the
+     content inset (status text + button stay at the same 16px
+     position). overflow:hidden on .loading-screen clips at its
+     padding box (x=0 to x=full), so the breakout sits inside
+     the clip region. */
   .loading-footer {
     flex: 0 0 auto;
     background: var(--color-bg);
     border-top: 1px solid rgba(255, 255, 255, 0.05);
-    padding: 0.75rem 0 0;
+    margin-left: -16px;
+    margin-right: -16px;
+    padding: 0.75rem 16px 0;
   }
 
   /* V7 tightened the three loading cards but V8 listen-test
