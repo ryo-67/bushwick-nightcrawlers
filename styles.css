@@ -1441,8 +1441,19 @@ main {
     padding: 0 1rem var(--space-sm);
   }
 
-  .alley-cards {
-    padding: 0 1rem var(--space-lg);
+  /* Rat cards span the full sheet width — no horizontal padding
+     on .alley-cards container. Each .alley-card carries its own
+     1rem L/R padding aligning the selfie/text/speaker icons with
+     the photo and title above (all at 1rem from sheet edge).
+     Bumped to .modal-card.alley-modal .alley-cards (specificity
+     0,3,0) to beat the universal `.modal-card > *:not(.modal-
+     venue-headline) { padding-left/right: 1rem }` rule (0,2,0). */
+  .modal-card.alley-modal .alley-cards {
+    padding: 0 0 var(--space-lg);
+  }
+
+  .alley-card {
+    padding: 12px 1rem;
   }
 
   .alley-cards-hint {
@@ -1782,13 +1793,20 @@ main {
 
   /* V11: alley photo displays at natural ratio. V10's 16/9
      forced ratio caused black banding because the source isn't
-     16/9. object-position keeps the JMZ-bridge underside cropped
-     out of the top of the visible area. */
+     16/9. V13: also stripped the module-scope polaroid styling
+     (transform:rotate(-0.6deg) + border + background) which was
+     producing visible bands at the wrapper edges where the
+     rotated photo didn't fill its AABB. The alley photo wants
+     a clean rectangular display, not the polaroid treatment
+     used on review-card venue photos. */
   .alley-modal .modal-venue-photo,
   .alley-photo,
   .alley-hero-image {
     aspect-ratio: auto;
     overflow: visible;
+    transform: none;
+    border: none;
+    background: none;
   }
 
   .alley-modal .modal-venue-photo img {
@@ -1796,6 +1814,7 @@ main {
     height: auto;
     object-fit: initial;
     object-position: center 30%;
+    display: block;
   }
 
   /* V11: clearance between alley photo and the "where the rats
