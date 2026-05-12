@@ -2805,6 +2805,30 @@ main {
     max-height: 50vh;
     object-fit: contain;
   }
+
+  /* Tighter desktop tail on location modals: .review-squeaks and
+     .review-reactions each had margin-top + padding-top of 16px,
+     plus the preceding <p>'s UA-default 16px margin-bottom. That
+     compounded to ~32px of breathing room between the review body
+     and each subsequent divider, pushing the modal content past
+     the 90vh max-height and adding a scroll. Zeroing all four
+     tail margins (review-body bottom, squeaks both, reactions
+     top) and relying on var(--space-sm) padding-top for the
+     visible space after each border collapses each separator to
+     8px — fits the modal within 90vh on standard desktop
+     viewports without scroll. Mobile keeps the looser rhythm so
+     touch targets stay comfortable. */
+  .review-content > .review-body {
+    margin: 0;
+  }
+  .review-content > .review-squeaks {
+    margin: 0;
+    padding-top: var(--space-sm);
+  }
+  .review-content > .review-reactions {
+    margin: 0;
+    padding-top: var(--space-sm);
+  }
 }
 
 /* ===== V17 safe-area overscroll fix =====
