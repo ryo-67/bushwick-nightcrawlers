@@ -449,13 +449,18 @@ main {
 
 /* Alley title bar stays anchored at top of the scrolling card so
    the user always sees what venue they're in and how to close it,
-   regardless of how far down the rat list they scroll. */
+   regardless of how far down the rat list they scroll. V12 P2:
+   added 1rem horizontal padding to match location modal headline
+   positioning — without this, alley title and close button
+   appeared flush to the sheet edge while location modal titles
+   were inset 1rem (the mobile .modal-venue-headline rule was
+   losing the cascade to this more-specific rule). */
 .modal-card.alley-modal .modal-venue-headline {
   position: sticky;
   top: 0;
   z-index: 5;
   background: var(--color-bg);
-  padding: 0.5rem 0;
+  padding: 0.75rem 1rem 0.5rem;
   margin-bottom: 0.5rem;
 }
 
@@ -564,7 +569,14 @@ main {
 .alley-cards {
   display: flex;
   flex-direction: column;
-  padding: 0 var(--space-lg) var(--space-lg);
+  /* V12 P2: removed module-scope horizontal padding (was
+     `0 var(--space-lg) var(--space-lg)`). The parent
+     .modal-card.alley-modal already pads horizontally by 2rem on
+     desktop; alley-cards adding another 2rem stacked to 4rem
+     total inset — excessive vs location modal cards. Mobile rule
+     at line ~1412 keeps its own horizontal padding since mobile
+     card has padding:0 and children carry their own inset. */
+  padding: 0 0 var(--space-lg);
 }
 
 .alley-card {
