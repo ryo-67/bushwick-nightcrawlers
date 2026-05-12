@@ -2014,7 +2014,11 @@ main {
    more clearance. ~2rem top margin on h2/h3 inside about content. */
 .about-section h2,
 .about-section h3,
-.freesound-subhead {
+.about-section .freesound-subhead {
+  /* V12: bumped specificity to .about-section .freesound-subhead
+     (0,2,0) to beat .about-section p (0,1,1) which was setting
+     margin-top:0 via the shorthand. V10's grouped rule with bare
+     .freesound-subhead (0,1,0) lost the cascade. */
   margin-top: 2rem;
 }
 
@@ -2041,12 +2045,16 @@ main {
   margin-bottom: 0.3rem;
 }
 
-.freesound-subhead {
+.about-section .freesound-subhead {
   color: var(--color-accent);
   font-family: var(--font-ui);
   font-size: 0.75rem;
   letter-spacing: 0.02em;
-  margin-top: 1rem;
+  /* V12: bumped to .about-section .freesound-subhead (0,2,0) so
+     this rule beats .about-section p (0,1,1) which was setting
+     margin-top:0 via shorthand. Spacing from preceding paragraph
+     is the load-bearing property here. */
+  margin-top: 2rem;
   margin-bottom: 0.4rem;
   opacity: 0.85;
 }
