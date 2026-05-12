@@ -2768,30 +2768,37 @@ main {
   pointer-events: none;
 }
 
-/* ===== V15 safe-area max() fallback — mobile only =====
-   V14 wrapped env(safe-area-inset-top) in max(..., 44px) at module
-   scope so devices where env() returns 0 (the env-returns-0 bug
-   on some iOS Safari configurations) still get a notch-height
-   floor. That floor leaked into chromium desktop, which correctly
-   resolves env() to 0 — bumping desktop headers by 44px. V15
-   scopes the floor to mobile widths so desktop reverts to the
-   prior 14px / 12px header padding.
-   Floors: 44px = iPhone notch (page/about/loading top), 34px =
-   iPhone home indicator (loading bottom). */
+/* V18: mirror of V17's ::before, anchored at the loading-screen
+   bottom edge and extending downward. Fixes the bottom-side bleed
+   reported on iOS Safari with the expanded bottom toolbar: the
+   toolbar's translucent overlay zone was exposing the map beneath
+   the loading-screen at the bottom. Headers don't have this
+   problem (content scrolls under them naturally), so the ::after
+   is loading-screen-only. */
+.loading-screen::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 100vh;
+  background: inherit;
+  pointer-events: none;
+}
+
+/* ===== V18 reverts V14/V15 max() padding floor =====
+   With V17's ::before pseudo extending each surface's bg upward
+   into the safe-area zone, the padding floor is excess chrome.
+   env() resolving to 0 in iOS Safari (URL bar pre-insets the page)
+   is correct — the pseudo handles the visual. Base rules with
+   plain env() reverted to V11-era values:
+     - Safari (env=0): page-header 14px, about-header 12px,
+       loading 14/32px
+     - PWA standalone (env > 0): env value adds to base, original
+       intent of the env() math preserved
+   Only the mobile-only overscroll-behavior-y rule from V17 stays
+   in this block. */
 @media (max-width: 768px) {
-  .page-header {
-    padding-top: calc(0.875rem + max(env(safe-area-inset-top), 44px));
-  }
-
-  .about-header {
-    padding-top: calc(0.75rem + max(env(safe-area-inset-top), 44px));
-  }
-
-  .loading-screen {
-    padding-top: calc(0.875rem + max(env(safe-area-inset-top), 44px));
-    padding-bottom: calc(2rem + max(env(safe-area-inset-bottom), 34px));
-  }
-
   /* V17 belt-and-suspenders: suppress iOS Safari rubber-band
      overscroll so the V17 ::before pseudo-element doesn't even
      get tested on iOS 16+. On older iOS this is a no-op and the
