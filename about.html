@@ -202,6 +202,10 @@
       requestAnimationFrame(function() {
         var r = probe.getBoundingClientRect();
         var visualHeight = window.visualViewport ? window.visualViewport.height : 'n/a';
+        var viewportMetas = Array.from(document.querySelectorAll('meta[name="viewport"]'));
+        var viewportTags = viewportMetas.length
+          ? viewportMetas.map(function(m, i) { return 'vp[' + i + ']: ' + m.content; }).join('<br>')
+          : 'vp: NONE FOUND';
         label.innerHTML = [
           'env-top: ' + r.height + 'px',
           'env-top width: ' + r.width + 'px',
@@ -210,6 +214,7 @@
           'screen.height: ' + window.screen.height + 'px',
           'visualViewport: ' + visualHeight + 'px',
           'standalone: ' + (window.navigator.standalone || false),
+          viewportTags,
           'UA: ' + navigator.userAgent.slice(0, 100)
         ].join('<br>');
       });
