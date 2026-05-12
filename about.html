@@ -191,5 +191,29 @@
       </blockquote>
     </section>
   </main>
+
+  <!-- V14 DEBUG — remove after on-device test confirms env() behavior. -->
+  <div id="env-probe" style="position:fixed;top:0;left:0;width:env(safe-area-inset-top);height:env(safe-area-inset-top);background:red;z-index:99999;pointer-events:none"></div>
+  <div id="env-label" style="position:fixed;top:60px;left:0;background:black;color:lime;font-size:11px;line-height:1.3;z-index:99999;padding:6px;font-family:monospace;max-width:90vw;pointer-events:none;border:1px solid lime"></div>
+  <script>
+    (function() {
+      var probe = document.getElementById('env-probe');
+      var label = document.getElementById('env-label');
+      requestAnimationFrame(function() {
+        var r = probe.getBoundingClientRect();
+        var visualHeight = window.visualViewport ? window.visualViewport.height : 'n/a';
+        label.innerHTML = [
+          'env-top: ' + r.height + 'px',
+          'env-top width: ' + r.width + 'px',
+          'innerHeight: ' + window.innerHeight + 'px',
+          'innerWidth: ' + window.innerWidth + 'px',
+          'screen.height: ' + window.screen.height + 'px',
+          'visualViewport: ' + visualHeight + 'px',
+          'standalone: ' + (window.navigator.standalone || false),
+          'UA: ' + navigator.userAgent.slice(0, 100)
+        ].join('<br>');
+      });
+    })();
+  </script>
 </body>
 </html>

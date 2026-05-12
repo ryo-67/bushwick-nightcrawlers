@@ -1074,8 +1074,14 @@ main {
   /* env(safe-area-inset-top) resolves to 0 on devices without a
      notch; on iPhone X+ it pads the header past the status bar
      so the title doesn't overlap. Requires viewport-fit=cover
-     on the meta tag (set in index.html / about.html). */
-  padding: calc(0.875rem + env(safe-area-inset-top)) 1.5rem 0.875rem;
+     on the meta tag (set in index.html / about.html).
+     V14 max(env(...), 44px) fallback: V13's puppeteer iPhone 14
+     Pro emulation passed but real-device iOS still showed bleed,
+     the classic env()-returns-0 signature. The max() floor at
+     44px (iPhone notch height) clears the status bar even when
+     env() resolves to 0; on devices where env() works correctly
+     it returns the env value, identical to the prior behavior. */
+  padding: calc(0.875rem + max(env(safe-area-inset-top), 44px)) 1.5rem 0.875rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1969,7 +1975,9 @@ main {
 }
 
 .about-header {
-  padding: calc(0.75rem + env(safe-area-inset-top)) 1rem 0.75rem;
+  /* V14 max(env(...), 44px) fallback — see .page-header rule
+     for full rationale. Same env()-returns-0 risk applies here. */
+  padding: calc(0.75rem + max(env(safe-area-inset-top), 44px)) 1rem 0.75rem;
   position: sticky;
   top: 0;
   z-index: 100;
@@ -2265,10 +2273,13 @@ main {
      (0.875rem top + safe-area, 1.5rem horizontal) so the
      loading-screen title and main-page title share visual
      position — title doesn't jump during fade-out transition. */
+  /* V14 max() fallback: 44px floor for the notch, 34px for the
+     home indicator. Same env()-returns-0 risk as the page/about
+     headers; the loading screen sits at the same chrome edge. */
   padding:
-    calc(0.875rem + env(safe-area-inset-top))
+    calc(0.875rem + max(env(safe-area-inset-top), 44px))
     1.5rem
-    calc(2rem + env(safe-area-inset-bottom));
+    calc(2rem + max(env(safe-area-inset-bottom), 34px));
   display: flex;
   flex-direction: column;
   opacity: 1;
