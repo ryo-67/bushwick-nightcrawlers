@@ -447,22 +447,20 @@ main {
   display: none;
 }
 
-/* Alley title bar stays anchored at top of the scrolling card so
-   the user always sees what venue they're in and how to close it,
-   regardless of how far down the rat list they scroll.
-   V13: no horizontal padding on desktop — the alley card has its
-   own 2rem horizontal padding (from .modal-card.alley-modal) and
-   the title should inherit that inset to match location modals.
-   Mobile media query restores 1rem horizontal because mobile
-   .modal-card.alley-modal has padding:0 — children carry their
-   own inset there. */
+/* Alley headline flows like every other modal title — static
+   position, no sticky pinning. V14 dropped the V13 sticky pattern
+   because (a) it sat the title flush against the card top while
+   other modals' titles sit 32px down (card padding), making the
+   alley header read visually shorter and offset; (b) combined
+   with the sticky .alley-header below it created a double-sticky
+   scroll where the photo pinned under the title and the rat cards
+   scrolled past it — users perceived this as a bug. Horizontal
+   inset comes from the rule below since .modal-card.alley-modal
+   zeroes its horizontal padding so .alley-cards can run full
+   bleed. Mobile padding override lives in the mobile media query. */
 .modal-card.alley-modal .modal-venue-headline {
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  background: var(--color-bg);
-  padding: 0.75rem 0 0.5rem;
-  margin-bottom: 0.5rem;
+  padding-left: var(--space-lg);
+  padding-right: var(--space-lg);
 }
 
 .reviewer-block {
@@ -532,44 +530,32 @@ main {
   color: var(--color-accent);
 }
 
-/* Alley modal: sticky header keeps title + photo + framing + close
-   button visible while the 11 mini-cards scroll. Modal-card padding
-   is zeroed so the header's own padding controls the visible chrome
-   at the top once content has scrolled past. */
+/* Alley card keeps the vertical card padding (matches other modals
+   so the title sits 32px down from the card top) but zeroes
+   horizontal padding so .alley-cards can run full-bleed to the
+   card edges. Non-bleeding children (.modal-venue-headline,
+   .alley-header, .alley-card) carry their own var(--space-lg)
+   horizontal padding so title, photo, and per-card content all
+   align at 32px from the card edge — matching the inset that
+   location modals inherit from uniform card padding. */
 .modal-card.alley-modal {
-  padding: 0 var(--space-lg) var(--space-lg);
+  padding: var(--space-lg) 0;
 }
 
-/* Alley header (photo + framing) sits as normal scrollable content
-   under the sticky .modal-venue-headline. The title/close moved
-   into the headline (which is the sticky region; see
-   .modal-card.alley-modal .modal-venue-headline above). V11
-   restores the desktop sticky behavior on .alley-header itself
-   so the photo + tagline stay visible while rat cards scroll
-   below — this is the affordance that makes the recency-of-play
-   reordering visible.
-   Mobile keeps the headline-only sticky pattern since the sheet
-   body has limited height and a large sticky region would crowd
-   the visible cards.
-   V13: margin-top:1.5rem matches the .review-content margin-top
-   on location modals so the gap between sticky title bottom and
-   the alley photo reads identically to location modal title →
-   content spacing. */
+/* Alley header (photo + framing). margin-top: 1.5rem matches the
+   .review-content margin-top on location modals so the gap
+   between the title bottom and the alley photo reads identically
+   to location-modal title → content spacing. Horizontal padding
+   aligns the photo + framing line with the title above and the
+   rat-card content below.
+   V14 stripped the desktop sticky behavior on .alley-header.
+   Combined with the sticky headline above, the V11 sticky was the
+   "scroll stickiness bug" — the photo region pinned at top:3.25rem
+   while rat cards scrolled past it, and users perceived that as
+   broken rather than as a reordering affordance. */
 .alley-header {
   margin-top: 1.5rem;
-  padding: 0 0 var(--space-md);
-}
-
-@media (min-width: 769px) {
-  .modal-card.alley-modal .alley-header {
-    position: sticky;
-    top: 3.25rem;
-    background: var(--color-bg);
-    z-index: 4;
-    padding-bottom: var(--space-md);
-    border-bottom: 1px solid rgba(184, 255, 0, 0.08);
-    margin-bottom: var(--space-sm);
-  }
+  padding: 0 var(--space-lg) var(--space-md);
 }
 
 .alley-cards {
@@ -591,7 +577,13 @@ main {
   align-items: flex-start;
   gap: 14px;
   width: 100%;
-  padding: 12px 14px;
+  /* Horizontal padding matches .modal-card padding on other modals
+     and the title/photo inset on the alley sheet, so selfies and
+     text align with the title above. The row itself spans the full
+     card width (.alley-cards has padding:0) so hover/focus tints
+     and the bottom rule run edge-to-edge — the full-bleed-with-
+     inset-content pattern from the mobile sheet. */
+  padding: 12px var(--space-lg);
   background: transparent;
   border: none;
   border-bottom: 1px solid rgba(184, 255, 0, 0.15);
