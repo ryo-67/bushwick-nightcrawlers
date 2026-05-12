@@ -46,16 +46,34 @@ body {
 }
 
 /* Map page (everything that isn't the about page) is a single-
-   screen experience: the page-header pins at the top and the
-   map-wrapper fills the rest. Locking body to 100dvh and
-   suppressing overflow prevents Safari's toolbar-collapse from
-   leaving a gap below the map and stops any incidental vertical
-   scroll. Descendant horizontal pan inside .map-wrapper still
-   works (it has its own overflow:auto on mobile). */
+   screen experience: page-header on top, map-wrapper fills the
+   remainder. V20 restructured as a flex column so the wrapper
+   fills main height without calc() arithmetic on 100dvh - header
+   (which was producing banding when the calculation didn't match
+   the actual header height exactly). Body locked to 100dvh +
+   overflow:hidden so Safari's toolbar collapse can't leave a gap
+   below the map; descendant horizontal pan inside .map-wrapper
+   still works via its own overflow:auto on mobile. */
 body:not(.about-page) {
-  overflow: hidden;
   height: 100vh;
   height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Override the global main { display:flex; align-items:center }
+   rule on the map page. With body as a flex column, main needs
+   to flex-fill the remainder, NOT flex-center the wrapper —
+   centering produced banding above and below the wrapper when
+   wrapper was shorter than viewport. min-height:0 lets the flex
+   child shrink below its content's intrinsic size as required.
+   .about-page main already has its own display:block. */
+body:not(.about-page) main {
+  flex: 1 1 0;
+  min-height: 0;
+  display: block;
+  padding: 0;
 }
 
 /* Visited links: project-wide override. Default browser purple
@@ -96,38 +114,46 @@ main {
 .map-wrapper {
   position: relative;
   width: 100%;
-  /* 100vh fallback for old browsers; 100dvh dynamic viewport so
-     the wrapper's bottom edge tracks Safari's collapsing toolbar
-     instead of being stuck at the fixed toolbar-extended value. */
-  height: calc(100vh - 3.5rem);
-  height: calc(100dvh - 3.5rem);
+  /* V20: height:100% of the flex-filling main, which is itself
+     body-height minus header. No calc() arithmetic to mismatch
+     the actual header height. Toolbar collapse cascades through
+     body 100dvh → main flex:1 → wrapper 100% → map height:100%. */
+  height: 100%;
   overflow: hidden;
-  margin: 0 auto;
   /* z-index + isolation creates a stacking context below the page
-     header (z-index 100) so the 250% mobile scroll content can't
+     header (z-index 100) so the wide scrollable map content can't
      visually escape past the wrapper edge during momentum scroll. */
   z-index: 1;
   isolation: isolate;
 }
 
+/* V20: height-anchored sizing. Map and pin-layer fill the wrapper
+   vertically; width derives from each element's aspect. Map-bg
+   (a <video>) uses the .mp4's intrinsic ratio (height:100% +
+   width:auto + no CSS aspect-ratio override → browser computes
+   width from intrinsic dimensions). Pin-layer uses the 16/9
+   fallback until syncPinLayerToMapDimensions() reads the same
+   intrinsic dimensions from videoWidth/Height and overrides
+   aspect-ratio to match — so post-sync both layers have the
+   same width and pin percentages map to the same map points.
+   On portrait viewports (mobile) resulting width > wrapper width
+   → horizontal scrolling. On wide desktop, wrapper is wider than
+   the map → minor right-side gap painted by body bg (same color
+   as the surround). Vertical coverage guaranteed everywhere. */
 .map-bg {
   position: absolute;
   bottom: 0;
   left: 0;
-  width: 100%;
-  height: auto;
+  height: 100%;
+  width: auto;
 }
 
-/* Pin-layer mirrors the map's geometry exactly so percentage-based
-   pin coordinates continue to land on venue locations. Aspect-ratio
-   is set as a CSS fallback (matches map.mp4 1920x1080) and
-   refined at runtime by syncPinLayerToMapDimensions() once the
-   video's metadata loads. */
 .pin-layer {
   position: absolute;
   bottom: 0;
   left: 0;
-  width: 100%;
+  height: 100%;
+  width: auto;
   aspect-ratio: 16 / 9;
   pointer-events: none;
 }
@@ -1352,12 +1378,12 @@ main {
     display: none;
   }
 
-  .map-bg,
-  .pin-layer {
-    /* 250% (up from 200%) gives pin labels enough breathing room
-       to read as discrete pills without overlapping neighbors. */
-    width: 250%;
-  }
+  /* V20: removed the explicit width:250% mobile override.
+     Height-anchored sizing at module scope already produces a map
+     wider than the wrapper on portrait viewports (iPhone 14 Pro
+     844×393 wrapper → map width ≈ 844 × 16/9 ≈ 1500px, ≈ 380% of
+     wrapper width) so pin labels get even more breathing room
+     than the prior 250%, without manual sizing. */
 
   /* Modal becomes a bottom sheet on mobile. Backdrop is dimmer
      (sheet doesn't cover full viewport) and the card slides up
