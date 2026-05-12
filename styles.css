@@ -1431,14 +1431,38 @@ main {
     background: rgba(10, 10, 10, 0.95);
   }
 
+  /* V23: extend the modal to 100lvh for full-extending sheets
+     (location, alley). The body-locked map page keeps iOS Safari's
+     URL-bar in its expanded-pill state for the session, so 100dvh
+     stops above the pill (~40px short of the device bottom on iOS
+     18.7). With inset:0 from module scope still in effect, setting
+     height:100lvh over-constrains the bottom property; per CSS spec
+     bottom is ignored and the modal extends top:0 → y=100lvh.
+     With align-items:flex-end and the card sized to 100lvh below,
+     card top lands at y=0 and card bottom lands at y=100lvh.
+     Tombstone variant excluded: its content-sized card needs to
+     stay bottom-aligned at innerHeight (= 100dvh) so the last
+     line doesn't get pushed into the URL-bar zone. :has() is
+     already in active use on this codebase (Safari 16.4+ full
+     support; user on iOS 18.7). */
+  .modal:not(:has(.modal-card-tombstone)) {
+    height: 100lvh;
+  }
+
   .modal-card {
     width: 100%;
     max-width: 100%;
-    /* Full viewport height. 100dvh accounts for mobile address-bar
-       collapse; 100vh is the fallback for browsers without dvh. */
+    /* V23: card extends to 100lvh so it paints through the URL-bar
+       zone (~40px on iOS 18.7 in body-locked state). Combined with
+       the .modal:not(:has(.modal-card-tombstone)) { height: 100lvh }
+       rule above, the modal's flex-end alignment places card top at
+       y=0 and card bottom at y=100lvh — visual surface reaches the
+       device's physical bottom edge.
+       100vh fallback for legacy browsers without lvh (Safari <15.4).
+       Tombstone overrides this back to height:auto below. */
     height: 100vh;
-    height: 100dvh;
-    max-height: 100dvh;
+    height: 100lvh;
+    max-height: 100lvh;
     /* Prevent scroll-chaining: when the user scrolls past the sheet
        content (especially on content-sized Rash where there's empty
        space below the card), the scroll shouldn't propagate to the
@@ -1465,6 +1489,23 @@ main {
 
   .modal[data-state='open'] .modal-card {
     transform: translateY(0);
+  }
+
+  /* V23: inert scrollable padding at the card bottom equal to the
+     URL-bar zone size. With height:100lvh and overflow-y:auto, the
+     effective scroll area = lvh - padding-bottom = 100dvh. When the
+     user scrolls to the end, the last content sits at y=100dvh
+     (just above the URL-bar pill); the padding zone fills
+     y=100dvh → y=100lvh — the pill obscures only inert padding,
+     never content.
+     calc(100lvh - 100dvh) resolves to 0 on every viewport without a
+     floating URL bar (chromium, desktop, PWA standalone, iOS
+     landscape) so the rule is invisible everywhere except iOS Safari
+     portrait. Scoped to non-tombstone so the content-sized tombstone
+     card isn't visually expanded by empty padding below its
+     epitaph. */
+  .modal-card:not(.modal-card-tombstone) {
+    padding-bottom: calc(100lvh - 100dvh);
   }
 
   /* With .modal-card padding zeroed, each non-sticky child gets

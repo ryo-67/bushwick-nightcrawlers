@@ -68,6 +68,14 @@ The map is a silent looping MP4 background. Pins are separate GIF assets layered
 
 The `muted` attribute is required for autoplay; `playsinline` prevents iOS Safari from launching the video to fullscreen. MP4 has no transparency, so pin overlays must use formats that do (GIF here, or WebM with alpha in Phase 2). Don't try to overlay video on video.
 
+## Mobile sheet sizing (V23)
+
+The map page locks body to `100dvh` with `overflow: hidden`, so iOS Safari keeps the URL bar in its expanded floating-pill state for the session (no scroll signal to collapse it). `100dvh` resolves to the smaller viewport (~695 on iPhone 14 Pro); the URL-bar pill occupies the ~40px strip from `innerHeight` to `100lvh`.
+
+Full-extending mobile sheets (review, alley) extend visually into that strip via `100lvh` height and `:has()` scoping on the modal: `.modal:not(:has(.modal-card-tombstone)) { height: 100lvh }` and `.modal-card { height: 100lvh; max-height: 100lvh }`. To prevent end-of-scroll content from rendering under the pill, `.modal-card:not(.modal-card-tombstone) { padding-bottom: calc(100lvh - 100dvh) }` adds an inert scrollable zone at the card bottom — the pill covers only padding, never content. On viewports without a floating URL bar (chromium, desktop, PWA standalone) `lvh === dvh`, the calc resolves to 0, and the rules behave identically to a plain `100dvh` sheet.
+
+The Rash tombstone variant (`.modal-card.modal-card-tombstone`) is content-sized (`height: auto; max-height: 100dvh`) and stays bottom-anchored at `innerHeight`. The `:not(.modal-card-tombstone)` scoping above keeps it out of the lvh extension so its short last line doesn't get pushed into the URL-bar zone.
+
 ## Audio rules (load-bearing)
 
 - `Tone.start()` must be called inside a user-gesture handler before any audio plays. The headphones tag at the top of the page is the gesture target. Until clicked, no AudioContext.
