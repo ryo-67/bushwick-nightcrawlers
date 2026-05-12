@@ -1672,7 +1672,11 @@ main {
     aspect-ratio: auto;
     width: 100%;
     overflow: visible;
-    margin: 0.5rem 0 1rem;
+    /* Top margin matches the .review-content top margin used by
+       location modals (1.5rem) so the gap between sticky title
+       bar bottom and the photo's top reads consistently across
+       tombstone and location sheets. */
+    margin: 1.5rem 0 1rem;
     transform: none;
     border: none;
     background: none;
@@ -2620,7 +2624,7 @@ main {
      The photo still gets a max-height cap to prevent unusually
      tall sources from dominating the modal. */
   .modal-card-tombstone .modal-venue-photo {
-    margin: 0 auto 1rem auto;
+    margin: 1.5rem auto 1rem;
   }
 
   .modal-card-tombstone .modal-venue-photo img {
