@@ -449,18 +449,19 @@ main {
 
 /* Alley title bar stays anchored at top of the scrolling card so
    the user always sees what venue they're in and how to close it,
-   regardless of how far down the rat list they scroll. V12 P2:
-   added 1rem horizontal padding to match location modal headline
-   positioning — without this, alley title and close button
-   appeared flush to the sheet edge while location modal titles
-   were inset 1rem (the mobile .modal-venue-headline rule was
-   losing the cascade to this more-specific rule). */
+   regardless of how far down the rat list they scroll.
+   V13: no horizontal padding on desktop — the alley card has its
+   own 2rem horizontal padding (from .modal-card.alley-modal) and
+   the title should inherit that inset to match location modals.
+   Mobile media query restores 1rem horizontal because mobile
+   .modal-card.alley-modal has padding:0 — children carry their
+   own inset there. */
 .modal-card.alley-modal .modal-venue-headline {
   position: sticky;
   top: 0;
   z-index: 5;
   background: var(--color-bg);
-  padding: 0.75rem 1rem 0.5rem;
+  padding: 0.75rem 0 0.5rem;
   margin-bottom: 0.5rem;
 }
 
@@ -549,8 +550,13 @@ main {
    reordering visible.
    Mobile keeps the headline-only sticky pattern since the sheet
    body has limited height and a large sticky region would crowd
-   the visible cards. */
+   the visible cards.
+   V13: margin-top:1.5rem matches the .review-content margin-top
+   on location modals so the gap between sticky title bottom and
+   the alley photo reads identically to location modal title →
+   content spacing. */
 .alley-header {
+  margin-top: 1.5rem;
   padding: 0 0 var(--space-md);
 }
 
@@ -1410,6 +1416,15 @@ main {
      edge-to-edge regardless. */
   .modal-card.alley-modal {
     padding: 0;
+  }
+
+  /* V13: restore horizontal padding on the alley headline for
+     mobile only. Module-scope rule above zeroes horizontal
+     padding so desktop can rely on card padding; mobile card
+     padding is 0 so headline needs its own 1rem horizontal to
+     match the mobile location modal title inset. */
+  .modal-card.alley-modal .modal-venue-headline {
+    padding: 0.75rem 1rem 0.5rem;
   }
 
   /* V9: rewrote as shorthand padding declarations to defeat any
