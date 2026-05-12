@@ -2732,6 +2732,42 @@ main {
   }
 }
 
+/* ===== V17 safe-area overscroll fix =====
+   V15 confirmed iOS Safari deliberately returns env(safe-area-
+   inset-top) = 0 with viewport-fit=cover declared correctly. The
+   visible "bleed" Shoro reports is iOS rubber-band overscroll —
+   pull-up scroll briefly exposes the page content (map, paragraphs,
+   loading screen contents) above each sticky/fixed surface. Each
+   surface only paints its bg from its top edge down, so the
+   safe-area zone above shows whatever sits underneath.
+
+   Fix: a position:absolute pseudo-element pinned at bottom:100% of
+   each surface (i.e. directly above its top edge), 100vh tall,
+   inheriting the parent's bg. The pseudo extends each surface's
+   visual bg upward into the safe-area zone so rubber-band exposes
+   the surface color rather than the underlying content.
+
+   100vh extension distance: rubber-band overshoot on iPhone is
+   bounded at ~screen-height; 100vh covers it with margin while
+   future-proofing against larger inset zones on new devices.
+
+   Each surface inherits the parent's position context (sticky/
+   sticky/fixed) so the pseudo anchors correctly. Each has a
+   shorthand `background: var(--color-bg)` parent, so
+   `background: inherit` pulls the full background longhand set. */
+.page-header::before,
+.about-header::before,
+.loading-screen::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  height: 100vh;
+  background: inherit;
+  pointer-events: none;
+}
+
 /* ===== V15 safe-area max() fallback — mobile only =====
    V14 wrapped env(safe-area-inset-top) in max(..., 44px) at module
    scope so devices where env() returns 0 (the env-returns-0 bug
@@ -2754,5 +2790,15 @@ main {
   .loading-screen {
     padding-top: calc(0.875rem + max(env(safe-area-inset-top), 44px));
     padding-bottom: calc(2rem + max(env(safe-area-inset-bottom), 34px));
+  }
+
+  /* V17 belt-and-suspenders: suppress iOS Safari rubber-band
+     overscroll so the V17 ::before pseudo-element doesn't even
+     get tested on iOS 16+. On older iOS this is a no-op and the
+     pseudo handles the visual. Desktop bounce stays intentional —
+     mobile-scoped only. */
+  html,
+  body {
+    overscroll-behavior-y: none;
   }
 }
