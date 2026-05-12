@@ -1942,13 +1942,13 @@ main {
 .about-page {
   background: var(--color-bg);
   color: var(--color-text);
-  /* Belt-and-suspenders for the iPhone notch: pad the body itself
-     so the about-title (which sits in .about-main, NOT inside the
-     sticky .about-header) clears the status bar. .about-header
-     ALSO has its own safe-area padding-top, but applying to body
-     too guarantees title content stays below the status bar even
-     if the header is empty / hidden / has unexpected height. */
-  padding-top: env(safe-area-inset-top);
+  /* No body-level safe-area padding. Applying env(safe-area-inset-
+     top) to body stacked with .about-header's own env() padding —
+     paying the inset cost twice and exposing body background as a
+     visible strip between the notch and the header content. The
+     html/body shared background var(--color-bg) fills the notch
+     zone, and the .about-header below carries its own env() so
+     content lands cleanly under the status bar. */
 }
 
 .about-header {
