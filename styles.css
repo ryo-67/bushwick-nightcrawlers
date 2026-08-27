@@ -2,7 +2,11 @@
   --color-bg: #0A0A0A;
   --color-text: #C5BFAE;
   --color-accent: #B8FF00;
-  --color-stars: #D32323;
+  /* V66: bureaucracy red (report-to-311, closure stamp). Lifted
+     from Yelp's #D32323, which is only ~3.8:1 on the page black —
+     this value holds ≥5:1 (WCAG AA for normal text) at full
+     opacity. Never render it below opacity 1 on text. */
+  --color-stars: #F03C3C;
 
   --font-editorial: Georgia, 'Times New Roman', Times, serif;
   --font-data: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -1301,7 +1305,9 @@ main {
 }
 
 .review-report.is-active {
-  opacity: 0.85;
+  /* Full opacity: the red token's contrast budget assumes it —
+     0.85 here dragged the effective ratio back under AA. */
+  opacity: 1;
   color: var(--color-stars);
 }
 
