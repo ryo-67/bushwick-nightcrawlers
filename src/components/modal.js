@@ -6,24 +6,36 @@ const ALLEY_FRAMING = 'the alley between Mr Kiwi and the JMZ';
 // not its location. Edit this single line to change the framing copy.
 const ALLEY_MEET_FRAMING = 'where the rats meet';
 const RASH_CLOSED_NOTE = '[closed February 2026]';
-// Yelp's canonical trio, with shaky hand-line icons. Storage type
-// 'helpful' predates the 'useful' label — kept so existing
-// localStorage reaction state survives.
+// V51: modern Yelp's reaction set, in the site's lowercase voice —
+// the reactions are real visitors reaching across the fourth wall
+// now, so the options read as human responses to a rat's review
+// ('oh no' carrying most of the weight). Shaky hand-line icons in
+// 24×24 boxes, drawn in circles by CSS.
 const REACTIONS = [
   {
     type: 'helpful',
-    label: 'useful',
-    icon: '<path d="M4 7.6 L4.1 13 M4 8 C5.4 7.5 6.4 6 6.9 4.1 C7.1 3.1 8.4 3 8.5 4.2 C8.6 5.4 8.2 6.6 7.9 7.3 L11.7 7.1 C12.7 7.1 12.8 8.3 12.1 8.6 C12.8 9 12.7 10 11.9 10.2 C12.5 10.7 12.3 11.6 11.5 11.8 C11.8 12.4 11.4 13 10.7 13 L6.2 12.9"/>',
+    label: 'helpful',
+    // Lightbulb.
+    icon: '<path d="M12 3.3 C15.6 3.2 18.3 5.9 18.2 9.2 C18.2 11.4 17 12.8 15.9 14.1 C15.3 14.8 15 15.6 14.9 16.4 L9.2 16.3 C9.1 15.5 8.8 14.8 8.2 14.1 C7.1 12.8 5.9 11.4 5.9 9.1 C5.9 5.8 8.5 3.4 12 3.3 Z M9.7 19.1 L14.4 19 M10.4 21.3 L13.7 21.2"/>',
   },
   {
-    type: 'funny',
-    label: 'funny',
-    icon: '<path d="M8 2.6 C11 2.5 13.4 4.9 13.3 8 C13.2 11 11 13.4 8 13.3 C5 13.2 2.7 11 2.8 8 C2.9 5 5.1 2.7 8 2.6 Z M5.3 6.4 L6.6 6.5 M9.4 6.3 L10.7 6.4 M5.1 9 C6.2 11 9.9 11.1 10.9 9.2"/>',
+    type: 'thanks',
+    label: 'leave a crumb',
+    labelActive: 'left crumb',
+    // A crumb: irregular morsel with specks.
+    icon: '<path d="M7.2 14.8 C5.9 13.2 6.3 10.9 7.9 9.6 L11.3 6.9 C13 5.6 15.4 6 16.6 7.7 C17.4 8.8 17.5 10.2 17 11.4 C18 11.9 18.6 13 18.4 14.2 C18.1 15.9 16.5 17 14.8 16.8 L9.9 16.2 C8.8 16.1 7.8 15.6 7.2 14.8 Z M10.5 10.3 L10.6 10.4 M13.4 9.4 L13.5 9.5 M12.3 13.2 L12.4 13.3"/>',
   },
   {
-    type: 'cool',
-    label: 'cool',
-    icon: '<path d="M2.6 6 L13.4 5.8 M3.6 6 C3.5 8 4.3 9.1 5.6 9.1 C6.9 9.1 7.5 8 7.4 6.1 M8.6 6 C8.5 8 9.2 9.1 10.5 9.1 C11.8 9.1 12.5 8 12.3 6"/>',
+    type: 'love',
+    label: 'love this',
+    // Heart.
+    icon: '<path d="M12 19.3 C7.5 15.8 4.6 13.1 4.7 9.9 C4.8 7.7 6.5 6.1 8.5 6.2 C10 6.3 11.2 7.2 12 8.5 C12.8 7.2 14 6.3 15.5 6.2 C17.5 6.1 19.3 7.8 19.2 10 C19.1 13.2 16.4 15.9 12 19.3 Z"/>',
+  },
+  {
+    type: 'ohno',
+    label: 'oh no',
+    // Worried face: raised brows, small o mouth.
+    icon: '<path d="M12 3.5 C16.7 3.4 20.5 7.3 20.4 12 C20.3 16.7 16.6 20.5 12 20.4 C7.4 20.3 3.6 16.6 3.7 12 C3.8 7.4 7.4 3.6 12 3.5 Z M8.3 9.7 L9.9 9.8 M14.1 9.6 L15.7 9.7 M12 14.4 C13.2 14.4 13.4 16.8 12 16.8 C10.7 16.8 10.9 14.4 12 14.4 Z"/>',
   },
 ];
 
@@ -53,8 +65,8 @@ const PAUSE_ICON =
 
 function reactionIconSvg(pathMarkup) {
   return (
-    '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" ' +
-    'fill="none" stroke="currentColor" stroke-width="1.2" ' +
+    '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" ' +
+    'fill="none" stroke="currentColor" stroke-width="1.4" ' +
     'stroke-linecap="round" stroke-linejoin="round">' +
     pathMarkup +
     '</svg>'
@@ -590,7 +602,7 @@ export class Modal {
     // on the static server, or store outage).
     const countEls = new Map();
     let shared = false;
-    const sharedCounts = { helpful: 0, funny: 0, cool: 0 };
+    const sharedCounts = { helpful: 0, thanks: 0, love: 0, ohno: 0 };
 
     const displayCount = (type) =>
       shared ? sharedCounts[type] : readCount(reviewId, type);
@@ -601,7 +613,7 @@ export class Modal {
     note.className = 'review-helpful-note';
     const renderNote = () => {
       const n = displayCount('helpful');
-      note.textContent = `${n} ${n === 1 ? 'person' : 'people'} found this useful`;
+      note.textContent = `${n} ${n === 1 ? 'human' : 'humans'} found this helpful`;
       note.style.display = n > 0 ? '' : 'none';
     };
     const renderCounts = () => {
@@ -611,11 +623,13 @@ export class Modal {
       renderNote();
     };
 
-    REACTIONS.forEach(({ type, label, icon }) => {
+    REACTIONS.forEach(({ type, label, labelActive, icon }) => {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'review-reaction';
       const initialActive = readHasReacted(reviewId, type);
+      // State-swapped copy (e.g. "leave a crumb" → "left crumb").
+      const labelFor = (active) => (active && labelActive ? labelActive : label);
 
       const iconEl = document.createElement('span');
       iconEl.className = 'reaction-icon';
@@ -625,7 +639,7 @@ export class Modal {
 
       const labelEl = document.createElement('span');
       labelEl.className = 'reaction-label';
-      labelEl.textContent = label;
+      labelEl.textContent = labelFor(initialActive);
       btn.appendChild(labelEl);
 
       const countEl = document.createElement('span');
@@ -647,6 +661,7 @@ export class Modal {
         writeHasReacted(reviewId, type, nextActive);
         btn.classList.toggle('is-active', nextActive);
         btn.setAttribute('aria-pressed', nextActive ? 'true' : 'false');
+        labelEl.textContent = labelFor(nextActive);
 
         if (shared) {
           // Optimistic bump, then reconcile with the server tally.
@@ -678,6 +693,31 @@ export class Modal {
       });
       reactions.appendChild(btn);
     });
+
+    // V52: the report analogue — Yelp's "Report review", in city
+    // terms. One-way (no un-reporting a rat to the city), no
+    // public tally; the count lands server-side all the same.
+    const report = document.createElement('button');
+    report.type = 'button';
+    report.className = 'review-report';
+    const renderReport = (reported) => {
+      report.textContent = reported ? 'reported to 311' : 'report to 311';
+      report.disabled = reported;
+    };
+    renderReport(readHasReacted(reviewId, 'report'));
+    report.addEventListener('click', () => {
+      if (readHasReacted(reviewId, 'report')) return;
+      writeHasReacted(reviewId, 'report', true);
+      renderReport(true);
+      if (shared) {
+        fetch('/api/reactions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ review: reviewId, type: 'report', delta: 1 }),
+        }).catch(() => {});
+      }
+    });
+    reactions.appendChild(report);
 
     renderNote();
 

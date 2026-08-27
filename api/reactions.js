@@ -25,7 +25,7 @@
  */
 import { reviews } from '../src/content/reviews.js';
 
-const VALID_TYPES = new Set(['helpful', 'funny', 'cool']);
+const VALID_TYPES = new Set(['helpful', 'thanks', 'love', 'ohno', 'report']);
 const VALID_REVIEWS = new Set(
   Object.values(reviews).map((r) => r.reviewerId)
 );
@@ -54,7 +54,7 @@ async function redisPipeline(commands) {
 
 function countsFromHgetall(flat) {
   // Upstash returns HGETALL as a flat [field, value, ...] array.
-  const counts = { helpful: 0, funny: 0, cool: 0 };
+  const counts = { helpful: 0, thanks: 0, love: 0, ohno: 0 };
   if (Array.isArray(flat)) {
     for (let i = 0; i + 1 < flat.length; i += 2) {
       const key = flat[i];

@@ -1122,31 +1122,82 @@ main {
   border-top: 1px solid rgba(184, 255, 0, 0.15);
 }
 
-/* V37: flat Yelp-style action links — no boxes. Quiet icon +
-   label + count, generous spacing, accent on hover/active. */
+/* V51: modern-Yelp reaction buttons — a circled hand-drawn icon
+   with the label + count beneath. Active state fills the circle
+   with the accent (the piece's active-control treatment). */
 .review-reaction {
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.4rem;
   font-family: var(--font-ui);
   letter-spacing: 0.02em;
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   padding: 0.25rem 0;
   background: transparent;
   color: var(--color-text);
   border: none;
-  opacity: 0.75;
+  opacity: 0.8;
   cursor: pointer;
   transition: color 150ms ease, opacity 150ms ease;
 }
 
 .reaction-icon {
   display: inline-flex;
-  opacity: 0.8;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border: 1px solid rgba(197, 191, 174, 0.45);
+  border-radius: 50%;
+  transition: background 150ms ease, border-color 150ms ease,
+    color 150ms ease, transform 150ms ease;
+}
+
+.review-reaction:hover:not(.is-active) .reaction-icon,
+.review-reaction:focus-visible .reaction-icon {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  transform: rotate(-4deg);
+}
+
+.review-reaction.is-active .reaction-icon {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-bg);
 }
 
 .reaction-count {
   opacity: 0.65;
+}
+
+/* V52: the report analogue — quiet text action at the row's far
+   edge, Yelp's "Report review" in city terms. */
+.review-report {
+  margin-left: auto;
+  align-self: center;
+  background: transparent;
+  border: none;
+  padding: 0.25rem 0;
+  font-family: var(--font-data);
+  font-size: 0.6875rem;
+  letter-spacing: 0.02em;
+  color: var(--color-text);
+  opacity: 0.4;
+  cursor: pointer;
+  transition: opacity 150ms ease, color 150ms ease;
+}
+
+.review-report:hover:not(:disabled),
+.review-report:focus-visible {
+  opacity: 1;
+  color: var(--color-stars);
+  outline: none;
+}
+
+.review-report:disabled {
+  opacity: 0.55;
+  cursor: default;
 }
 
 /* Yelp's tally line under the reaction row. Hidden at zero (JS). */
