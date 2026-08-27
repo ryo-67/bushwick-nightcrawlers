@@ -255,17 +255,31 @@ function setupPinPositions() {
   }
 }
 
-// Pannable map: when the wrapper is proportionally taller than the
-// map (phones, tablet portrait, tall desktop windows — the
-// @container rule in styles.css flips to height-anchored sizing),
-// the map overflows horizontally and the wrapper scrolls. Center
-// the view on the venue-cluster centroid so the first pannable
-// paint shows the action area rather than the map's left edge.
-// Gated on actual overflow, not a breakpoint, so it tracks whatever
-// the CSS decides. Re-fires only when a resize newly tips the
-// wrapper into pannable mode (e.g. tablet rotation) — re-centering
-// on every resize would yank a pan position the visitor chose.
-let mapPanWasActive = false;
+// Pannable map: the map overflows the wrapper horizontally (tall
+// wrappers: phones, tablet portrait) or vertically (wide wrappers:
+// desktop; V27 top-anchoring made that crop scrollable), and the
+// wrapper scrolls. Center the view on the venue-cluster centroid on
+// both axes so the first paint shows the action area rather than a
+// map corner. Gated on actual overflow, not a breakpoint, so it
+// tracks whatever the CSS decides. Pannability is tracked PER AXIS:
+// crossing the aspect threshold (tablet rotation, window reshape)
+// swaps which axis overflows, and the browser silently zeroes the
+// collapsed axis's scroll — so a swap must re-center even though
+// "some axis was already pannable" before and after. Resizes that
+// keep the same axis don't re-fire; that would yank a position the
+// visitor chose.
+let mapPanAxes = { x: false, y: false };
+
+// Initial-view target: the Myrtle-Broadway intersection cluster
+// (JMZ platform, Trifecta, Mr. Kiwi, Market Hotel, the alley) —
+// the piece's anchor corner; mean of those pins' venues.js
+// coordinates. Deliberately NOT the 10-venue centroid: the
+// eastern pins (Mood Ring, Bossa Nova, Caffeine Underground)
+// would drag the opening frame off the intersection. X sits a
+// notch west of the cluster mean (0.26) so the JMZ-platform pin
+// clears the left edge on a 375px phone.
+const MAP_HOME_X = 0.24;
+const MAP_HOME_Y = 0.58;
 
 function centerMapOnVenueCluster() {
   const wrapper = document.querySelector('.map-wrapper');
@@ -276,14 +290,14 @@ function centerMapOnVenueCluster() {
     const sh = wrapper.scrollHeight;
     const cw = wrapper.clientWidth;
     const ch = wrapper.clientHeight;
-    const pannable = sw > cw || sh > ch;
-    const newlyPannable = pannable && !mapPanWasActive;
-    mapPanWasActive = pannable;
+    const panX = sw > cw;
+    const panY = sh > ch;
+    const newlyPannable =
+      (panX && !mapPanAxes.x) || (panY && !mapPanAxes.y);
+    mapPanAxes = { x: panX, y: panY };
     if (!newlyPannable) return;
-    // Centroid of the 10-venue spread: roughly 45% x, 58% y of the
-    // map. Updated if venues.js coordinates shift significantly.
-    const centerX = sw * 0.45 - cw / 2;
-    const centerY = sh * 0.58 - ch / 2;
+    const centerX = sw * MAP_HOME_X - cw / 2;
+    const centerY = sh * MAP_HOME_Y - ch / 2;
     wrapper.scrollTo({
       left: Math.max(0, centerX),
       top: Math.max(0, centerY),

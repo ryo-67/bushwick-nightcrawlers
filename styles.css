@@ -129,12 +129,11 @@ main {
 }
 
 /* Wrapper is the visible viewport slot for the map: full width,
-   header-offset height, hidden overflow. The map and pin-layer both
-   render at full natural width / aspect-derived height, anchored to
-   wrapper bottom. The top of the map crops above the wrapper edge
-   on typical desktop viewports — that's the point: pins are
-   calibrated to the lower portion of the map, so cropping the
-   sparser upper streets brings the venues into the visible band. */
+   chrome-offset height (header above, footer below), scrollable
+   overflow. Whichever axis the map exceeds the wrapper on (see the
+   anchoring comment at .map-bg) pans; the initial scroll position
+   is set by main.js centerMapOnVenueCluster() so the venue cluster
+   opens centered in the visible band on both axes. */
 .map-wrapper {
   position: relative;
   width: 100%;
@@ -175,21 +174,24 @@ main {
    the same map points regardless of viewport.
 
    Wide wrappers (width:100%, height auto via aspect-ratio): fills
-   the wrapper edge-to-edge horizontally. The map's height exceeds
-   the wrapper, and `bottom: 0` + unreachable-overflow clipping
-   crops the top of the map. This matches the original design
-   intent (see .map-wrapper comment) — pins are calibrated to the
-   lower portion of the map, so cropping the sparser upper streets
-   brings the venues into the visible band.
+   the wrapper edge-to-edge horizontally; the map's height exceeds
+   the wrapper and the excess scrolls vertically.
 
    Tall wrappers (height:100%, width auto, via the @container rule
-   below): produces a map wider than the wrapper, enabling the
-   horizontal pan that .map-wrapper { overflow:auto } uses to
-   navigate between pins. V25 moved this switch from the ≤768px
+   below): produces a map wider than the wrapper, and the excess
+   scrolls horizontally. V25 moved this switch from the ≤768px
    media query to a container query on the wrapper's own aspect
    ratio — device width was a proxy that failed on tablet portrait
    and tall desktop windows (width-anchored map fell short of the
    wrapper height, leaving a void above the map).
+
+   V27: anchored top-left (was bottom-left). Overflow on the side
+   opposite an absolute anchor is unreachable — the old `bottom: 0`
+   made the top crop unscrollable on wide viewports. With top/left
+   anchoring every crop is scrollable, and main.js
+   centerMapOnVenueCluster() scrolls the initial view to the venue
+   cluster centroid on both axes, so short wrappers open centered
+   on the pins instead of pinned to the map's bottom band.
 
    FILE DEPENDENCY: if assets/map.mp4 is replaced with a video
    at a different aspect ratio, update the aspect-ratio value
@@ -198,7 +200,7 @@ main {
 .map-bg,
 .pin-layer {
   position: absolute;
-  bottom: 0;
+  top: 0;
   left: 0;
   width: 100%;
   aspect-ratio: 1920 / 1334;
@@ -2538,16 +2540,14 @@ main {
      peek through at the bottom edge. */
   height: 100vh;
   height: 100dvh;
-  /* V12 P5 + P6: V8 reduced padding-bottom to bare env() losing
-     desktop spacing. calc() restores 2rem baseline + iOS inset.
-     Top/horizontal padding aligned to .page-header values
+  /* Top/horizontal padding aligned to .page-header values
      (0.875rem top + safe-area, 1.5rem horizontal) so the
      loading-screen title and main-page title share visual
-     position — title doesn't jump during fade-out transition. */
-  padding:
-    calc(0.875rem + env(safe-area-inset-top))
-    1.5rem
-    calc(2rem + env(safe-area-inset-bottom));
+     position — title doesn't jump during fade-out transition.
+     V28: bottom padding moved onto .loading-footer, which now
+     mirrors .page-footer's geometry for the same reason at the
+     bottom edge. */
+  padding: calc(0.875rem + env(safe-area-inset-top)) 1.5rem 0;
   display: flex;
   flex-direction: column;
   opacity: 1;
@@ -2826,14 +2826,25 @@ main {
   to   { transform: translateY(-4%) scaleY(0.93) rotate(-0.8deg); }
 }
 
+/* V28: mirrors .page-footer's geometry (0.625rem vertical padding
+   + safe-area, 1.75rem centered content row; sides come from the
+   loading-screen's 1.5rem padding) so the status line sits exactly
+   where the map footer's controls line lands — the bottom chrome
+   holds position through the loading→map fade, like the title does
+   at the top. The CTA is absolutely centered on the same line (see
+   .loading-cta) so its height can't stretch the row. */
 .loading-footer {
   position: relative;
   z-index: 2;
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
+  align-items: center;
+  /* Border-box: min-height must include the padding to leave the
+     1.75rem content row (0.625 + 1.75 + 0.625 = 3rem). */
+  min-height: calc(3rem + env(safe-area-inset-bottom));
   gap: 1rem;
   margin-top: auto;
+  padding: 0.625rem 0 calc(0.625rem + env(safe-area-inset-bottom));
 }
 
 .loading-status {
@@ -2846,6 +2857,17 @@ main {
 }
 
 .loading-cta {
+  /* Centered on the footer's content-row centerline (padding-top
+     0.625rem + half the 1.75rem row = 1.5rem) so the button's
+     height extends symmetrically instead of stretching the row and
+     shifting the status line off the map footer's. --cta-shift
+     (not a bare transform) so the ctaPulse keyframes can compose
+     with it; mobile resets both. */
+  position: absolute;
+  right: 0;
+  top: 1.5rem;
+  --cta-shift: -50%;
+  transform: translateY(var(--cta-shift));
   background: transparent;
   border: 1px solid currentColor;
   color: var(--color-text);
@@ -2879,8 +2901,8 @@ main {
 }
 
 @keyframes ctaPulse {
-  0%, 100% { transform: scale(1); }
-  50%      { transform: scale(1.02); }
+  0%, 100% { transform: translateY(var(--cta-shift, 0%)) scale(1); }
+  50%      { transform: translateY(var(--cta-shift, 0%)) scale(1.02); }
 }
 
 /* Returning-visitor variant */
@@ -3045,6 +3067,10 @@ main {
   }
 
   .loading-cta {
+    /* Back into the column flow; undo the desktop centerline hang. */
+    position: static;
+    --cta-shift: 0%;
+    transform: none;
     width: 100%;
     text-align: center;
   }
