@@ -379,7 +379,8 @@ main {
    mobile (and desktop, as a complement to the tooltip). */
 .alley-locked-toast {
   position: fixed;
-  bottom: 1.5rem;
+  /* V26: clear the footer control bar (~3rem) plus a gap. */
+  bottom: 4rem;
   left: 50%;
   transform: translateX(-50%) translateY(150%);
   background: rgba(10, 10, 10, 0.95);
@@ -872,7 +873,7 @@ main {
   transition: opacity 800ms ease;
 }
 
-.header-reset {
+.footer-reset {
   background: transparent;
   border: none;
   font-family: inherit;
@@ -889,8 +890,8 @@ main {
   transition: opacity 100ms linear, color 100ms linear;
 }
 
-.header-reset:hover,
-.header-reset:focus-visible {
+.footer-reset:hover,
+.footer-reset:focus-visible {
   opacity: 1;
   color: var(--color-accent);
   outline: none;
@@ -1195,7 +1196,7 @@ main {
   display: flex;
   /* flex-start + fixed title line box (below), not center: with
      center, the title's vertical position depends on the tallest
-     sibling — .header-mode-set wraps to two lines between ~769
+     sibling — .footer-mode-set wraps to two lines between ~769
      and ~1000px viewports, growing the row and shoving the title
      down. Top-aligning and giving title + controls their own
      1.75rem (= 3.5rem min-height − 2 × 0.875rem padding) line
@@ -1252,11 +1253,41 @@ main {
   outline: none;
 }
 
-.header-divider {
+/* ===== Footer control bar (V26) =====
+   The playback-mode toggle, volume/mute, and reset moved out of
+   the header into a dedicated bar at the bottom of the body flex
+   column (header / main / footer). This restores STRATEGY's
+   original "footer toggle" placement, frees the header from the
+   mode-set wrap that inflated it between ~769-1000px viewports,
+   and gives the map page a deliberate bottom edge on iOS Safari
+   (body is 100dvh, so the bar sits above the URL-bar pill zone;
+   safe-area padding keeps controls clear of the home indicator).
+   Same visual grammar as the header: bg, hairline border, UI
+   font. z-index 100 matches .page-header, above the map (1),
+   below modals (1000) and the loading screen (9999). */
+.page-footer {
+  z-index: 100;
+  background: var(--color-bg);
+  border-top: 1px solid rgba(184, 255, 0, 0.15);
+  padding: 0.625rem 1.5rem calc(0.625rem + env(safe-area-inset-bottom));
+}
+
+.footer-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 1.75rem;
+  gap: 0.875rem;
+  font-family: var(--font-ui);
+  letter-spacing: 0.02em;
+  font-size: 0.75rem;
+}
+
+.footer-divider {
   opacity: 0.45;
 }
 
-.header-mode-set {
+.footer-mode-set {
   display: inline-flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -1266,13 +1297,13 @@ main {
   color: var(--color-text);
 }
 
-.header-mode-prefix {
+.footer-mode-prefix {
   font-family: var(--font-editorial);
   font-style: italic;
   opacity: 0.7;
 }
 
-.header-mode {
+.footer-mode {
   font-family: inherit;
   font-size: inherit;
   letter-spacing: inherit;
@@ -1285,38 +1316,41 @@ main {
   transition: opacity 100ms linear, color 100ms linear;
 }
 
-.header-mode:hover:not(.is-active),
-.header-mode:focus-visible:not(.is-active) {
+.footer-mode:hover:not(.is-active),
+.footer-mode:focus-visible:not(.is-active) {
   opacity: 0.85;
   outline: none;
 }
 
-.header-mode.is-active {
+.footer-mode.is-active {
   color: var(--color-accent);
   opacity: 1;
 }
 
-.header-mode-pipe {
+.footer-mode-pipe {
   opacity: 0.35;
 }
 
-.header-audio-set {
+.footer-audio-set {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
 }
 
-.header-volume {
+.footer-volume {
   -webkit-appearance: none;
   appearance: none;
-  width: 80px;
+  /* V26: widened from the header-era 80px — the footer bar has
+     the horizontal room, and a longer track gives finer dB
+     control. */
+  width: 180px;
   height: 14px;
   background: transparent;
   cursor: pointer;
   --fill: 100%;
 }
 
-.header-volume::-webkit-slider-runnable-track {
+.footer-volume::-webkit-slider-runnable-track {
   height: 2px;
   background: linear-gradient(
     to right,
@@ -1327,7 +1361,7 @@ main {
   );
 }
 
-.header-volume::-webkit-slider-thumb {
+.footer-volume::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
   width: 8px;
@@ -1339,7 +1373,7 @@ main {
   cursor: pointer;
 }
 
-.header-volume::-moz-range-track {
+.footer-volume::-moz-range-track {
   height: 2px;
   background: linear-gradient(
     to right,
@@ -1351,7 +1385,7 @@ main {
   border: none;
 }
 
-.header-volume::-moz-range-thumb {
+.footer-volume::-moz-range-thumb {
   width: 8px;
   height: 12px;
   background: var(--color-accent);
@@ -1360,12 +1394,12 @@ main {
   cursor: pointer;
 }
 
-.header-volume:focus-visible {
+.footer-volume:focus-visible {
   outline: 1px solid var(--color-accent);
   outline-offset: 4px;
 }
 
-.header-mute {
+.footer-mute {
   background: transparent;
   border: none;
   padding: 0.2rem;
@@ -1378,28 +1412,28 @@ main {
   transition: color 100ms linear;
 }
 
-.header-mute:hover,
-.header-mute:focus-visible {
+.footer-mute:hover,
+.footer-mute:focus-visible {
   color: var(--color-accent);
   outline: none;
 }
 
-.header-mute[aria-pressed='true'] {
+.footer-mute[aria-pressed='true'] {
   color: var(--color-accent);
 }
 
-.header-mute[aria-pressed='false'] .header-mute-x {
+.footer-mute[aria-pressed='false'] .footer-mute-x {
   display: none;
 }
 
-.header-mute[aria-pressed='true'] .header-mute-bars {
+.footer-mute[aria-pressed='true'] .footer-mute-bars {
   display: none;
 }
 
 /* Mobile header reset button: two text variants. Full string on
    desktop, single 'forget' word on mobile to fit the compressed
    two-row layout. */
-.header-reset-short { display: none; }
+.footer-reset-short { display: none; }
 
 @media (max-width: 768px) {
   /* V21: dropped main { min-height: calc(100vh - 4.25rem) }.
@@ -1411,10 +1445,10 @@ main {
      prior shorthand silently overrode the base rule's safe-area
      math, leaving the title under the iPhone notch when the body
      lock didn't push the page down. */
+  /* V26: header holds only title + about on all sizes now, so the
+     mobile column layout (which existed to give the controls a
+     second row) is gone — the base single-row layout works. */
   .page-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.4rem;
     padding: calc(0.5rem + env(safe-area-inset-top)) 1rem 0.5rem;
     min-height: auto;
   }
@@ -1424,27 +1458,26 @@ main {
     line-height: 1.2;
   }
 
-  .page-controls {
-    width: 100%;
-    justify-content: space-between;
+  /* Footer control bar, phone sizing. Volume slider stays hidden
+     (hardware buttons own volume on phones); reset shortens to
+     one word; the mode prefix drops. Edge-justified so the two
+     control groups sit in thumb reach. */
+  .page-footer {
+    padding: 0.5rem 1rem calc(0.5rem + env(safe-area-inset-bottom));
+  }
+
+  .footer-controls {
     gap: 0.5rem;
     font-size: 0.6875rem;
-    flex-wrap: nowrap;
   }
 
-  .header-volume,
-  .header-mode-prefix {
+  .footer-volume,
+  .footer-mode-prefix {
     display: none;
   }
 
-  .header-reset-full { display: none; }
-  .header-reset-short { display: inline; }
-
-  /* Hide redundant dividers around hidden controls. */
-  .header-divider:nth-of-type(2),
-  .header-divider:nth-of-type(3) {
-    display: none;
-  }
+  .footer-reset-full { display: none; }
+  .footer-reset-short { display: inline; }
 
   /* V25: map pan + height-anchored sizing moved out of this media
      query — the wrapper's overflow/pan rules live on the base
@@ -1722,9 +1755,11 @@ main {
     margin: 0;
   }
 
-  /* Sheet fills the viewport; remove the page header from layout
-     entirely so the sheet sits flush at the top edge. */
-  body:has(.modal[data-state='open']) .page-header {
+  /* Sheet fills the viewport; remove the page header and footer
+     from layout entirely so the sheet sits flush at the top edge
+     and no control bar competes with the sheet's own controls. */
+  body:has(.modal[data-state='open']) .page-header,
+  body:has(.modal[data-state='open']) .page-footer {
     display: none;
   }
 

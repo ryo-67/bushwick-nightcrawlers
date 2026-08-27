@@ -450,9 +450,9 @@ function handleModalClose() {
   updateAlleyPinState();
 }
 
-function setupHeaderAudioControls() {
-  const slider = document.querySelector('.header-volume');
-  const muteBtn = document.querySelector('.header-mute');
+function setupFooterAudioControls() {
+  const slider = document.querySelector('.footer-volume');
+  const muteBtn = document.querySelector('.footer-mute');
   if (!slider || !muteBtn) return;
 
   function updateSliderFill() {
@@ -486,8 +486,8 @@ function setupHeaderAudioControls() {
 //   - "new to the neighborhood"  (in-world, Yelp pastiche)
 //   - "reset progress"  (functional)
 //   - "clear visit log"  (functional)
-function setupHeaderReset() {
-  const btn = document.querySelector('.header-reset');
+function setupFooterReset() {
+  const btn = document.querySelector('.footer-reset');
   if (!btn) return;
   btn.addEventListener('click', () => {
     try {
@@ -517,8 +517,8 @@ function setupHeaderReset() {
   });
 }
 
-function setupHeaderModeToggle() {
-  const buttons = Array.from(document.querySelectorAll('.header-mode'));
+function setupFooterModeToggle() {
+  const buttons = Array.from(document.querySelectorAll('.footer-mode'));
   if (buttons.length === 0) return;
   function refresh() {
     const mode = getMode();
@@ -675,9 +675,9 @@ document.addEventListener('DOMContentLoaded', () => {
   centerMapOnVenueCluster();
   window.addEventListener('resize', centerMapOnVenueCluster);
   const tooltip = setupPinTooltip();
-  setupHeaderModeToggle();
-  setupHeaderAudioControls();
-  setupHeaderReset();
+  setupFooterModeToggle();
+  setupFooterAudioControls();
+  setupFooterReset();
 
   const mapWrapper = document.querySelector('.map-wrapper') || document.body;
   mapWrapper.addEventListener('click', (event) => {
