@@ -1355,6 +1355,62 @@ main {
   opacity: 1;
 }
 
+/* V65: Rash tombstone — the review anatomy, dead. Empty aggregate
+   under the headline, a stamped closure notice on the photo, an
+   obit-halftone photo treatment, a flatlined scope strip, obituary
+   double-rules around the epitaph, and a pay-respects chip. */
+.tombstone-rating {
+  margin: -0.5rem 0 1.25rem;
+}
+
+.modal-card-tombstone .modal-venue-photo {
+  position: relative;
+}
+
+/* Obituary halftone: nearly gray, a trace of the truck red
+   surviving. Overrides the site-wide newsprint filter. */
+.modal-card-tombstone .modal-venue-photo img {
+  filter: grayscale(0.85) contrast(1.12);
+}
+
+/* The closure label stamped across the photo's lower corner —
+   condemnation-notice red, tilted like the peeks, dark backing so
+   it reads over any photo. */
+.tombstone-closed-stamp {
+  position: absolute;
+  left: 1rem;
+  bottom: 1rem;
+  font-family: var(--font-ui);
+  letter-spacing: 0.08em;
+  font-size: 0.8125rem;
+  color: var(--color-stars);
+  border: 2px solid var(--color-stars);
+  padding: 0.35rem 0.65rem;
+  transform: rotate(-3deg);
+  background: rgba(10, 10, 10, 0.6);
+}
+
+/* Dead scope: same strip as the review player, shorter and with no
+   transport — a monitor left on in an empty room. */
+.tombstone-osc {
+  margin-top: 1.5rem;
+}
+
+.modal-card-tombstone .oscilloscope {
+  height: 56px;
+}
+
+/* Obituary column rules around the epitaph. */
+.modal-card-tombstone .tombstone-epitaph {
+  border-top: 4px double rgba(197, 191, 174, 0.45);
+  border-bottom: 4px double rgba(197, 191, 174, 0.45);
+  padding: 1.25rem 0;
+}
+
+.tombstone-respects {
+  margin-top: 1.25rem;
+}
+
 .modal-card .oscilloscope {
   display: block;
   width: 100%;

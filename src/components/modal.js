@@ -39,6 +39,14 @@ const REACTIONS = [
   },
 ];
 
+// V65: praying hands for the Rash tombstone's pay-respects button —
+// two pressed palms, fingers up, with the emoji's little light rays.
+// Same shaky hand-line dialect as the reaction icons above.
+const PRAY_ICON_PATH =
+  '<path d="M11.6 3.6 C11.6 7.2 10 9.2 8.4 11.2 C7 13 6.6 15.4 7.4 17.6 L8.6 20.4 ' +
+  'M12.4 3.6 C12.4 7.2 14 9.2 15.6 11.2 C17 13 17.4 15.4 16.6 17.6 L15.4 20.4 ' +
+  'M6 6.6 L7.2 7.6 M18 6.6 L16.8 7.6"/>';
+
 // Yelp-style boxed stars: a row of filled squares with the star
 // knocked out (see .star CSS — the wobble lives there). Used by
 // the per-review rating row and the venue aggregate line.
@@ -1019,13 +1027,38 @@ export class Modal {
     const name = this.buildModalHeadline(card, venue.displayName);
     card.appendChild(name);
 
-    const photo = buildVenuePhoto(venue);
-    if (photo) card.appendChild(photo);
+    // V65: the review anatomy, dead. Empty aggregate under the
+    // headline — the venue is no longer rated.
+    const rating = document.createElement('div');
+    rating.className = 'tombstone-rating';
+    rating.appendChild(buildStarRow(0, {}));
+    card.appendChild(rating);
 
-    const closed = document.createElement('p');
-    closed.className = 'venue-closed-note';
-    closed.textContent = RASH_CLOSED_NOTE;
-    card.appendChild(closed);
+    const photo = buildVenuePhoto(venue);
+    if (photo) {
+      // The closure label as a stamp across the photo's corner —
+      // condemnation-notice red, tilted like the peeks.
+      const stamp = document.createElement('span');
+      stamp.className = 'tombstone-closed-stamp';
+      stamp.textContent = RASH_CLOSED_NOTE;
+      photo.appendChild(stamp);
+      card.appendChild(photo);
+    } else {
+      const closed = document.createElement('p');
+      closed.className = 'venue-closed-note';
+      closed.textContent = RASH_CLOSED_NOTE;
+      card.appendChild(closed);
+    }
+
+    // V65: dead oscilloscope — the same strip as the review player,
+    // no transport. main.js points it at the master bus at ambient
+    // scale, so it lies near-flat and stirs only when the corner
+    // (and Rash's lingering siren bed) does.
+    const oscPlayer = document.createElement('div');
+    oscPlayer.className = 'osc-player tombstone-osc';
+    this.oscilloscope = new Oscilloscope();
+    oscPlayer.appendChild(this.oscilloscope.element);
+    card.appendChild(oscPlayer);
 
     // Optional epitaph (Rash currently the only tombstone). Array
     // of strings → one <p> per paragraph; the last paragraph
@@ -1042,6 +1075,98 @@ export class Modal {
       card.appendChild(epitaph);
     }
 
+    card.appendChild(this.buildRespects(venue.id));
+
     return card;
+  }
+
+  // V65: the tombstone's single reaction — a literal pay-respects
+  // button. Same chip anatomy and server flow as the review
+  // reactions, keyed by venue id ('rash') since there's no
+  // reviewer. localStorage keeps the same two jobs: your own
+  // dedup, and the count store when the API is absent.
+  buildRespects(memorialId) {
+    const wrap = document.createElement('div');
+    wrap.className = 'review-reactions tombstone-respects';
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'review-reaction';
+    const type = 'respects';
+    const label = 'pay respects';
+    const labelActive = 'respects paid';
+
+    const iconEl = document.createElement('span');
+    iconEl.className = 'reaction-icon';
+    iconEl.setAttribute('aria-hidden', 'true');
+    iconEl.innerHTML = reactionIconSvg(PRAY_ICON_PATH);
+    btn.appendChild(iconEl);
+
+    const labelEl = document.createElement('span');
+    labelEl.className = 'reaction-label';
+    const applyLabel = (active) => {
+      labelEl.textContent = active ? labelActive : label;
+      labelEl.dataset.alt = active ? label : labelActive;
+    };
+    btn.appendChild(labelEl);
+
+    const countEl = document.createElement('span');
+    countEl.className = 'reaction-count';
+    btn.appendChild(countEl);
+
+    let shared = false;
+    let sharedCount = 0;
+    const displayCount = () =>
+      shared ? sharedCount : readCount(memorialId, type);
+    const renderCount = () => {
+      const text = formatCount(displayCount());
+      countEl.textContent = text;
+      countEl.style.minWidth = `${text.length}ch`;
+    };
+
+    const renderState = (active) => {
+      btn.classList.toggle('is-active', active);
+      btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+      applyLabel(active);
+    };
+    renderState(readHasReacted(memorialId, type));
+    renderCount();
+
+    btn.addEventListener('click', () => {
+      const nextActive = !readHasReacted(memorialId, type);
+      const step = nextActive ? 1 : -1;
+      writeHasReacted(memorialId, type, nextActive);
+      renderState(nextActive);
+      if (shared) {
+        sharedCount = Math.max(0, sharedCount + step);
+        renderCount();
+        fetch('/api/reactions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ review: memorialId, type, delta: step }),
+        })
+          .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+          .then((counts) => {
+            sharedCount = Math.max(0, counts[type] ?? sharedCount);
+            renderCount();
+          })
+          .catch(() => {});
+      } else {
+        writeCount(memorialId, type, Math.max(0, readCount(memorialId, type) + step));
+        renderCount();
+      }
+    });
+
+    fetch(`/api/reactions?review=${encodeURIComponent(memorialId)}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((counts) => {
+        shared = true;
+        sharedCount = Math.max(0, counts[type] ?? 0);
+        renderCount();
+      })
+      .catch(() => {});
+
+    wrap.appendChild(btn);
+    return wrap;
   }
 }

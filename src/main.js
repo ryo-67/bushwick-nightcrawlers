@@ -442,7 +442,13 @@ function handleModalOpen(venueId, ctx) {
   }
 
   const review = ctx?.review;
-  if (!review) return; // rash — no rat generator
+  if (!review) {
+    // Rash tombstone: no rat generator, but the dead scope still
+    // taps the corner at murmur scale — near-flat, stirred only by
+    // the ambient mix (including Rash's lingering siren bed).
+    startAmbientScope();
+    return;
+  }
 
   // Mark this venue as visited (review-bearing only).
   engine.markVisited(venueId);

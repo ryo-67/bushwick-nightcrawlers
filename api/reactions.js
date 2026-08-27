@@ -25,10 +25,21 @@
  */
 import { reviews } from '../src/content/reviews.js';
 
-const VALID_TYPES = new Set(['helpful', 'thanks', 'love', 'ohno', 'report']);
+const VALID_TYPES = new Set([
+  'helpful',
+  'thanks',
+  'love',
+  'ohno',
+  'report',
+  'respects',
+]);
+// Reaction targets are reviewer ids, plus memorial venue ids —
+// closed venues with no reviewer whose tombstone takes reactions
+// (currently Rash's pay-respects counter).
 const VALID_REVIEWS = new Set(
   Object.values(reviews).map((r) => r.reviewerId)
 );
+VALID_REVIEWS.add('rash');
 const RATE_LIMIT_PER_MIN = 30;
 
 function redisEnv() {
@@ -54,7 +65,7 @@ async function redisPipeline(commands) {
 
 function countsFromHgetall(flat) {
   // Upstash returns HGETALL as a flat [field, value, ...] array.
-  const counts = { helpful: 0, thanks: 0, love: 0, ohno: 0 };
+  const counts = { helpful: 0, thanks: 0, love: 0, ohno: 0, respects: 0 };
   if (Array.isArray(flat)) {
     for (let i = 0; i + 1 < flat.length; i += 2) {
       const key = flat[i];
