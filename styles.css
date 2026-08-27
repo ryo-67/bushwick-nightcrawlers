@@ -2739,7 +2739,11 @@ main {
   left: 0;
   right: 0;
   height: 16px;
-  color: var(--color-text);
+  /* Opaque stand-in for text-at-50%-over-bg: rats run at full
+     opacity (see the scuttle keyframes) so overlapping crew
+     members don't double up darker where they cross — the subtle
+     tint is baked into the color instead of an alpha channel. */
+  color: color-mix(in srgb, var(--color-text) 50%, var(--color-bg));
   pointer-events: none;
   z-index: 2;
 }
@@ -2751,30 +2755,75 @@ main {
   opacity: 0;
 }
 
-.loading-rat-eye {
-  fill: var(--color-bg);
-}
-
+/* Scuttle: rats cross in dart-pause-dart bursts, not a linear
+   marquee. The intermediate keyframe pairs (e.g. 15% → 21% barely
+   moving) are the sniff-stops; ease-in-out makes each dash
+   accelerate out of the stop and brake into the next one. JS sets
+   per-rat animation-delay/-duration inline so a crew desyncs. */
 .loading-rat.is-running[data-direction="ltr"] svg {
-  animation: ratScuttleLTR 6s linear forwards;
+  animation: ratScuttleLTR 6s ease-in-out forwards;
 }
 
 .loading-rat.is-running[data-direction="rtl"] svg {
-  animation: ratScuttleRTL 6s linear forwards;
+  animation: ratScuttleRTL 6s ease-in-out forwards;
 }
 
 @keyframes ratScuttleLTR {
-  0%   { transform: translateX(-10vw) scaleX(1); opacity: 0; }
-  8%   { opacity: 0.6; }
-  92%  { opacity: 0.6; }
-  100% { transform: translateX(110vw) scaleX(1); opacity: 0; }
+  0%   { transform: translateX(-8vw) scaleX(1); opacity: 0; }
+  6%   { opacity: 1; }
+  15%  { transform: translateX(16vw) scaleX(1); }
+  21%  { transform: translateX(17.5vw) scaleX(1); }
+  36%  { transform: translateX(46vw) scaleX(1); }
+  41%  { transform: translateX(47vw) scaleX(1); }
+  56%  { transform: translateX(72vw) scaleX(1); }
+  63%  { transform: translateX(73.5vw) scaleX(1); }
+  94%  { opacity: 1; }
+  100% { transform: translateX(112vw) scaleX(1); opacity: 0; }
 }
 
 @keyframes ratScuttleRTL {
-  0%   { transform: translateX(110vw) scaleX(-1); opacity: 0; }
-  8%   { opacity: 0.6; }
-  92%  { opacity: 0.6; }
-  100% { transform: translateX(-10vw) scaleX(-1); opacity: 0; }
+  0%   { transform: translateX(112vw) scaleX(-1); opacity: 0; }
+  6%   { opacity: 1; }
+  15%  { transform: translateX(88vw) scaleX(-1); }
+  21%  { transform: translateX(86.5vw) scaleX(-1); }
+  36%  { transform: translateX(58vw) scaleX(-1); }
+  41%  { transform: translateX(57vw) scaleX(-1); }
+  56%  { transform: translateX(32vw) scaleX(-1); }
+  63%  { transform: translateX(30.5vw) scaleX(-1); }
+  94%  { opacity: 1; }
+  100% { transform: translateX(-8vw) scaleX(-1); opacity: 0; }
+}
+
+/* Body bob rides on the inner group so it composes with the svg's
+   translate keyframes: a quick squash-and-hop cycle around the
+   ground line (fill-box origin at the feet). It keeps running
+   through the sniff-stops, which is what sells them as sniffing.
+   Per-rat rhythm via --bob-duration/--bob-delay set inline. */
+.loading-rat .rat-body {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+
+/* Hairline bg-colored outline so crew members stay readable as
+   separate animals where they overlap. paint-order:stroke keeps
+   the stroke behind the fill, so the silhouette's shape is not
+   thinned — the outline grows outward only. Width is in viewBox
+   units (438-wide box drawn at ~28px ≈ 1/16 scale): 16 units ≈
+   half a rendered pixel of visible rim. */
+.loading-rat path {
+  stroke: var(--color-bg);
+  stroke-width: 16;
+  stroke-linejoin: round;
+  paint-order: stroke;
+}
+
+.loading-rat.is-running .rat-body {
+  animation: ratBob var(--bob-duration, 240ms) ease-in-out var(--bob-delay, 0ms) infinite alternate;
+}
+
+@keyframes ratBob {
+  from { transform: translateY(0) scaleY(1) rotate(0.6deg); }
+  to   { transform: translateY(-4%) scaleY(0.93) rotate(-0.8deg); }
 }
 
 .loading-footer {
@@ -3012,6 +3061,12 @@ main {
   .loading-rat.is-running[data-direction="ltr"] svg,
   .loading-rat.is-running[data-direction="rtl"] svg {
     animation-duration: 9s;
+  }
+  /* No squash-and-hop under reduced motion; the slow glide above
+     is the whole show. (The 9s duration is also enforced from JS
+     since per-rat inline durations would override this rule.) */
+  .loading-rat .rat-body {
+    animation: none;
   }
 }
 
