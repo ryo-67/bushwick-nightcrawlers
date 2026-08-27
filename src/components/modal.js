@@ -637,15 +637,18 @@ export class Modal {
       iconEl.innerHTML = reactionIconSvg(icon);
       btn.appendChild(iconEl);
 
+      // One text line under the icon, Yelp-style: "helpful 3".
+      const textRow = document.createElement('span');
+      textRow.className = 'reaction-text';
       const labelEl = document.createElement('span');
       labelEl.className = 'reaction-label';
       labelEl.textContent = labelFor(initialActive);
-      btn.appendChild(labelEl);
-
+      textRow.appendChild(labelEl);
       const countEl = document.createElement('span');
       countEl.className = 'reaction-count';
       countEl.textContent = String(readCount(reviewId, type));
-      btn.appendChild(countEl);
+      textRow.appendChild(countEl);
+      btn.appendChild(textRow);
       countEls.set(type, countEl);
 
       if (initialActive) {
@@ -732,15 +735,12 @@ export class Modal {
       })
       .catch(() => {});
 
+    // V56: report rides the chip row itself — far right, vertically
+    // centered against the squares. The tally note keeps its own
+    // quiet line beneath.
+    reactions.appendChild(report);
     wrap.appendChild(reactions);
-
-    // V54 (option A): the two system-voice texts share one quiet
-    // line — tally left, report right — under the icon row.
-    const socialMeta = document.createElement('div');
-    socialMeta.className = 'review-social-meta';
-    socialMeta.appendChild(note);
-    socialMeta.appendChild(report);
-    wrap.appendChild(socialMeta);
+    wrap.appendChild(note);
     return wrap;
   }
 
