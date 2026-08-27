@@ -133,6 +133,7 @@ V24 update: V22/V23's lvh extension didn't visibly help on iOS — Safari clips 
 
 Query-param-gated diagnostics. Production users see nothing unless the param is set.
 
+- `?voice=syllabic` — A/B flag for the syllabic voice mode (V68): general-register words render as syllable-rate USV runs (word-hash-seeded, so a given word always sounds the same) instead of one sample per word. Cocaine-register words stay word-level in both modes. Default remains the word-level engine until the syllabic mode is approved. Implementation: `scheduleSyllabicWord` in `src/audio/rat-generator.js`, feature data in `src/audio/usv-features.js` (regenerate via `scripts/analyze_usv_features.py`).
 - `?debug=viewport` — attaches a live readout inside any open modal-card showing innerHeight/Width, visualViewport (height/offsetTop/scale), modal + modal-card bounding rects, computed heights, and safe-area inset values. Updates on window/visualViewport resize and scroll. Tap the readout to dismiss for the session. Used to capture iPhone Safari-specific layout state that chromium emulation can't reproduce. Implementation: `src/debug/viewport-readout.js`; wired into `src/main.js` at module top. Zero overhead when the param is absent.
 
 ## When in doubt

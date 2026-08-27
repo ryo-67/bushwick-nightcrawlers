@@ -27,6 +27,21 @@ import { getMode } from './playback-mode.js';
 import { matchKeyword } from './keyword-effects.js';
 import { matchProcessor } from './keyword-processors.js';
 import { panForVenue } from './spatial.js';
+import { USV_FEATURES } from './usv-features.js';
+import { syllableCount } from './syllables.js';
+
+// V68 A/B flag: `?voice=syllabic` switches the general register from
+// one-sample-per-word to syllabic synthesis (see scheduleSyllabicWord).
+// Default stays the word-level engine until the syllabic mode is
+// approved by ear. Cocaine-register words are word-level in BOTH
+// modes — the drug register smears the language (user call, Aug 2026).
+const VOICE_MODE = (() => {
+  try {
+    return new URLSearchParams(window.location.search).get('voice') || 'word';
+  } catch {
+    return 'word';
+  }
+})();
 
 function fnv1a(str) {
   let h = 2166136261;
@@ -88,6 +103,66 @@ function eligibleTiers(word) {
   return ['short', 'medium'];
 }
 
+// ——— Syllabic voice mode (V68) ———————————————————————————————
+//
+// Words become sequences of short USVs at syllable rate. The word
+// itself seeds the sequence (fnv1a of the normalized word), so the
+// same word produces the same squeak run in every review, every
+// visit, both playback modes — the translation is real. Rat identity
+// lives in the voice (per-rat playback rate, syllable tempo, and the
+// existing per-rat chain), not in sample choice.
+
+// tierSkew personality → syllables per second. Manic rats talk fast.
+const SYLLABLE_RATES = {
+  'short-dominant': 6,
+  'short-across-all': 6,
+  'short with occasional long': 5.5,
+  chaotic: 5,
+  mixed: 5,
+  'medium-dominant': 4.5,
+  'medium/long dominant': 4,
+};
+
+// Pools from the general bank, filtered by the analyzed effective
+// duration (usv-features.js): syllables need <=250ms of actual
+// sound; sentence tails may run longer for word-final lengthening.
+let syllablePools = null;
+function getSyllablePools() {
+  if (syllablePools) return syllablePools;
+  const bank = engine.getBank('usvs');
+  if (!bank || bank.length === 0) return null;
+  const feats = USV_FEATURES.usvs;
+  const short = [];
+  const tails = [];
+  const byContour = {};
+  for (const s of bank) {
+    const f = feats[s.filename];
+    if (!f) continue;
+    const entry = { ...s, eff: f.eff, onset: f.onset, contour: f.contour };
+    if (f.eff <= 0.25) {
+      short.push(entry);
+      (byContour[f.contour] ||= []).push(entry);
+    }
+    if (f.eff > 0.2 && f.eff <= 0.45 && f.contour !== 'rise') {
+      tails.push(entry);
+    }
+  }
+  if (short.length === 0) return null;
+  syllablePools = { short, tails, byContour };
+  return syllablePools;
+}
+
+// Contour seasoning: a soft positional bias — openings lean trill,
+// closings lean fall, middles lean flat. Deliberately subtle (60/40
+// against the whole pool): texture, not a legend.
+function pickSyllableSample(pools, wordRng, pos, n) {
+  const biasClass = pos === 0 ? 'trill' : pos === n - 1 ? 'fall' : 'flat';
+  const biased = pools.byContour[biasClass];
+  const useBias = wordRng() < 0.6 && biased && biased.length > 0;
+  const pool = useBias ? biased : pools.short;
+  return pool[Math.floor(wordRng() * pool.length)];
+}
+
 function applyTierSkew(eligible, skew, rng) {
   if (!skew || skew === 'mixed' || skew === 'chaotic') return eligible;
   if (skew === 'short with occasional long') {
@@ -119,6 +194,12 @@ export class RatGenerator {
       (profile.keywordTriggers || []).map((s) => s.toLowerCase())
     );
     this.words = tokenize(reviewText, triggerSet);
+    // Syllabic-mode voice identity: the word decides the samples, the
+    // rat decides the voice — a stable per-rat playback-rate offset
+    // (pitch/speed) and syllable tempo derived from the reviewer id.
+    const idHash = fnv1a(reviewerId || 'rat');
+    this.voiceRate = 0.94 + ((idHash % 997) / 997) * 0.12;
+    this.voiceTempo = 0.92 + (((idHash >>> 8) % 997) / 997) * 0.16;
     this.activeSources = [];
     this._isPlaying = false;
     this.playbackId = 0;
@@ -239,9 +320,7 @@ export class RatGenerator {
     }
   }
 
-  pickSample(word) {
-    const useCocaine =
-      word.isKeywordTrigger || this.rng() < this.profile.cocaineRatio;
+  pickSample(word, useCocaine) {
     const bankName = useCocaine ? 'usvs-cocaine' : 'usvs';
     const bank = engine.getBank(bankName);
     if (bank.length === 0) return null;
@@ -252,6 +331,44 @@ export class RatGenerator {
     if (pool.length === 0) pool = bank.filter((s) => eligible.includes(s.tier));
     if (pool.length === 0) pool = bank;
     return pool[Math.floor(this.rng() * pool.length)];
+  }
+
+  // V68: one word as a run of syllable-rate USVs. Sequence is seeded
+  // by the word itself — "IMMACULATE" squeaks identically wherever
+  // and whenever it's spoken. Sentence-end words take a longer
+  // fall/flat tail (word-final lengthening). Returns the word's
+  // scheduled duration including its trailing gap.
+  scheduleSyllabicWord(word, cursor, chainHead, pools) {
+    const Tone = window.Tone;
+    const n = Math.max(1, syllableCount(word.lower || word.raw));
+    const wordRng = mulberry32(fnv1a(word.lower || word.raw));
+    const rate = (SYLLABLE_RATES[this.profile.tierSkew] || 5) * this.voiceTempo;
+    const slot = 1 / rate;
+    let lastDur = slot;
+    for (let k = 0; k < n; k += 1) {
+      const isTail = word.isSentenceEnd && k === n - 1;
+      let sample;
+      if (isTail && pools.tails.length > 0) {
+        sample = pools.tails[Math.floor(wordRng() * pools.tails.length)];
+      } else {
+        sample = pickSyllableSample(pools, wordRng, k, n);
+      }
+      const src = new Tone.ToneBufferSource(sample.buffer);
+      src.fadeOut = 0.015;
+      src.playbackRate.value = this.voiceRate * (0.97 + wordRng() * 0.06);
+      if (chainHead) src.connect(chainHead);
+      else src.toDestination();
+      // Skip the sample's analyzed lead-in so syllables land on the
+      // grid; cap each to its slot (tails may run past it).
+      const dur = isTail
+        ? Math.min(sample.eff + 0.05, 0.5)
+        : Math.min(sample.eff + 0.03, slot);
+      src.start(cursor + k * slot, sample.onset || 0, dur);
+      this.activeSources.push(src);
+      if (k === n - 1) lastDur = dur;
+    }
+    const gap = Math.max(0.14, slot * 0.75);
+    return (n - 1) * slot + Math.max(lastDur, slot * 0.6) + gap;
   }
 
   start() {
@@ -267,16 +384,35 @@ export class RatGenerator {
     const chainHead = this.ensurePerRatChain();
     let cursor = Tone.now() + 0.05;
 
+    // Syllabic voice mode: general-register words run through the
+    // syllable scheduler; cocaine-register words stay word-level in
+    // both modes (the drug register smears the language).
+    const syllabicPools =
+      VOICE_MODE === 'syllabic' ? getSyllablePools() : null;
+
     for (let i = 0; i < this.words.length; i += 1) {
       const word = this.words[i];
-      const sample = this.pickSample(word);
+      const useCocaine =
+        word.isKeywordTrigger || this.rng() < this.profile.cocaineRatio;
 
-      if (sample) {
-        const source = new Tone.ToneBufferSource(sample.buffer);
-        if (chainHead) source.connect(chainHead);
-        else source.toDestination();
-        source.start(cursor);
-        this.activeSources.push(source);
+      let wordDur;
+      if (syllabicPools && !useCocaine) {
+        wordDur = this.scheduleSyllabicWord(
+          word,
+          cursor,
+          chainHead,
+          syllabicPools
+        );
+      } else {
+        const sample = this.pickSample(word, useCocaine);
+        if (sample) {
+          const source = new Tone.ToneBufferSource(sample.buffer);
+          if (chainHead) source.connect(chainHead);
+          else source.toDestination();
+          source.start(cursor);
+          this.activeSources.push(source);
+        }
+        wordDur = sample ? sample.duration : 0.2;
       }
 
       // Keyword-triggered effect: layers on top of the USV at the
@@ -303,8 +439,7 @@ export class RatGenerator {
         this.modal?.highlightWord?.(i, this.reviewerId);
       }, wordTime);
 
-      const dur = sample ? sample.duration : 0.2;
-      cursor += dur;
+      cursor += wordDur;
       if (word.isSentenceEnd) {
         cursor += 0.2 + this.rng() * 0.2;
       }
