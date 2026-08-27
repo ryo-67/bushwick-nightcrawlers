@@ -7,6 +7,34 @@
 
 const VOWEL_GROUP = /[aeiouy]+/g;
 
+/**
+ * V69: syllable cores — one per counted syllable, each the chunk's
+ * leading consonant run + vowel nucleus ("crumbs" → ['cru'],
+ * "cheesy" → ['chee', 'sy']). The syllabic voice seeds each
+ * syllable's sample from its core, so related words share sounds:
+ * rat/rats, crumb/crumbs, cheese/cheesy overlap where they overlap
+ * in spelling. Codas are deliberately ignored — onset + nucleus
+ * carry the identity. Length always equals syllableCount(word).
+ */
+export function syllableChunks(word) {
+  const w = word.toLowerCase().replace(/[^a-z]/g, '');
+  const n = syllableCount(word);
+  if (w.length === 0) return ['x'];
+  const cores = [];
+  let prevEnd = 0;
+  for (const m of w.matchAll(VOWEL_GROUP)) {
+    cores.push(w.slice(prevEnd, m.index) + m[0]);
+    prevEnd = m.index + m[0].length;
+  }
+  if (cores.length === 0) return [w];
+  // The count heuristic drops silent endings (-e, -es, -ed): trim
+  // trailing cores to match, folding the dropped tail into the last
+  // kept core's consonant context — 'late' and 'lates' both end on
+  // the 'la' core.
+  while (cores.length > n && cores.length > 1) cores.pop();
+  return cores;
+}
+
 export function syllableCount(word) {
   const w = word.toLowerCase().replace(/[^a-z]/g, '');
   if (w.length === 0) return 1;

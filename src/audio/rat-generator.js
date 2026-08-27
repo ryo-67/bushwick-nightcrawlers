@@ -28,7 +28,7 @@ import { matchKeyword } from './keyword-effects.js';
 import { matchProcessor } from './keyword-processors.js';
 import { panForVenue } from './spatial.js';
 import { USV_FEATURES } from './usv-features.js';
-import { syllableCount } from './syllables.js';
+import { syllableChunks } from './syllables.js';
 
 // V68 A/B flag: `?voice=syllabic` switches the general register from
 // one-sample-per-word to syllabic synthesis (see scheduleSyllabicWord).
@@ -139,7 +139,11 @@ function getSyllablePools() {
     const f = feats[s.filename];
     if (!f) continue;
     const entry = { ...s, eff: f.eff, onset: f.onset, contour: f.contour };
-    if (f.eff <= 0.25) {
+    // 300ms ceiling: slightly past the syllable slot (samples get
+    // capped to the slot at schedule time) — the wider pool matters
+    // more than the trim, with 37 → ~43 samples it dilutes how often
+    // any one distinctive vocalization recurs across words.
+    if (f.eff <= 0.3) {
       short.push(entry);
       (byContour[f.contour] ||= []).push(entry);
     }
@@ -152,15 +156,20 @@ function getSyllablePools() {
   return syllablePools;
 }
 
-// Contour seasoning: a soft positional bias — openings lean trill,
-// closings lean fall, middles lean flat. Deliberately subtle (60/40
-// against the whole pool): texture, not a legend.
-function pickSyllableSample(pools, wordRng, pos, n) {
-  const biasClass = pos === 0 ? 'trill' : pos === n - 1 ? 'fall' : 'flat';
+// Contour seasoning: a soft positional bias — multi-syllable words
+// open leaning trill and close leaning fall; middles and
+// monosyllables lean flat (the unmarked class — V69: monosyllables
+// used to lean trill, which funneled most words through the ten
+// most distinctive samples). Deliberately subtle (45/55 against the
+// whole pool): texture, not a legend.
+function pickSyllableSample(pools, chunkRng, pos, n) {
+  let biasClass = 'flat';
+  if (n > 1 && pos === 0) biasClass = 'trill';
+  else if (n > 1 && pos === n - 1) biasClass = 'fall';
   const biased = pools.byContour[biasClass];
-  const useBias = wordRng() < 0.6 && biased && biased.length > 0;
+  const useBias = chunkRng() < 0.45 && biased && biased.length > 0;
   const pool = useBias ? biased : pools.short;
-  return pool[Math.floor(wordRng() * pool.length)];
+  return pool[Math.floor(chunkRng() * pool.length)];
 }
 
 function applyTierSkew(eligible, skew, rng) {
@@ -333,29 +342,36 @@ export class RatGenerator {
     return pool[Math.floor(this.rng() * pool.length)];
   }
 
-  // V68: one word as a run of syllable-rate USVs. Sequence is seeded
-  // by the word itself — "IMMACULATE" squeaks identically wherever
-  // and whenever it's spoken. Sentence-end words take a longer
-  // fall/flat tail (word-final lengthening). Returns the word's
-  // scheduled duration including its trailing gap.
+  // V68/V69: one word as a run of syllable-rate USVs. Each syllable
+  // is seeded by its CORE (leading consonants + vowel nucleus, see
+  // syllables.js), not the whole word — so "rat" and "rats" squeak
+  // the same, "cheese" and "cheesy" share their opening, and every
+  // rat pronounces a given core with the same sample (transposed by
+  // its own voiceRate). Sentence-end words take a longer fall/flat
+  // tail (word-final lengthening). Returns the word's scheduled
+  // duration including its trailing gap.
   scheduleSyllabicWord(word, cursor, chainHead, pools) {
     const Tone = window.Tone;
-    const n = Math.max(1, syllableCount(word.lower || word.raw));
-    const wordRng = mulberry32(fnv1a(word.lower || word.raw));
+    const chunks = syllableChunks(word.lower || word.raw);
+    const n = chunks.length;
     const rate = (SYLLABLE_RATES[this.profile.tierSkew] || 5) * this.voiceTempo;
     const slot = 1 / rate;
     let lastDur = slot;
     for (let k = 0; k < n; k += 1) {
+      const chunkRng = mulberry32(fnv1a(chunks[k]));
       const isTail = word.isSentenceEnd && k === n - 1;
       let sample;
       if (isTail && pools.tails.length > 0) {
-        sample = pools.tails[Math.floor(wordRng() * pools.tails.length)];
+        sample = pools.tails[Math.floor(chunkRng() * pools.tails.length)];
       } else {
-        sample = pickSyllableSample(pools, wordRng, k, n);
+        sample = pickSyllableSample(pools, chunkRng, k, n);
       }
       const src = new Tone.ToneBufferSource(sample.buffer);
       src.fadeOut = 0.015;
-      src.playbackRate.value = this.voiceRate * (0.97 + wordRng() * 0.06);
+      // Core-seeded transposition (±6%): the same sample landing in
+      // different cores reads differently, while a given core keeps
+      // its exact pitch everywhere. voiceRate transposes per rat.
+      src.playbackRate.value = this.voiceRate * (0.94 + chunkRng() * 0.12);
       if (chainHead) src.connect(chainHead);
       else src.toDestination();
       // Skip the sample's analyzed lead-in so syllables land on the
