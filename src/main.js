@@ -1,6 +1,5 @@
 import { LoadingScreen } from './components/loading-screen.js';
 import { Modal, buildStarRow, formatCount } from './components/modal.js';
-import { RAT_PATH_D, RAT_VIEWBOX } from './components/rat-silhouette.js';
 import { rats } from './content/rats.js';
 import { venues } from './content/venues.js';
 import { reviews } from './content/reviews.js';
@@ -73,51 +72,25 @@ function setupPinTooltip() {
       tooltip.appendChild(img);
     }
 
-    // V59: mini-review-card peek. Name (+ a gold "met" stamp for
-    // venues whose rat you've already heard), primary review's
-    // stars, reviewer identity, and — when real humans have
-    // reacted — a live tally whisper.
+    // V61: teaser peek — name left, stars on the right edge,
+    // nothing that spoils the reviewer. (The met stamp and
+    // reviewed-by line gave the game away.)
     const nameRow = document.createElement('div');
     nameRow.className = 'pin-tooltip-name-row';
     const name = document.createElement('div');
     name.className = 'pin-tooltip-name';
     name.textContent = venue.displayName;
     nameRow.appendChild(name);
-    if (engine.hasVisited(venue.id)) {
-      const met = document.createElement('span');
-      met.className = 'pin-tooltip-met';
-      met.innerHTML =
-        `<svg viewBox="${RAT_VIEWBOX}" width="18" height="9" aria-hidden="true">` +
-        `<path d="${RAT_PATH_D}" fill="currentColor" fill-rule="evenodd"/></svg>` +
-        `<span>met</span>`;
-      nameRow.appendChild(met);
-    }
-    tooltip.appendChild(nameRow);
 
     const primary = Object.values(reviews).find(
       (r) => r.venueId === venue.id
     );
     if (primary) {
-      const rating = document.createElement('div');
-      rating.className = 'pin-tooltip-rating';
-      rating.appendChild(buildStarRow(primary.rating, { small: true }));
-      tooltip.appendChild(rating);
+      nameRow.appendChild(buildStarRow(primary.rating, { small: true }));
+    }
+    tooltip.appendChild(nameRow);
 
-      const reviewer = rats[primary.reviewerId];
-      if (reviewer) {
-        const line = document.createElement('div');
-        line.className = 'pin-tooltip-reviewer';
-        const thumb = document.createElement('img');
-        thumb.src = reviewer.selfiePath;
-        thumb.alt = '';
-        thumb.loading = 'lazy';
-        line.appendChild(thumb);
-        const who = document.createElement('span');
-        who.textContent = `reviewed by ${reviewer.handle}`;
-        line.appendChild(who);
-        tooltip.appendChild(line);
-      }
-
+    if (primary) {
       // Tally whisper: only rendered once real reactions exist.
       const tally = document.createElement('div');
       tally.className = 'pin-tooltip-tally';
