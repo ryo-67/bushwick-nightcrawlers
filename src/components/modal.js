@@ -1025,14 +1025,16 @@ export class Modal {
     card.classList.add('modal-card-tombstone');
 
     const name = this.buildModalHeadline(card, venue.displayName);
-    card.appendChild(name);
-
-    // V65: the review anatomy, dead. Empty aggregate under the
-    // headline — the venue is no longer rated.
-    const rating = document.createElement('div');
+    // V66: the review anatomy, dead. Empty aggregate rides the
+    // headline row itself — title, stars, close — so the header
+    // reads as one line on every breakpoint.
+    const rating = document.createElement('span');
     rating.className = 'tombstone-rating';
     rating.appendChild(buildStarRow(0, {}));
-    card.appendChild(rating);
+    const headlineRow = name.querySelector('.modal-venue-headline-row');
+    const closeBtn = headlineRow?.querySelector('.modal-close');
+    if (headlineRow) headlineRow.insertBefore(rating, closeBtn ?? null);
+    card.appendChild(name);
 
     const photo = buildVenuePhoto(venue);
     if (photo) {

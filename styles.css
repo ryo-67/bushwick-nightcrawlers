@@ -500,14 +500,14 @@ main {
 .pin-tooltip-review-count {
   font-family: var(--font-data);
   font-size: 0.6875rem;
-  opacity: 0.55;
+  opacity: 0.7; /* V66: AA floor */
 }
 
 .pin-tooltip-tally {
   margin-top: 0.35rem;
   font-family: var(--font-data);
   font-size: 0.6875rem;
-  opacity: 0.55;
+  opacity: 0.7; /* V66: AA floor */
 }
 
 .pin-tooltip-photo,
@@ -1002,10 +1002,11 @@ main {
   letter-spacing: inherit;
   text-transform: inherit;
   color: var(--color-text);
-  /* Dimmer than the always-on controls (mode toggle ~0.55, audio
-     icons ~0.7) so the destructive action doesn't compete for
-     attention. Hover restores full opacity. */
-  opacity: 0.4;
+  /* V66: quietest of the always-on controls, but never below the
+     0.7 muted floor — cream under ~0.63 effective opacity on the
+     page black drops under WCAG AA (4.5:1). Hover restores full
+     opacity. */
+  opacity: 0.7;
   cursor: pointer;
   padding: 0;
   transition: opacity 100ms linear, color 100ms linear;
@@ -1154,7 +1155,7 @@ main {
 .review-date {
   font-family: var(--font-data);
   font-size: 0.75rem;
-  opacity: 0.6;
+  opacity: 0.7; /* V66: AA floor */
 }
 
 /* V36: natural height — no inner scrollbox. The card is the single
@@ -1255,7 +1256,9 @@ main {
 }
 
 .reaction-count {
-  opacity: 0.65;
+  /* V66: 0.8 because it multiplies with the chip's 0.85 —
+     0.8 × 0.85 ≈ 0.68 effective, just above the AA floor. */
+  opacity: 0.8;
   display: inline-block;
   font-variant-numeric: tabular-nums;
 }
@@ -1292,7 +1295,7 @@ main {
   font-size: 0.6875rem;
   letter-spacing: 0.02em;
   color: var(--color-text);
-  opacity: 0.4;
+  opacity: 0.7; /* V66: AA floor — resting, but still interactive */
   cursor: pointer;
   transition: opacity 150ms ease, color 150ms ease;
 }
@@ -1333,7 +1336,7 @@ main {
   letter-spacing: 0.02em;
   font-size: 0.8125rem;
   margin: 0;
-  opacity: 0.6;
+  opacity: 0.7; /* V66: AA floor */
 }
 
 /* Tombstone epitaph: a few paragraphs that follow the [CLOSED]
@@ -1361,8 +1364,14 @@ main {
 /* V65: Rash tombstone — the review anatomy, dead. Empty aggregate
    under the headline, a stamped closure notice on the photo, an
    obit-halftone photo treatment, and a pay-respects chip. */
+/* Rides the headline row between title and close: hugs the title
+   (auto margin pushes the close away), centered on the title's
+   line. Star size tracks the existing responsive .star rules. */
 .tombstone-rating {
-  margin: 0.25rem 0 1.5rem;
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  margin-right: auto;
 }
 
 .modal-card-tombstone .modal-venue-photo {
@@ -1589,7 +1598,7 @@ main {
 }
 
 .footer-divider {
-  opacity: 0.45;
+  opacity: 0.7; /* V66: AA floor for muted cream on black */
 }
 
 .footer-mode-set {
@@ -1617,7 +1626,7 @@ main {
   padding: 0;
   cursor: pointer;
   color: var(--color-text);
-  opacity: 0.45;
+  opacity: 0.7; /* V66: AA floor — inactive mode is still a control */
   transition: opacity 100ms linear, color 100ms linear;
 }
 
@@ -1633,7 +1642,7 @@ main {
 }
 
 .footer-mode-pipe {
-  opacity: 0.35;
+  opacity: 0.7; /* V66: AA floor */
 }
 
 .footer-audio-set {
@@ -3229,7 +3238,7 @@ main {
   font-family: var(--font-data);
   font-size: 0.8125rem;
   letter-spacing: 0.02em;
-  opacity: 0.6;
+  opacity: 0.7; /* V66: AA floor */
   margin: 0;
   min-height: 1.2em; /* reserve line height during typewriter clears */
 }
@@ -3247,7 +3256,7 @@ main {
   font-family: var(--font-data);
   font-size: 0.75rem;
   letter-spacing: 0.05em;
-  opacity: 0.5;
+  opacity: 0.7; /* V66: AA floor — skip is interactive */
 }
 
 .loading-footer.is-skip:hover .loading-footer-label,
