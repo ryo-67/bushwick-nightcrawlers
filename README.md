@@ -8,13 +8,28 @@ A sound art piece, not a website with audio. The interactive interface is the sc
 
 → [bushwick-nightcrawlers.vercel.app](https://bushwick-nightcrawlers.vercel.app)
 
-Headphones recommended. The piece needs a first user gesture to start (Web Audio API requirement); the headphones tag at the top of the page is the gesture target.
+Headphones recommended. The piece needs a first user gesture to start (Web Audio API requirement); the loading screen's enter bar is the gesture target.
+
+## How the rats speak
+
+Every word of a review is voiced with rat ultrasonic vocalizations (USVs), pitch-shifted into human hearing range. A footer toggle picks the register:
+
+- **in the moment** (default) — generative. One USV per word, chosen fresh on every click by duration tier, punctuation context, and each rat's personality skew. No two playbacks are alike; the rats are speaking, not replaying.
+- **in their tongue** — the rats' language. Words render as runs of short USVs at syllable rate, and each syllable's sound is seeded from its *core* (leading consonants + vowel nucleus) — so "rat" and "rats" squeak identically, "cheese" and "cheesy" share their opening, and every rat pronounces a given syllable with the same sample, transposed by its own voice. Fully deterministic: the same review plays identically every time, because the language itself is stable — not because anything was recorded.
+
+In both modes, drug-effect events fire on keyword matches in the review text (never probabilistically): "ketamine" opens a k-hole on the rat's voice chain, "diet" fizzes, "tagged" pings. One rat speaks entirely in the cocaine register — samples recorded from rats on cocaine — and a few others drift into it word by word.
+
+Everything is spatial: each rat's voice and each venue's ambient bed sit in the stereo field where its pin sits on the map.
+
+## The social layer
+
+Visitors can react to reviews (helpful · leave crumb · love this · oh no, plus report to 311), and one closed venue takes pay-respects. Counts are shared globally — the next visitor sees everyone's tallies — via a single Vercel Function backed by Upstash Redis, with per-IP rate limiting and no accounts or tracking beyond your own browser's memory of what you pressed.
 
 ## Stack
 
-- Vanilla HTML/CSS/JS, ES modules, no framework, no build step
+- Vanilla HTML/CSS/JS, ES modules, no framework, no bundler, no build step
 - [Tone.js](https://tonejs.github.io/) v15 via unpkg CDN
-- Vercel for static hosting
+- Vercel hosting; one serverless function (`api/reactions.js`) for the shared reaction counters
 
 ## Run locally
 
@@ -25,26 +40,30 @@ python3 -m http.server 8000
 # open http://localhost:8000
 ```
 
-No `npm install`, no transpilation. The site is plain static files; any static server works.
+No `npm install`, no transpilation. The site is plain static files; any static server works. Without the reactions API (it needs the Upstash credentials on Vercel), reaction counts silently fall back to per-browser local counts — everything else is fully functional offline.
 
 ## Structure
 
 ```
 index.html              # entry, map page
-about.html              # epigraph, credits
+about.html              # epigraph, credits, citations
 styles.css              # design tokens, layout, modal sheets
+api/
+└── reactions.js        # shared reaction counters (Vercel Function + Upstash)
 src/
-├── main.js             # bootstrap, pin handlers, header controls
-├── audio/              # engine, rat-generator, profiles, beds, effects
-├── components/         # modal, oscilloscope, loading-screen, headphones-tag
+├── main.js             # bootstrap, pin handlers, footer controls
+├── audio/              # engine, rat-generator, profiles, beds, effects,
+│                       # syllables + usv-features (the 'in their tongue' voice)
+├── components/         # modal, oscilloscope, loading-screen
 ├── content/            # rats, reviews, venues, alley-oneliners
 └── debug/              # ?debug=viewport overlay
 assets/
 ├── map.mp4             # animated map background
-├── pins/               # 10 pin GIFs/WebPs
-├── selfies/            # 11 rat profile images
-├── photos/             # 10 venue photos
+├── pins/               # 10 animated pins
+├── selfies/            # rat profile images
+├── photos/             # venue photos
 └── sounds/             # USV banks (general + cocaine), ambient, effects, beds
+scripts/                # asset pipeline + generated-manifest tooling
 docs/
 ├── STRATEGY.md         # project concept, sonification system, build plan
 └── ASSETS.md           # asset checklist with sources and citations
@@ -55,22 +74,14 @@ CLAUDE.md               # repo conventions for AI coding agents
 
 Full credits — concept, art, voice register reference, USV recordings, sound design samples, license terms — live on the [About page](https://bushwick-nightcrawlers.vercel.app/about.html).
 
-Notable: USV cocaine bank samples come from the [USVSEG dataset](https://doi.org/10.5281/zenodo.3428024) (Tachibana et al., 2020, *PLOS ONE*) — recorded from rats given cocaine, who vocalize with pleasure. Sound design samples are mostly Freesound CC0 with a few CC BY 3.0 / 4.0 entries (all credited on the About page).
+Notable: USV cocaine bank samples come from the [USVSEG dataset](https://doi.org/10.5281/zenodo.3428024) (Tachibana et al., 2020, *PLOS ONE*) — recorded from rats given cocaine, who vocalize with pleasure. The loading screen's rat is by [Danil Polshin](https://thenounproject.com/icon/rat-8308195/) (the Noun Project, CC BY 3.0). Sound design samples are mostly Freesound CC0 with a few CC BY 3.0 / 4.0 entries (all credited on the About page).
 
-## Playback modes
+## Debug flags
 
-Two modes via the footer toggle:
+Query-param-gated; production users see nothing unless the param is set.
 
-- **in the moment** (default) — generative. Each playback differs. Sample selection and timing roll fresh on every click.
-- **on record** — seeded. Same review = same audio every play. Seed is `fnv1a(reviewerId + reviewText)`; persists in `localStorage`.
-
-The toggle is read at playback start; mid-playback flips don't affect the currently-running generator.
-
-## Debug
-
-Append `?debug=viewport` to any URL to attach a live readout inside any open modal showing `innerHeight`, `visualViewport` state, modal/card bounding rects, computed heights, and safe-area inset values. Used to diagnose iOS Safari-specific layout state. Tap to dismiss. Zero overhead when the param is absent.
-
-See `src/debug/viewport-readout.js`.
+- `?debug=viewport` — live readout inside any open modal showing `innerHeight`, `visualViewport` state, bounding rects, computed heights, and safe-area insets. Used to diagnose iOS Safari-specific layout state. Tap to dismiss.
+- `?voice=syllabic` — dev override forcing the syllabic voice regardless of the footer mode.
 
 ## Repository conventions
 
