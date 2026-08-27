@@ -4,7 +4,7 @@
 
 Single-page sound piece. Hand-drawn map of the Myrtle-Broadway JMZ intersection in Bushwick. Ten pins; click a pin and a rat reviews the venue in Yelp pastiche, with USV (rat ultrasonic-vocalization) audio synced to the review text.
 
-Sound art piece, NOT a website with audio. The interactive interface is the score. Audio playback is generative by default — different sample selection per click. A footer toggle ('in the moment' / 'on record' / 'in their tongue') lets visitors switch to seeded deterministic playback ('on record') or the syllabic voice ('in their tongue' — words render as syllable-core USV runs, the same word squeaking identically everywhere). Conceptually: rats don't archive their language, so 'in the moment' is the baseline; 'on record' is opt-in.
+Sound art piece, NOT a website with audio. The interactive interface is the score. Audio playback is generative by default — different sample selection per click. A footer toggle ('in the moment' / 'in their tongue') switches to the syllabic voice — words render as syllable-core USV runs, the same word squeaking identically everywhere, with residual randomness seeded so a tongue playback reproduces exactly (it absorbed the old 'on record' mode's determinism). Conceptually: rats don't archive their language, so 'in the moment' is the baseline; 'on record' is opt-in.
 
 ## Authoritative spec
 
@@ -90,7 +90,7 @@ V24 update: V22/V23's lvh extension didn't visibly help on iOS — Safari clips 
 ## Audio rules (load-bearing)
 
 - `Tone.start()` must be called inside a user-gesture handler before any audio plays. The headphones tag at the top of the page is the gesture target. Until clicked, no AudioContext.
-- Default playback is generative ('in the moment' mode). Seeded determinism is opt-in via the footer toggle ('on record' mode). RatGenerator reads playback mode via `getMode()` at `start()` time and routes all randomness through `this.rng` — `Math.random` for moment, `mulberry32(fnv1a(reviewerId + text))` for record.
+- Default playback is generative ('in the moment' mode). The 'in their tongue' mode is the syllabic voice AND the deterministic mode (it replaced 'on record' in V72): RatGenerator reads playback mode via `getMode()` at `start()` time and routes all randomness through `this.rng` — `Math.random` for moment, `mulberry32(fnv1a(reviewerId + text))` for tongue; syllable sequences are additionally word-seeded.
 - Drug-effect events fire on keyword matches in the review text, not probabilistically. Keyword matching happens in RatGenerator's tokenizer against two tables: `src/audio/keyword-effects.js` (keyword → sample played alongside the voice) and `src/audio/keyword-processors.js` (keyword → processing applied to the voice itself, e.g. kHole, timeGlitch). Examples: "ketamine" fires kHole; "diet" fires fizz; "tagged" or "for the gram" fires notification ping; "Chase Sapphire" or "my mom" kicks up coffee-shop ambience; "viral" or "sniff" fires a small cough sample.
 - Pin audio persists after modal close (cumulative master mix). Do NOT dispose Tone nodes when modals close; lower their gain instead.
 - Subtitle reveal uses `Tone.Draw.schedule`, NOT `setTimeout` or `requestAnimationFrame`, so text and audio stay sample-accurate.

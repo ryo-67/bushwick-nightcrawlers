@@ -1756,6 +1756,7 @@ main {
    desktop, single 'forget' word on mobile to fit the compressed
    two-row layout. */
 .footer-reset-short { display: none; }
+.footer-mode-short { display: none; }
 
 @media (max-width: 768px) {
   /* V21: dropped main { min-height: calc(100vh - 4.25rem) }.
@@ -1802,17 +1803,11 @@ main {
   .footer-reset-full { display: none; }
   .footer-reset-short { display: inline; }
 
-  /* V71: three speak-modes don't fit a single phone row beside the
-     action cluster — deliberate two-row footer: the mode set owns
-     row one, mute + reset right-align on row two. */
-  .footer-controls {
-    flex-wrap: wrap;
-    row-gap: 0.4rem;
-  }
-
-  .footer-mode-set {
-    flex-basis: 100%;
-  }
+  /* V71b: modes shorten to one word each on phones (same pattern
+     as the reset button above), so the whole footer keeps a single
+     row: moment · record · tongue. */
+  .footer-mode-full { display: none; }
+  .footer-mode-short { display: inline; }
 
   /* V25: map pan + height-anchored sizing moved out of this media
      query — the wrapper's overflow/pan rules live on the base

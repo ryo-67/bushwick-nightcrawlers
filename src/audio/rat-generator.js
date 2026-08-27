@@ -15,8 +15,9 @@
  *      after sentence-ending words
  *
  * Playback mode (read at start() time):
- *   'moment' — Math.random, generative each play
- *   'record' — seeded mulberry32, deterministic per (reviewerId,text)
+ *   'moment' — Math.random, generative each play; word-level voice
+ *   'tongue' — syllabic voice, fully deterministic (word-seeded
+ *              sequences + seeded mulberry32 residual randomness)
  *
  * Pause behavior: stop() halts immediately; clicking play again
  * restarts from word 0. No mid-stream resume in this version.
@@ -323,7 +324,11 @@ export class RatGenerator {
 
   configureRng() {
     this.mode = getMode();
-    if (this.mode === 'record') {
+    // V72: 'tongue' absorbed the old 'record' determinism — the
+    // syllable sequences are word-seeded by design, and the residual
+    // randomness (register rolls, pauses, word-level cocaine picks)
+    // is seeded too, so a tongue playback reproduces exactly.
+    if (this.mode === 'tongue') {
       const seed = fnv1a(`${this.reviewerId}\n${this.reviewText}`);
       this.rng = mulberry32(seed);
     } else {

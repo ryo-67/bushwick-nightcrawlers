@@ -1,15 +1,15 @@
 /**
  * src/audio/playback-mode.js — playback mode controller.
  *
- * Three modes:
+ * Two modes:
  *   'moment' — generative. Each playback differs (Math.random).
  *              Default. The rats are speaking, not replaying.
- *   'record' — fixed. Same review = same audio every time.
- *              Seeded RNG keyed off reviewerId + reviewText.
- *   'tongue' — syllabic voice (V71): words render as syllable-core
- *              USV runs (see rat-generator.js scheduleSyllabicWord).
- *              Residual randomness behaves like 'moment' — the
- *              syllable sequences are word-deterministic by design.
+ *   'tongue' — the rats' real language (V72, replacing 'record'):
+ *              words render as syllable-core USV runs (rat-generator
+ *              scheduleSyllabicWord) and residual randomness is
+ *              seeded, so the same review plays identically every
+ *              time — determinism emerges from the language itself
+ *              rather than from a recording.
  *
  * Persisted in localStorage under bushwick.playback.mode.
  * The footer toggle calls setMode(); RatGenerator calls getMode()
@@ -18,14 +18,16 @@
  */
 
 const STORAGE_KEY = 'bushwick.playback.mode';
-const VALID_MODES = new Set(['moment', 'record', 'tongue']);
+const VALID_MODES = new Set(['moment', 'tongue']);
 const DEFAULT_MODE = 'moment';
 
 let currentMode = DEFAULT_MODE;
 const listeners = new Set();
 
 try {
-  const stored = localStorage.getItem(STORAGE_KEY);
+  let stored = localStorage.getItem(STORAGE_KEY);
+  // V72: 'record' folded into 'tongue' — migrate saved prefs.
+  if (stored === 'record') stored = 'tongue';
   if (VALID_MODES.has(stored)) currentMode = stored;
 } catch {
   // localStorage unavailable — stay on default
