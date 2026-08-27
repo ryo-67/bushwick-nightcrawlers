@@ -120,11 +120,22 @@ function setupPinTooltip() {
     tooltip.dataset.placement = placement;
   }
 
+  // Deterministic per-venue tilt for the hover peek: hash the pin
+  // id into one of a curated set of angles (mixed left and right
+  // leans) so the paste-up feels hand-placed but stable per venue.
+  const PEEK_ANGLES = [-2.2, 1.6, -1.4, 2.3, -0.8, 1.1];
+  function peekAngleFor(pinId) {
+    let sum = 0;
+    for (let i = 0; i < pinId.length; i += 1) sum += pinId.charCodeAt(i);
+    return PEEK_ANGLES[sum % PEEK_ANGLES.length];
+  }
+
   function show(pin) {
     if (isPointerCoarse()) return;
     const venue = venues[pin.dataset.pinId];
     if (!venue) return;
     currentPin = pin;
+    tooltip.style.setProperty('--peek-rotate', `${peekAngleFor(venue.id)}deg`);
     populate(venue);
     position(pin);
   }
