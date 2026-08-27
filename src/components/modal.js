@@ -1,4 +1,5 @@
 import { Oscilloscope } from './oscilloscope.js';
+import { RAT_PATH_D, RAT_VIEWBOX } from './rat-silhouette.js';
 
 const REVIEWER_LOCATION = 'Bushwick, Brooklyn';
 const ALLEY_FRAMING = 'the alley between Mr Kiwi and the JMZ';
@@ -6,11 +7,52 @@ const ALLEY_FRAMING = 'the alley between Mr Kiwi and the JMZ';
 // not its location. Edit this single line to change the framing copy.
 const ALLEY_MEET_FRAMING = 'where the rats meet';
 const RASH_CLOSED_NOTE = '[closed February 2026]';
+// Yelp's canonical trio, with shaky hand-line icons. Storage type
+// 'helpful' predates the 'useful' label — kept so existing
+// localStorage reaction state survives.
 const REACTIONS = [
-  { type: 'helpful', label: 'helpful' },
-  { type: 'funny', label: 'funny' },
-  { type: 'cool', label: 'cool' },
+  {
+    type: 'helpful',
+    label: 'useful',
+    icon: '<path d="M4 7.6 L4.1 13 M4 8 C5.4 7.5 6.4 6 6.9 4.1 C7.1 3.1 8.4 3 8.5 4.2 C8.6 5.4 8.2 6.6 7.9 7.3 L11.7 7.1 C12.7 7.1 12.8 8.3 12.1 8.6 C12.8 9 12.7 10 11.9 10.2 C12.5 10.7 12.3 11.6 11.5 11.8 C11.8 12.4 11.4 13 10.7 13 L6.2 12.9"/>',
+  },
+  {
+    type: 'funny',
+    label: 'funny',
+    icon: '<path d="M8 2.6 C11 2.5 13.4 4.9 13.3 8 C13.2 11 11 13.4 8 13.3 C5 13.2 2.7 11 2.8 8 C2.9 5 5.1 2.7 8 2.6 Z M5.3 6.4 L6.6 6.5 M9.4 6.3 L10.7 6.4 M5.1 9 C6.2 11 9.9 11.1 10.9 9.2"/>',
+  },
+  {
+    type: 'cool',
+    label: 'cool',
+    icon: '<path d="M2.6 6 L13.4 5.8 M3.6 6 C3.5 8 4.3 9.1 5.6 9.1 C6.9 9.1 7.5 8 7.4 6.1 M8.6 6 C8.5 8 9.2 9.1 10.5 9.1 C11.8 9.1 12.5 8 12.3 6"/>',
+  },
 ];
+
+// Yelp-style boxed stars: a row of filled squares with the star
+// knocked out (see .star CSS — the wobble lives there). Used by
+// the per-review rating row and the venue aggregate line.
+function buildStarRow(rating, { small = false } = {}) {
+  const stars = document.createElement('span');
+  stars.className = small ? 'star-rating star-rating-small' : 'star-rating';
+  stars.setAttribute('aria-label', `${rating} out of 5 stars`);
+  for (let i = 0; i < 5; i += 1) {
+    const star = document.createElement('span');
+    star.className = i < rating ? 'star' : 'star star-empty';
+    star.setAttribute('aria-hidden', 'true');
+    stars.appendChild(star);
+  }
+  return stars;
+}
+
+function reactionIconSvg(pathMarkup) {
+  return (
+    '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true" ' +
+    'fill="none" stroke="currentColor" stroke-width="1.2" ' +
+    'stroke-linecap="round" stroke-linejoin="round">' +
+    pathMarkup +
+    '</svg>'
+  );
+}
 
 // First-visit hint above the alley mini-cards. Auto-dismisses on
 // first card click OR after the timeout, whichever first. Persisted
@@ -420,6 +462,24 @@ export class Modal {
     const headline = this.buildModalHeadline(card, venue.displayName);
     card.appendChild(headline);
 
+    // Venue aggregate, Yelp-style: star row + "4.5 (2 reviews)".
+    // Computed honestly from the venue's actual reviews.
+    if (allReviews.length > 0) {
+      const avg =
+        allReviews.reduce((s, r) => s + r.rating, 0) / allReviews.length;
+      const avgLabel = Number.isInteger(avg) ? String(avg) : avg.toFixed(1);
+      const agg = document.createElement('div');
+      agg.className = 'venue-aggregate';
+      agg.appendChild(buildStarRow(Math.round(avg), { small: true }));
+      const text = document.createElement('span');
+      text.className = 'venue-aggregate-text';
+      text.textContent = `${avgLabel} (${allReviews.length} ${
+        allReviews.length === 1 ? 'review' : 'reviews'
+      })`;
+      agg.appendChild(text);
+      card.appendChild(agg);
+    }
+
     if (allReviews.length >= 2) {
       card.appendChild(this.buildReviewPagination(allReviews));
     }
@@ -448,16 +508,7 @@ export class Modal {
     const ratingRow = document.createElement('div');
     ratingRow.className = 'review-rating';
 
-    const stars = document.createElement('span');
-    stars.className = 'star-rating';
-    stars.setAttribute('aria-label', `${review.rating} out of 5 stars`);
-    for (let i = 0; i < 5; i += 1) {
-      const star = document.createElement('span');
-      star.className = i < review.rating ? 'star' : 'star star-empty';
-      star.setAttribute('aria-hidden', 'true');
-      stars.appendChild(star);
-    }
-    ratingRow.appendChild(stars);
+    ratingRow.appendChild(buildStarRow(review.rating));
 
     const date = document.createElement('span');
     date.className = 'review-date';
@@ -498,9 +549,14 @@ export class Modal {
     meta.appendChild(location);
 
     if (reviewer.elite) {
+      // Yelp Elite badge, house style: gold rat mark + year chip
+      // (ASSETS §1.5 called for exactly this silhouette).
       const elite = document.createElement('span');
       elite.className = 'reviewer-elite';
-      elite.textContent = 'elite';
+      elite.innerHTML =
+        `<svg viewBox="${RAT_VIEWBOX}" width="18" height="9" aria-hidden="true">` +
+        `<path d="${RAT_PATH_D}" fill="currentColor" fill-rule="evenodd"/></svg>` +
+        `<span>elite &rsquo;26</span>`;
       meta.appendChild(elite);
     }
 
@@ -525,15 +581,44 @@ export class Modal {
 
   buildReactions(review) {
     const reviewId = review.reviewerId;
+    const wrap = document.createElement('div');
+
     const reactions = document.createElement('div');
     reactions.className = 'review-reactions';
-    REACTIONS.forEach(({ type, label }) => {
+
+    // Yelp's classic tally line under the buttons. Tracks the
+    // 'useful' count live.
+    const note = document.createElement('p');
+    note.className = 'review-helpful-note';
+    const renderNote = () => {
+      const n = readCount(reviewId, 'helpful');
+      note.textContent = `${n} ${n === 1 ? 'person' : 'people'} found this useful`;
+      note.style.display = n > 0 ? '' : 'none';
+    };
+
+    REACTIONS.forEach(({ type, label, icon }) => {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'review-reaction';
       const initialCount = readCount(reviewId, type);
       const initialActive = readHasReacted(reviewId, type);
-      btn.textContent = `${label} ${initialCount}`;
+
+      const iconEl = document.createElement('span');
+      iconEl.className = 'reaction-icon';
+      iconEl.setAttribute('aria-hidden', 'true');
+      iconEl.innerHTML = reactionIconSvg(icon);
+      btn.appendChild(iconEl);
+
+      const labelEl = document.createElement('span');
+      labelEl.className = 'reaction-label';
+      labelEl.textContent = label;
+      btn.appendChild(labelEl);
+
+      const countEl = document.createElement('span');
+      countEl.className = 'reaction-count';
+      countEl.textContent = String(initialCount);
+      btn.appendChild(countEl);
+
       if (initialActive) {
         btn.classList.add('is-active');
         btn.setAttribute('aria-pressed', 'true');
@@ -547,13 +632,18 @@ export class Modal {
         const nextActive = !wasActive;
         writeCount(reviewId, type, nextCount);
         writeHasReacted(reviewId, type, nextActive);
-        btn.textContent = `${label} ${nextCount}`;
+        countEl.textContent = String(nextCount);
         btn.classList.toggle('is-active', nextActive);
         btn.setAttribute('aria-pressed', nextActive ? 'true' : 'false');
+        if (type === 'helpful') renderNote();
       });
       reactions.appendChild(btn);
     });
-    return reactions;
+
+    renderNote();
+    wrap.appendChild(reactions);
+    wrap.appendChild(note);
+    return wrap;
   }
 
   buildAmbientCard(venue) {

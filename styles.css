@@ -655,14 +655,17 @@ main {
 }
 
 .reviewer-elite {
-  display: inline-block;
+  /* V35: Yelp Elite in the house hand — gold chip, rat mark, year. */
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   margin-top: 0.6rem;
   font-family: var(--font-ui);
   letter-spacing: 0.02em;
   font-size: 0.6875rem;
   padding: 0.15rem 0.5rem;
-  border: 1px solid var(--color-accent);
-  color: var(--color-accent);
+  border: 1px solid #c9a227;
+  color: #c9a227;
 }
 
 /* Alley card keeps the vertical card padding (matches other modals
@@ -1002,13 +1005,35 @@ main {
   gap: 3px;
 }
 
+/* V35: Yelp's signature is the star knocked out of a filled colored
+   box, not a floating glyph. Box in Yelp red, star cutout in the
+   newsprint cream; alternating per-star tilt keeps it hand-set. */
 .star {
+  position: relative;
   display: inline-block;
   width: 21px;
   height: 21px;
   background: var(--color-stars);
+  border-radius: 2px;
+  transform: rotate(-2.5deg);
+}
+
+.star::after {
+  content: '';
+  position: absolute;
+  inset: 12%;
+  background: var(--color-text);
   clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
-  transform: rotate(-3deg);
+}
+
+.star:nth-child(even) {
+  transform: rotate(1.5deg) translateY(0.5px);
+}
+
+.star-rating-small .star {
+  width: 15px;
+  height: 15px;
+  border-radius: 1.5px;
 }
 
 .star-empty {
@@ -1052,6 +1077,9 @@ main {
 }
 
 .review-reaction {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
   font-family: var(--font-ui);
   letter-spacing: 0.02em;
   font-size: 0.6875rem;
@@ -1061,6 +1089,40 @@ main {
   border: 1px solid rgba(197, 191, 174, 0.4);
   cursor: pointer;
   transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
+}
+
+.reaction-icon {
+  display: inline-flex;
+  opacity: 0.8;
+}
+
+.reaction-count {
+  opacity: 0.65;
+}
+
+/* Yelp's tally line under the reaction row. Hidden at zero (JS). */
+.review-helpful-note {
+  font-family: var(--font-data);
+  font-size: 0.6875rem;
+  letter-spacing: 0.02em;
+  opacity: 0.5;
+  margin: 0.5rem 0 0;
+}
+
+/* Venue aggregate under the headline: small star row + "4.5 (2
+   reviews)". */
+.venue-aggregate {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.25rem 0 0.5rem;
+}
+
+.venue-aggregate-text {
+  font-family: var(--font-data);
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+  opacity: 0.7;
 }
 
 .review-reaction:hover,
