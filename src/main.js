@@ -276,9 +276,10 @@ let mapPanAxes = { x: false, y: false };
 // coordinates. Deliberately NOT the 10-venue centroid: the
 // eastern pins (Mood Ring, Bossa Nova, Caffeine Underground)
 // would drag the opening frame off the intersection. X sits a
-// notch west of the cluster mean (0.26) so the JMZ-platform pin
-// clears the left edge on a 375px phone.
-const MAP_HOME_X = 0.24;
+// couple notches west of the cluster mean (0.26) so the
+// JMZ-platform pin clears the left edge with comfortable air on
+// a 375px phone.
+const MAP_HOME_X = 0.22;
 const MAP_HOME_Y = 0.58;
 
 function centerMapOnVenueCluster() {

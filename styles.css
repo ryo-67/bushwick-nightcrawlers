@@ -23,10 +23,19 @@
   --chrome-pad-x: 1.5rem;
   --chrome-pad-y: 0.875rem;
   --chrome-control-h: 2.25rem;
-  /* +1px = the bar's border-bottom (border-box): keeps a
-     min-height-governed bar (map header) exactly as tall as a
-     content-governed one (loading header wrapping the control). */
+  /* +1px = the bar's border (border-box): keeps a min-height-
+     governed bar exactly as tall as a content-governed one. */
   --chrome-bar-h: calc(var(--chrome-control-h) + 2 * var(--chrome-pad-y) + 1px);
+}
+
+/* V33: one override retunes every chrome bar (headers and footers,
+   map page and loading screen) for phones. */
+@media (max-width: 768px) {
+  :root {
+    --chrome-pad-x: 1rem;
+    --chrome-pad-y: 0.5rem;
+    --chrome-control-h: 2rem;
+  }
 }
 
 *,
@@ -1285,7 +1294,17 @@ main {
   z-index: 100;
   background: var(--color-bg);
   border-top: 1px solid rgba(184, 255, 0, 0.15);
-  padding: 0.625rem 1.5rem calc(0.625rem + env(safe-area-inset-bottom));
+  /* V33: shared chrome tokens — same bar geometry as the loading
+     screen's footer-as-button, so the two footers hold position
+     through the loading→map fade. */
+  padding: var(--chrome-pad-y) var(--chrome-pad-x) calc(var(--chrome-pad-y) + env(safe-area-inset-bottom));
+  min-height: calc(var(--chrome-bar-h) + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+}
+
+.page-footer .footer-controls {
+  flex: 1;
 }
 
 .footer-controls {
@@ -1461,39 +1480,31 @@ main {
      prior shorthand silently overrode the base rule's safe-area
      math, leaving the title under the iPhone notch when the body
      lock didn't push the page down. */
-  /* V26: header holds only title + about on all sizes now, so the
-     mobile column layout (which existed to give the controls a
-     second row) is gone — the base single-row layout works.
-     Baseline alignment (not the desktop flex-start + fixed line
-     boxes) keeps the smaller about link on the title's text
-     baseline; the title is the taller item, so its top — the
-     loading-screen alignment anchor — stays at the padding edge. */
-  .page-header {
-    align-items: baseline;
-    padding: calc(0.5rem + env(safe-area-inset-top)) 1rem 0.5rem;
-    min-height: auto;
-  }
-
-  .page-controls {
-    min-height: 0;
-  }
-
+  /* V33: header/footer bar geometry comes from the mobile chrome
+     token override at :root — no per-bar padding overrides needed.
+     Only the type scale changes here. */
   .page-title {
     font-size: 0.875rem;
     line-height: 1.2;
   }
 
-  /* Footer control bar, phone sizing. Volume slider stays hidden
+  /* Footer controls, phone sizing. Volume slider stays hidden
      (hardware buttons own volume on phones); reset shortens to
-     one word; the mode prefix drops. Edge-justified so the two
-     control groups sit in thumb reach. */
-  .page-footer {
-    padding: 0.5rem 1rem calc(0.5rem + env(safe-area-inset-bottom));
+     one word; the mode prefix drops. V34: mode toggle anchors
+     left, mute + reset cluster right (dividers dropped) — mirrors
+     the loading footer's text-left / action-right grammar instead
+     of scattering items and orphan dots across the bar. */
+  .footer-controls {
+    gap: 0.75rem;
+    font-size: 0.6875rem;
   }
 
-  .footer-controls {
-    gap: 0.5rem;
-    font-size: 0.6875rem;
+  .footer-divider {
+    display: none;
+  }
+
+  .footer-audio-set {
+    margin-left: auto;
   }
 
   .footer-volume,
@@ -2251,7 +2262,15 @@ main {
    against scrolling phone content and the safe-area-inset-top
    keeps the link clear of the iPhone status bar. */
 .about-header {
-  padding: 0.75rem 1rem;
+  /* V34: shared chrome tokens — same bar geometry as the map and
+     loading headers (padding, min-height, centered midline), so
+     the back link sits on the same line the map title does.
+     Background stays the deliberate split: transparent on desktop
+     (content scrolls under bare), solid on mobile. */
+  padding: calc(var(--chrome-pad-y) + env(safe-area-inset-top)) var(--chrome-pad-x) var(--chrome-pad-y);
+  min-height: var(--chrome-bar-h);
+  display: flex;
+  align-items: center;
   position: sticky;
   top: 0;
   z-index: 100;
@@ -2743,9 +2762,9 @@ main {
 
 .loading-rat {
   position: absolute;
-  /* V29: run along the bottom band where the map footer will be —
-     centered on its 1.5rem controls line (strip is 16px tall). */
-  bottom: calc(1rem + env(safe-area-inset-bottom));
+  /* V33: run just above the footer-as-button bar. Token-derived,
+     so the track follows the bar across breakpoints. */
+  bottom: calc(var(--chrome-bar-h) + env(safe-area-inset-bottom) + 2px);
   left: 0;
   right: 0;
   height: 16px;
@@ -2836,20 +2855,41 @@ main {
   to   { transform: translateY(-4%) scaleY(0.93) rotate(-0.8deg); }
 }
 
-/* V29: status message + button live in the loading header's right
-   slot (see buildHeader). The header is a top-anchored bar: each
-   slot hangs from the same top line (the container's flex-start),
-   so a control of ANY height simply extends downward instead of
-   overflowing toward the viewport edge. The title keeps its own
-   fixed 1.75rem line box for the loading→map fade alignment; the
-   status centers against the button so the pair reads as one
-   unit. No fixed heights here — swap the button for a taller or
-   shorter control and the bar accommodates it. */
-.loading-header-status {
+/* V33: the footer bar IS the button (a <button> element — see
+   buildFooter). Same bar geometry as .page-footer via the shared
+   chrome tokens, so the loading footer dissolves into the map
+   footer on the same lines. Status message left, action label
+   right; tapping anywhere on the bar acts. Three states:
+   skip (dim label, acts as skip) → waiting (disabled) →
+   ready (solid accent bar, bg-color text). */
+.loading-footer {
+  position: relative;
+  z-index: 2;
+  margin-top: auto;
+  appearance: none;
+  width: 100%;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 1rem;
-  margin-left: auto;
+  background: transparent;
+  border: none;
+  border-top: 1px solid rgba(184, 255, 0, 0.15);
+  color: var(--color-text);
+  text-align: left;
+  padding: var(--chrome-pad-y) var(--chrome-pad-x) calc(var(--chrome-pad-y) + env(safe-area-inset-bottom));
+  min-height: calc(var(--chrome-bar-h) + env(safe-area-inset-bottom));
+  cursor: pointer;
+  transition: background 300ms ease, border-color 300ms ease, color 300ms ease;
+}
+
+.loading-footer:disabled {
+  cursor: default;
+}
+
+.loading-footer:focus-visible {
+  outline: none;
+  border-top-color: var(--color-accent);
 }
 
 .loading-status {
@@ -2859,67 +2899,43 @@ main {
   opacity: 0.6;
   margin: 0;
   min-height: 1.2em; /* reserve line height during typewriter clears */
-  text-align: right;
 }
 
-.loading-cta {
-  /* Sized by the shared chrome token so the bar wraps it with
-     exactly --chrome-pad-y above and below. */
-  height: var(--chrome-control-h);
-  display: inline-flex;
-  align-items: center;
-  background: transparent;
-  border: 1px solid currentColor;
-  color: var(--color-text);
+.loading-footer-label {
   font-family: var(--font-ui);
   font-size: 0.9375rem;
   letter-spacing: 0.04em;
-  padding: 0 1.25rem;
-  cursor: pointer;
   opacity: 0.35;
-  transition: opacity 300ms ease, color 300ms ease, border-color 300ms ease;
   white-space: nowrap;
+  transition: opacity 300ms ease;
 }
 
-/* Skip state: the same button, dressed down to the old skip
-   affordance — borderless, dim, data font. The box metrics stay
-   put so the skip → waiting → ready transformation doesn't jump. */
-.loading-cta.is-skip {
-  border-color: transparent;
-  opacity: 0.5;
+.loading-footer.is-skip .loading-footer-label {
   font-family: var(--font-data);
-  cursor: pointer;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  opacity: 0.5;
 }
 
-.loading-cta.is-skip:hover,
-.loading-cta.is-skip:focus-visible {
+.loading-footer.is-skip:hover .loading-footer-label,
+.loading-footer.is-skip:focus-visible .loading-footer-label {
   opacity: 1;
-  outline: none;
 }
 
-.loading-cta:disabled {
-  cursor: default;
-  opacity: 0.35;
-}
-
-.loading-cta.is-ready {
-  opacity: 1;
-  color: var(--color-accent);
-  border-color: var(--color-accent);
-  animation: ctaPulse 2s ease-in-out infinite;
-}
-
-.loading-cta.is-ready:hover,
-.loading-cta.is-ready:focus-visible {
+/* Ready: the whole bar lights up — accent background, no border,
+   text in the page bg color. */
+.loading-footer.is-ready {
   background: var(--color-accent);
+  border-top-color: transparent;
   color: var(--color-bg);
-  outline: none;
-  animation-play-state: paused;
 }
 
-@keyframes ctaPulse {
-  0%, 100% { transform: scale(1); }
-  50%      { transform: scale(1.02); }
+.loading-footer.is-ready .loading-status {
+  opacity: 0.7;
+}
+
+.loading-footer.is-ready .loading-footer-label {
+  opacity: 1;
 }
 
 /* Returning-visitor variant */
@@ -2948,16 +2964,6 @@ main {
     padding: 0;
   }
 
-  /* Mirror mobile .page-header (its padding, auto height); the
-     status + button group wraps to its own row under the title. */
-  .loading-header {
-    padding: calc(0.5rem + env(safe-area-inset-top)) 1rem 0.5rem;
-    min-height: 0;
-    align-items: flex-start;
-    flex-wrap: wrap;
-    row-gap: 0.5rem;
-  }
-
   .loading-title {
     /* Match mobile .page-title metrics exactly. */
     font-size: 0.875rem;
@@ -2979,15 +2985,6 @@ main {
     -webkit-overflow-scrolling: touch;
     mask-image: none;
     -webkit-mask-image: none;
-  }
-
-  .loading-header-status {
-    width: 100%;
-    justify-content: space-between;
-  }
-
-  .loading-status {
-    text-align: left;
   }
 
   /* V7 tightened the three loading cards but V8 listen-test
@@ -3038,15 +3035,6 @@ main {
     padding-left: 0.625rem;
   }
 
-  .loading-cta {
-    /* Compact header button on phones — still a comfortable tap
-       target, but sized to the header row rather than a
-       full-width block. */
-    height: 2rem;
-    font-size: 0.8125rem;
-    padding: 0 0.875rem;
-  }
-
   .loading-greeting {
     font-size: 1rem;
   }
@@ -3054,7 +3042,6 @@ main {
 
 @media (prefers-reduced-motion: reduce) {
   .loading-noise { animation: none; }
-  .loading-cta.is-ready { animation: none; }
   .loading-card { transition-duration: 200ms; }
   .loading-rat.is-running[data-direction="ltr"] svg,
   .loading-rat.is-running[data-direction="rtl"] svg {
@@ -3177,11 +3164,12 @@ main {
      rubber-band ever needs suppression there, scope to
      .about-page main rather than the global mobile selector. */
 
-  /* Mobile about-header: adds the var(--color-bg) and safe-area
-     padding that desktop drops. Sticky/z-index/compositor are
-     inherited from the module-scope rule. */
+  /* Mobile about-header: adds the var(--color-bg) that desktop
+     drops (padding/height come from the mobile chrome tokens),
+     plus the hairline the other mobile bars carry. Sticky/
+     z-index/compositor are inherited from the module-scope rule. */
   .about-header {
-    padding: calc(0.75rem + env(safe-area-inset-top)) 1rem 0.75rem;
     background: var(--color-bg);
+    border-bottom: 1px solid rgba(184, 255, 0, 0.15);
   }
 }
