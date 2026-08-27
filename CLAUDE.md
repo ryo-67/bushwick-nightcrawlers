@@ -30,29 +30,38 @@ For the asset checklist and citations: `docs/ASSETS.md`.
 
 ```
 /
-├── index.html              # Entry, page structure
+├── index.html              # Entry, page structure (map, pins, footer, modals mount)
 ├── styles.css              # Design tokens, modal, oscilloscope, layout
-├── about.html              # Epigraph, attribution
+├── about.html              # Epigraph, project copy, full credits + citations
 ├── src/
-│   ├── main.js             # Bootstrap
+│   ├── main.js             # Bootstrap, pin click handlers, pin tooltips
 │   ├── audio/              # engine.js, rat-generator.js, rat-profiles.js,
-│   │                       # venue-beds.js, effects.js, keyword-scanner.js
-│   ├── components/         # map.js, modal.js, oscilloscope.js,
-│   │                       # subtitles.js, headphones-tag.js
-│   └── content/            # rats.js, reviews.js, venues.js
+│   │                       # beds.js (ambient + train + venue beds),
+│   │                       # keyword-effects.js (keyword → sample table),
+│   │                       # keyword-processors.js (keyword → voice processing),
+│   │                       # master-controls.js, playback-mode.js,
+│   │                       # manifest.js (generated — see scripts/)
+│   ├── components/         # modal.js (incl. word-highlight rendering), oscilloscope.js,
+│   │                       # headphones-tag.js, loading-screen.js
+│   ├── content/            # rats.js, reviews.js, venues.js,
+│   │                       # alley-oneliners.js, loading-narrative.js
+│   └── debug/              # viewport-readout.js (?debug=viewport)
+├── scripts/                # Asset-pipeline shell/python scripts +
+│                           # generate-audio-manifest.js (regenerates src/audio/manifest.js)
 ├── assets/
 │   ├── map.mp4             # Animated map background (silent, looping)
-│   ├── pins/               # 10 GIF pin assets, one per venue
+│   ├── pins/               # 10 venues, animated WebP (alpha), + alley-gray variant
+│   ├── source-pins/        # GIF originals the WebP pins are converted from
 │   ├── grain.png
-│   ├── selfies/, photos/
-│   └── sounds/jmz-rumble.wav, sounds/usvs/, sounds/usvs-cocaine/,
-│       sounds/beds/, sounds/effects/
+│   ├── selfies/, photos/   # WebP
+│   └── sounds/             # ambient/ (jmz-rumble.webm, myrtle-broadway-traffic.webm),
+│                           # usvs/, usvs-cocaine/, effects/ — all WebM/Opus
 └── docs/                   # STRATEGY.md, ASSETS.md
 ```
 
 ## Map and pin layering pattern
 
-The map is a silent looping MP4 background. Pins are separate GIF assets layered on top via absolute positioning.
+The map is a silent looping MP4 background. Pins are separate animated WebP assets (alpha-capable, converted from the GIF originals in `assets/source-pins/` via `scripts/convert-pin-gifs.sh`) layered on top via absolute positioning.
 
 ```html
 <div class="map-wrapper">
@@ -60,13 +69,13 @@ The map is a silent looping MP4 background. Pins are separate GIF assets layered
     <source src="assets/map.mp4" type="video/mp4">
   </video>
   <div class="pin-layer">
-    <img src="assets/pins/market-hotel.gif" class="pin" data-pin-id="market-hotel" aria-label="Market Hotel">
+    <img src="assets/pins/market-hotel.webp" class="pin" data-pin-id="market-hotel" aria-label="Market Hotel">
     <!-- ...10 pins total, positioned absolutely with percentage-based top/left -->
   </div>
 </div>
 ```
 
-The `muted` attribute is required for autoplay; `playsinline` prevents iOS Safari from launching the video to fullscreen. MP4 has no transparency, so pin overlays must use formats that do (GIF here, or WebM with alpha in Phase 2). Don't try to overlay video on video.
+The `muted` attribute is required for autoplay; `playsinline` prevents iOS Safari from launching the video to fullscreen. MP4 has no transparency, so pin overlays must use formats that do (animated WebP here). Don't try to overlay video on video.
 
 ## Mobile sheet sizing (V23)
 
@@ -82,7 +91,7 @@ V24 update: V22/V23's lvh extension didn't visibly help on iOS — Safari clips 
 
 - `Tone.start()` must be called inside a user-gesture handler before any audio plays. The headphones tag at the top of the page is the gesture target. Until clicked, no AudioContext.
 - Default playback is generative ('in the moment' mode). Seeded determinism is opt-in via the footer toggle ('on record' mode). RatGenerator reads playback mode via `getMode()` at `start()` time and routes all randomness through `this.rng` — `Math.random` for moment, `mulberry32(fnv1a(reviewerId + text))` for record.
-- Drug-effect events fire on keyword matches in the review text, not probabilistically. See `src/audio/keyword-scanner.js`. Examples: "ketamine" fires kHole; "diet" fires fizz; "tagged" or "for the gram" fires notification ping; "Chase Sapphire" or "my mom" kicks up coffee-shop ambience; "viral" or "sniff" fires a small cough sample.
+- Drug-effect events fire on keyword matches in the review text, not probabilistically. Keyword matching happens in RatGenerator's tokenizer against two tables: `src/audio/keyword-effects.js` (keyword → sample played alongside the voice) and `src/audio/keyword-processors.js` (keyword → processing applied to the voice itself, e.g. kHole, timeGlitch). Examples: "ketamine" fires kHole; "diet" fires fizz; "tagged" or "for the gram" fires notification ping; "Chase Sapphire" or "my mom" kicks up coffee-shop ambience; "viral" or "sniff" fires a small cough sample.
 - Pin audio persists after modal close (cumulative master mix). Do NOT dispose Tone nodes when modals close; lower their gain instead.
 - Subtitle reveal uses `Tone.Draw.schedule`, NOT `setTimeout` or `requestAnimationFrame`, so text and audio stay sample-accurate.
 - The JMZ rumble fires on a randomized 60-90s interval (recursive setTimeout, not Tone.Loop) and triggers sidechain compression on the master bus.
