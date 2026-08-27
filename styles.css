@@ -2087,19 +2087,37 @@ main {
 
   .reviewer-info {
     width: 100%;
+    /* V48: the desktop 200px floor exists to meet the square
+       portrait's height; the stacked mobile flow sizes naturally. */
+    min-height: 0;
+  }
+
+  /* V48 spacing pass: tighter top chrome (pagination now occupies
+     a row), and the content carries its own bottom inset since
+     the DOM-last pagination moved visually to the top. */
+  .review-content {
+    margin-top: 0.25rem;
+    padding-bottom: 1.5rem;
+  }
+
+  .review-rating {
+    margin: 0.5rem 0 0;
   }
 
   /* Rat photo: 70% sheet width centered, square aspect, no
      radius (V7: rounded corners removed across photos). */
   .rat-selfie {
     position: static;
-    width: 70%;
-    max-width: 70%;
+    /* V48: trimmed from 70% — the portrait was the sheet's
+       biggest scroll cost; 58% keeps it a portrait moment while
+       pulling the player and text a full viewport-line closer. */
+    width: 58%;
+    max-width: 58%;
     height: auto;
     aspect-ratio: 1 / 1;
     object-fit: cover;
     border-radius: 0;
-    margin: 0.5rem auto;
+    margin: 0.25rem auto 0.5rem;
     display: block;
   }
 
@@ -2185,18 +2203,30 @@ main {
     min-height: 2.5rem;
   }
 
-  /* Mobile: static end-of-sheet row, not pinned — the V23 lvh
-     sheet extends the card's scrollport below the visible screen,
-     so sticky would pin the bar into the URL-bar zone / over
-     content. Real mobile Yelp paginates at the end of the scroll
-     anyway. Chunky touch targets on the arrows. */
+  /* V48: pagination rides directly under the sticky headline on
+     mobile — flip between reviews the moment the sheet opens, no
+     scroll-to-the-end required. The card becomes a flex column so
+     `order` can lift the DOM-last pagination to the top without
+     touching the desktop pinned-bar markup. */
+  .modal-card:has(.review-pagination) {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .modal-venue-headline {
+    order: -2;
+  }
+
   .review-pagination {
+    order: -1;
     position: static;
     justify-content: space-between;
     width: 100%;
-    padding: 0.75rem 1rem;
-    margin: 0.5rem 0 0;
+    padding: 0.125rem 1rem 0.375rem;
+    margin: 0;
     gap: 1rem;
+    border-top: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   }
 
   .pagination-arrow {
