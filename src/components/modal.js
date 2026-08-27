@@ -601,7 +601,7 @@ export class Modal {
     metaRow.className = 'review-meta-row';
     const metaLine = document.createElement('span');
     metaLine.className = 'review-date';
-    metaLine.textContent = `${review.date} · Translated from ${wordCount} squeaks`;
+    metaLine.textContent = `${review.date} · Translated from ${formatCount(wordCount)} squeaks`;
     metaRow.appendChild(metaLine);
     container.appendChild(metaRow);
 
