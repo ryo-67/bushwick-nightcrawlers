@@ -196,6 +196,18 @@ main {
   display: none;
 }
 
+/* V73: mouse users drag-pan the map (main.js setupMapDragPan).
+   Grab cursor advertises it; pins keep their own pointer cursor. */
+@media (hover: hover) and (pointer: fine) {
+  .map-wrapper {
+    cursor: grab;
+  }
+
+  .map-wrapper.is-panning {
+    cursor: grabbing;
+  }
+}
+
 /* V21/V25: width-anchored on wide wrappers, height-anchored on
    tall ones. Both share aspect-ratio: 1920 / 1334 (map.mp4's
    intrinsic dimensions) so .map-bg and .pin-layer always render
