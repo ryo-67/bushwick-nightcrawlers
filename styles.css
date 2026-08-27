@@ -517,10 +517,21 @@ main {
   color: var(--color-text);
   border: 1px solid rgba(184, 255, 0, 0.2);
   width: 100%;
-  max-width: 640px;
+  /* V36: wider card uses the desktop viewport's spare width so
+     review text wraps into fewer lines — most reviews then fit
+     inside 90vh with no scrolling at all. */
+  max-width: 700px;
   max-height: 90vh;
   overflow-y: auto;
+  /* Residual overflow (long review × short viewport) scrolls
+     without scrollbar chrome — same treatment as .map-wrapper. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   padding: var(--space-lg);
+}
+
+.modal-card::-webkit-scrollbar {
+  display: none;
 }
 
 /* Close button lives inside .modal-venue-headline as a flex item.
@@ -618,8 +629,11 @@ main {
 }
 
 .rat-selfie {
-  width: 240px;
-  height: 240px;
+  /* V36: trimmed from 240px — the selfie set the reviewer block's
+     height; 200px keeps the portrait prominent while reclaiming
+     40px of card height toward the no-scroll budget. */
+  width: 200px;
+  height: 200px;
   aspect-ratio: 1 / 1;
   border-radius: 0;
   object-fit: cover;
@@ -1046,15 +1060,12 @@ main {
   opacity: 0.6;
 }
 
+/* V36: natural height — no inner scrollbox. The card is the single
+   scroll context on every breakpoint (mobile already worked this
+   way); the old fixed 280px box put a second scrollbar inside the
+   panel and clipped review text behind a fade. */
 .review-body {
-  height: 280px;
-  overflow-y: auto;
-  padding-right: 12px; /* clearance for scrollbar */
-}
-
-/* Optional: subtle gradient hint that more text is below */
-.review-body {
-  mask-image: linear-gradient(to bottom, black calc(100% - 24px), transparent);
+  height: auto;
 }
 
 .review-squeaks {
@@ -1891,15 +1902,10 @@ main {
     line-height: 1.55;
   }
 
-  /* Review body: cancel the desktop fixed-height + inner scroll.
-     The sheet body (.modal-card) is the only scroll container on
-     mobile, so the review text scrolls with the rest of the body. */
+  /* V36 made natural-height review text the base behavior; this
+     block now only clears the desktop tail-rhythm margins. */
   .review-body {
     height: auto;
-    max-height: none;
-    overflow: visible;
-    padding-right: 0;
-    mask-image: none;
     -webkit-mask-image: none;
   }
 
