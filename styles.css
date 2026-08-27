@@ -2250,17 +2250,26 @@ main {
     max-height: 100dvh;
   }
 
-  /* Larger touch targets for the reaction buttons. */
+  /* V58: chips take the mobile pagination buttons' treatment —
+     chunky bordered touch targets sharing the row width (2×2
+     grid), bigger text. Report wraps to its own line beneath. */
   .review-reactions {
     gap: 0.5rem;
   }
 
   .review-reaction {
-    /* Flat links (V37): vertical padding alone provides the
-       touch target height. */
-    padding: 0.625rem 0;
+    flex: 1 1 calc(50% - 0.25rem);
+    justify-content: center;
+    padding: 0.75rem 0.5rem;
+    font-size: 0.8125rem;
+    min-height: 3rem;
+  }
+
+  .review-report {
+    flex-basis: 100%;
+    margin: 0.5rem 0 0;
+    text-align: right;
     font-size: 0.75rem;
-    min-height: 2.5rem;
   }
 
   /* V48: pagination rides directly under the sticky headline on
