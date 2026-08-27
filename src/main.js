@@ -1,5 +1,6 @@
 import { LoadingScreen } from './components/loading-screen.js';
-import { Modal } from './components/modal.js';
+import { Modal, buildStarRow, formatCount } from './components/modal.js';
+import { RAT_PATH_D, RAT_VIEWBOX } from './components/rat-silhouette.js';
 import { rats } from './content/rats.js';
 import { venues } from './content/venues.js';
 import { reviews } from './content/reviews.js';
@@ -72,15 +73,82 @@ function setupPinTooltip() {
       tooltip.appendChild(img);
     }
 
+    // V59: mini-review-card peek. Name (+ a gold "met" stamp for
+    // venues whose rat you've already heard), primary review's
+    // stars, reviewer identity, and — when real humans have
+    // reacted — a live tally whisper.
+    const nameRow = document.createElement('div');
+    nameRow.className = 'pin-tooltip-name-row';
     const name = document.createElement('div');
     name.className = 'pin-tooltip-name';
     name.textContent = venue.displayName;
-    tooltip.appendChild(name);
+    nameRow.appendChild(name);
+    if (engine.hasVisited(venue.id)) {
+      const met = document.createElement('span');
+      met.className = 'pin-tooltip-met';
+      met.innerHTML =
+        `<svg viewBox="${RAT_VIEWBOX}" width="18" height="9" aria-hidden="true">` +
+        `<path d="${RAT_PATH_D}" fill="currentColor" fill-rule="evenodd"/></svg>` +
+        `<span>met</span>`;
+      nameRow.appendChild(met);
+    }
+    tooltip.appendChild(nameRow);
+
+    const primary = Object.values(reviews).find(
+      (r) => r.venueId === venue.id
+    );
+    if (primary) {
+      const rating = document.createElement('div');
+      rating.className = 'pin-tooltip-rating';
+      rating.appendChild(buildStarRow(primary.rating, { small: true }));
+      tooltip.appendChild(rating);
+
+      const reviewer = rats[primary.reviewerId];
+      if (reviewer) {
+        const line = document.createElement('div');
+        line.className = 'pin-tooltip-reviewer';
+        const thumb = document.createElement('img');
+        thumb.src = reviewer.selfiePath;
+        thumb.alt = '';
+        thumb.loading = 'lazy';
+        line.appendChild(thumb);
+        const who = document.createElement('span');
+        who.textContent = `reviewed by ${reviewer.handle}`;
+        line.appendChild(who);
+        tooltip.appendChild(line);
+      }
+
+      // Tally whisper: only rendered once real reactions exist.
+      const tally = document.createElement('div');
+      tally.className = 'pin-tooltip-tally';
+      tally.style.display = 'none';
+      tooltip.appendChild(tally);
+      fetchPeekTally(primary.reviewerId).then((n) => {
+        if (n > 0 && tally.isConnected) {
+          tally.textContent = `${formatCount(n)} ${n === 1 ? 'human' : 'humans'} found this helpful`;
+          tally.style.display = '';
+          if (currentPin) position(currentPin);
+        }
+      });
+    }
 
     const cta = document.createElement('div');
     cta.className = 'pin-tooltip-cta';
     cta.textContent = ctaCopyForVenue(venue);
     tooltip.appendChild(cta);
+  }
+
+  // Session cache for peek tallies — one fetch per reviewer, and
+  // silence (0) when the API is absent.
+  const peekTallies = new Map();
+  function fetchPeekTally(reviewerId) {
+    if (peekTallies.has(reviewerId)) return peekTallies.get(reviewerId);
+    const p = fetch(`/api/reactions?review=${encodeURIComponent(reviewerId)}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((counts) => counts.helpful || 0)
+      .catch(() => 0);
+    peekTallies.set(reviewerId, p);
+    return p;
   }
 
   function position(pin) {
@@ -400,7 +468,7 @@ function handleModalOpen(venueId, ctx) {
       engine.unregisterRat(review.reviewerId);
       if (currentRatGen === rg && modalRef?.isOpen()) {
         modalRef.setPlayState('idle');
-        modalRef.oscilloscope?.stop();
+        startAmbientScope();
         currentRatGen = null;
       }
     };
@@ -411,6 +479,10 @@ function handleModalOpen(venueId, ctx) {
   currentRatGenVenueId = venueId;
 
   syncPlayState();
+  // V60: the scope is never dead air — idle, it taps the master
+  // bus and murmurs with the live ambient corner (rumble, traffic,
+  // any still-talking rats). Play refocuses it on this rat's voice.
+  startAmbientScope();
 
   if (!engine.isReady()) {
     engine.onReady(() => {
@@ -425,13 +497,15 @@ function handleModalOpen(venueId, ctx) {
   playClickHandler = () => {
     if (!engine.isReady()) return;
     if (currentRatGen?.isPlaying()) {
-      // Pause: unregister + fade out. Modal flips back to idle.
+      // Pause: unregister + fade out. Modal flips back to idle;
+      // the scope returns to the ambient murmur.
       engine.unregisterRat(review.reviewerId);
-      modalRef.oscilloscope?.stop();
+      startAmbientScope();
       modalRef.setPlayState('idle');
       currentRatGen = null;
     } else {
       if (!currentRatGen) currentRatGen = makeRatGen();
+      modalRef.oscilloscope?.setSourceMode('voice');
       modalRef.oscilloscope?.attach(engine.getRatGain());
       modalRef.oscilloscope?.start();
       engine.registerRat(review.reviewerId, currentRatGen);
@@ -440,6 +514,17 @@ function handleModalOpen(venueId, ctx) {
     }
   };
   playBtn.addEventListener('click', playClickHandler);
+}
+
+// Idle scope = the corner's live signal at murmur scale. Safe to
+// call before the audio engine starts (the analyser just reads
+// zeros and draws the flat baseline).
+function startAmbientScope() {
+  const osc = modalRef?.oscilloscope;
+  if (!osc || !window.Tone) return;
+  osc.setSourceMode('ambient');
+  osc.attach(window.Tone.getDestination());
+  osc.start();
 }
 
 function spawnAlleyOneLiner(reviewerId) {

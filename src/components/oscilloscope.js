@@ -61,11 +61,27 @@ export class Oscilloscope {
     this.levels = new Float32Array(BUCKETS);
     // Running raw peak for the adaptive normalizer.
     this.runningPeak = PEAK_FLOOR;
+    // 'voice' (full drama) or 'ambient' (idle murmur of the master
+    // bus — see setSourceMode).
+    this.modeScale = 1;
     this.clear();
   }
 
   get element() {
     return this.canvas;
+  }
+
+  // V60: 'voice' draws at full scale; 'ambient' caps the envelope
+  // low so the idle scope reads as the corner murmuring, not a
+  // performance. Resets the normalizer — the two sources sit at
+  // very different levels.
+  setSourceMode(mode) {
+    const scale = mode === 'ambient' ? 0.22 : 1;
+    if (scale !== this.modeScale) {
+      this.modeScale = scale;
+      this.runningPeak = PEAK_FLOOR;
+      this.levels.fill(0);
+    }
   }
 
   attach(toneNode) {
@@ -140,7 +156,7 @@ export class Oscilloscope {
     );
     const norm = HEADROOM / this.runningPeak;
     for (let b = 0; b < BUCKETS; b += 1) {
-      const target = Math.pow(Math.min(1, bucketPeaks[b] * norm), SHAPE_EXP);
+      const target = Math.pow(Math.min(1, bucketPeaks[b] * norm), SHAPE_EXP) * this.modeScale;
       const cur = this.levels[b];
       this.levels[b] = cur + (target - cur) * (target > cur ? EASE_RISE : EASE_FALL);
     }

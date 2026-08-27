@@ -454,9 +454,73 @@ main {
   top: -9999px;
   /* V49: per-venue tilt — main.js sets --peek-rotate from the pin
      id so hover peeks lean left or right instead of all tilting
-     the same way. */
-  transform: rotate(var(--peek-rotate, -1.2deg));
+     the same way. V59: drops in with a small settle. */
+  transform: translateY(6px) scale(0.985) rotate(var(--peek-rotate, -1.2deg));
   transform-origin: center center;
+  transition: opacity 120ms linear,
+    transform 180ms cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+.pin-tooltip.is-visible {
+  transform: translateY(0) scale(1) rotate(var(--peek-rotate, -1.2deg));
+}
+
+/* ASSETS §1.3 photo treatment, finally applied: every photograph
+   (venue shots, selfies, peek photos) reads as newsprint-grade —
+   slightly desaturated, a touch of contrast. Pin art and UI are
+   untouched. */
+/* (see .photo-treatment group below the tooltip rules) */
+
+/* V59: mini-review-card peek rows. */
+.pin-tooltip-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.pin-tooltip-met {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: #c9a227;
+  font-family: var(--font-data);
+  font-size: 0.625rem;
+  letter-spacing: 0.08em;
+}
+
+.pin-tooltip-rating {
+  margin: 0.35rem 0 0.1rem;
+}
+
+.pin-tooltip-reviewer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+  font-family: var(--font-data);
+  font-size: 0.75rem;
+  opacity: 0.75;
+}
+
+.pin-tooltip-reviewer img {
+  width: 26px;
+  height: 26px;
+  object-fit: cover;
+}
+
+.pin-tooltip-tally {
+  margin-top: 0.35rem;
+  font-family: var(--font-data);
+  font-size: 0.6875rem;
+  opacity: 0.55;
+}
+
+.pin-tooltip-photo,
+.pin-tooltip-reviewer img,
+.modal-venue-photo img,
+.rat-selfie {
+  filter: saturate(0.7) contrast(1.08);
 }
 
 .pin-tooltip.is-visible {
@@ -1189,6 +1253,20 @@ main {
   font-variant-numeric: tabular-nums;
 }
 
+/* V59 micro-interactions: press squish + a small pop when a chip
+   arms. */
+.review-reaction:active {
+  transform: scale(0.96);
+}
+
+.review-reaction.is-active .reaction-icon {
+  animation: chipPop 260ms ease;
+}
+
+@keyframes chipPop {
+  40% { transform: rotate(-8deg) scale(1.18); }
+}
+
 /* V52: the report analogue — quiet text action at the row's far
    edge, Yelp's "Report review" in city terms. */
 .review-report {
@@ -1241,9 +1319,16 @@ main {
   transition: color 80ms ease, font-weight 80ms ease;
 }
 
+/* V59 trial: marker-swipe highlight — accent wash behind the live
+   word, dark glyphs. Padding and negative margin cancel exactly so
+   the highlight never reflows the text. */
 .word.is-active {
-  color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-bg);
   font-weight: 600;
+  padding: 0.06em 0.18em;
+  margin: -0.06em -0.18em;
+  border-radius: 1px;
 }
 
 .venue-framing {
@@ -1338,6 +1423,10 @@ main {
 
 .play-button:hover:not(:disabled) {
   opacity: 0.85;
+}
+
+.play-button:active:not(:disabled) {
+  transform: translateY(-50%) scale(0.92);
 }
 
 .play-button:focus-visible {
@@ -2546,6 +2635,21 @@ main {
 
 .about-section {
   margin-bottom: var(--space-lg);
+}
+
+/* V59: the house rat as a quiet divider between About sections.
+   assets/rat-mark.svg mirrors src/components/rat-silhouette.js —
+   regenerate the asset if the path ever changes. */
+.about-section + .about-section::before {
+  content: '';
+  display: block;
+  width: 38px;
+  height: 19px;
+  margin: 0 0 2rem;
+  background-color: var(--color-text);
+  opacity: 0.3;
+  -webkit-mask: url('assets/rat-mark.svg') center / contain no-repeat;
+  mask: url('assets/rat-mark.svg') center / contain no-repeat;
 }
 
 .about-section h2 {

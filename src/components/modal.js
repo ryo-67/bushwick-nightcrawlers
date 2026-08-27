@@ -42,7 +42,7 @@ const REACTIONS = [
 // Yelp-style boxed stars: a row of filled squares with the star
 // knocked out (see .star CSS — the wobble lives there). Used by
 // the per-review rating row and the venue aggregate line.
-function buildStarRow(rating, { small = false } = {}) {
+export function buildStarRow(rating, { small = false } = {}) {
   const stars = document.createElement('span');
   stars.className = small ? 'star-rating star-rating-small' : 'star-rating';
   stars.setAttribute('aria-label', `${rating} out of 5 stars`);
@@ -66,7 +66,7 @@ const PAUSE_ICON =
 // Compact tallies: 999 → then 1k, 1.1k, 12k, 1m, 1.1b… One
 // decimal below 10 units, floor above. Optimism about the rat
 // internet, encoded for completeness.
-function formatCount(n) {
+export function formatCount(n) {
   if (n < 1000) return String(n);
   const units = [
     [1e9, 'b'],
