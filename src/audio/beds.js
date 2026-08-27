@@ -24,6 +24,8 @@
  * Stereo is preserved end-to-end.
  */
 
+import { panForVenue } from './spatial.js';
+
 // Component gainDb values anchored to the established baseline
 // (see git history for previous tuning passes). Primary loop
 // component matches the most recent per-venue level (cafe -11,
@@ -210,7 +212,11 @@ async function ensureBed(venueId) {
   // relative levels within the bed: each component routes through
   // its own gain node before joining the shared bus, so the mix
   // ratios survive the shared fade envelope.
-  const sharedGain = new Tone.Gain(0).toDestination();
+  // Spatial: the whole bed sits where the venue's pin sits on the
+  // map (see spatial.js). Site-wide layers above (JMZ, traffic,
+  // train) stay centered.
+  const bedPanner = new Tone.Panner(panForVenue(venueId)).toDestination();
+  const sharedGain = new Tone.Gain(0).connect(bedPanner);
   const componentObjs = [];
 
   for (const comp of components) {

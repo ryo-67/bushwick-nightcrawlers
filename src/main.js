@@ -378,7 +378,13 @@ function handleModalOpen(venueId, ctx) {
   // Factory so we can rebuild the rat after a pause (since pause
   // unregisters and disposes — there's no resume).
   function makeRatGen() {
-    const rg = new RatGenerator(profile, review.text, review.reviewerId, modalRef);
+    const rg = new RatGenerator(
+      profile,
+      review.text,
+      review.reviewerId,
+      modalRef,
+      venueId
+    );
     rg.onComplete = () => {
       engine.unregisterRat(review.reviewerId);
       if (currentRatGen === rg && modalRef?.isOpen()) {
@@ -435,7 +441,13 @@ function spawnAlleyOneLiner(reviewerId) {
   // alley modal has no word-span DOM; the cards are static text).
   // The rat's own onComplete handles unregister; the engine's
   // displacement logic handles same-id click-while-playing.
-  const ratGen = new RatGenerator(profile, oneLiner.text, reviewerId, null);
+  const ratGen = new RatGenerator(
+    profile,
+    oneLiner.text,
+    reviewerId,
+    null,
+    oneLiner.venueId
+  );
   ratGen.onComplete = () => engine.unregisterRat(reviewerId);
   engine.registerRat(reviewerId, ratGen);
   ratGen.start();

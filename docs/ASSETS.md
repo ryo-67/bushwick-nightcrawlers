@@ -408,7 +408,7 @@ A 4-6 paragraph manifesto articulating the project's generative aesthetic. What 
 
 Items intentionally cut from tonight's build but documented for later:
 
-- **Spatial panning** (Web Audio `PannerNode`) — pin position to stereo position
+- ~~**Spatial panning** — pin position to stereo position~~ **Shipped Aug 2026** via `Tone.Panner` (not `PannerNode`): `src/audio/spatial.js` derives pan from venues.js `mapCoordinates.x`, normalized across the pin spread to ±0.65. Rat voices + venue beds pan; site-wide layers (JMZ rumble, traffic, train) stay centered; reverb send stays diffuse.
 - **USV-only listen mode** (no subtitles, oscilloscope only) — "concert mode"
 - **Phoneme-to-USV mapping** — Hamdan-explicit version, real syllabic synthesis
 - **Live 311 rat sightings data** via Socrata API — affects ambient bed density per location in real time

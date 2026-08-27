@@ -26,6 +26,7 @@ import * as engine from './engine.js';
 import { getMode } from './playback-mode.js';
 import { matchKeyword } from './keyword-effects.js';
 import { matchProcessor } from './keyword-processors.js';
+import { panForVenue } from './spatial.js';
 
 function fnv1a(str) {
   let h = 2166136261;
@@ -106,11 +107,14 @@ function applyTierSkew(eligible, skew, rng) {
 }
 
 export class RatGenerator {
-  constructor(profile, reviewText, reviewerId, modal) {
+  constructor(profile, reviewText, reviewerId, modal, venueId = null) {
     this.profile = profile;
     this.reviewText = reviewText;
     this.reviewerId = reviewerId;
     this.modal = modal;
+    // Where this rat sits in the stereo field (see spatial.js).
+    // Null venueId (unknown) pans center.
+    this.venueId = venueId;
     const triggerSet = new Set(
       (profile.keywordTriggers || []).map((s) => s.toLowerCase())
     );
@@ -162,7 +166,11 @@ export class RatGenerator {
     // Initial values match foreground (rank 0). Engine.recomputeLadder
     // ramps to the correct rank within RAT_LADDER_RAMP_SEC of registration.
     this.perRatLPF = new Tone.Filter(20000, 'lowpass');
-    this.perRatGain = new Tone.Gain(1).connect(ratGain);
+    // Spatial: the dry voice sits where the venue's pin sits on
+    // the map. The reverb send stays unpanned — the shared reverb
+    // reads as the room, diffuse around the listener.
+    this.perRatPanner = new Tone.Panner(panForVenue(this.venueId)).connect(ratGain);
+    this.perRatGain = new Tone.Gain(1).connect(this.perRatPanner);
     this.perRatReverbSend = new Tone.Gain(0).connect(reverb);
     this.perRatLPF.connect(this.perRatGain);
     this.perRatLPF.connect(this.perRatReverbSend);
@@ -385,6 +393,7 @@ export class RatGenerator {
     for (const node of [
       this.perRatLPF,
       this.perRatGain,
+      this.perRatPanner,
       this.perRatReverbSend,
       this.kHolePhaser,
       this.kHolePingPong,
