@@ -1158,7 +1158,16 @@ main {
      unnecessary 44px header push. */
   padding: calc(0.875rem + env(safe-area-inset-top)) 1.5rem 0.875rem;
   display: flex;
-  align-items: center;
+  /* flex-start + fixed title line box (below), not center: with
+     center, the title's vertical position depends on the tallest
+     sibling — .header-mode-set wraps to two lines between ~769
+     and ~1000px viewports, growing the row and shoving the title
+     down. Top-aligning and giving title + controls their own
+     1.75rem (= 3.5rem min-height − 2 × 0.875rem padding) line
+     boxes keeps the title at an identical position at every
+     width — and identical to .loading-title, so the title
+     doesn't jump during the loading→map fade. */
+  align-items: flex-start;
   justify-content: space-between;
   gap: 1.5rem;
   min-height: 3.5rem;
@@ -1169,6 +1178,9 @@ main {
   font-style: italic;
   font-weight: normal;
   font-size: 1.25rem;
+  /* Fixed line box; see .page-header comment. Keep in sync with
+     .loading-title. */
+  line-height: 1.75rem;
   letter-spacing: 0.01em;
   color: var(--color-text);
   opacity: 0.85;
@@ -1179,6 +1191,10 @@ main {
 .page-controls {
   display: flex;
   align-items: center;
+  /* Center controls within the same 1.75rem row as the title, so
+     the unwrapped rendering matches the old align-items: center
+     look exactly. */
+  min-height: 1.75rem;
   gap: 0.875rem;
   font-family: var(--font-ui);
   letter-spacing: 0.02em;
@@ -2505,7 +2521,11 @@ main {
   z-index: 2;
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  /* Mirror .page-header geometry (flex-start + 1.75rem title
+     line box) so the title holds its exact position through the
+     loading→map fade. See the .page-header comment. */
+  align-items: flex-start;
+  min-height: 1.75rem;
   gap: 1rem;
 }
 
@@ -2518,12 +2538,16 @@ main {
      transition from loading screen to map view. Italic added for
      the same reason — page-title is italic by design. */
   font-size: 1.25rem;
+  /* Fixed line box matching .page-title; see .page-header. */
+  line-height: 1.75rem;
   letter-spacing: 0.01em;
   margin: 0;
   opacity: 0.85;
 }
 
 .loading-skip {
+  /* Center against the title's 1.75rem line box. */
+  align-self: center;
   background: transparent;
   border: none;
   color: var(--color-text);
@@ -2789,11 +2813,24 @@ main {
 
 @media (max-width: 768px) {
   .loading-screen {
-    padding: 1.25rem 1rem 1.5rem;
+    /* Top/horizontal padding mirror mobile .page-header
+       (calc(0.5rem + safe-area) top, 1rem sides) so the title
+       doesn't jump during the loading→map fade on mobile. */
+    padding: calc(0.5rem + env(safe-area-inset-top)) 1rem 1.5rem;
+  }
+
+  /* Mobile .page-header drops min-height (auto) and top-aligns;
+     undo the desktop centering box so the title sits flush at
+     the padding edge, same as the map header. */
+  .loading-header {
+    min-height: 0;
+    align-items: flex-start;
   }
 
   .loading-title {
-    font-size: 0.9375rem;
+    /* Match mobile .page-title metrics exactly. */
+    font-size: 0.875rem;
+    line-height: 1.2;
   }
 
   /* Cards area scrolls independently; status + CTA stay fixed at
