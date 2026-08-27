@@ -113,14 +113,16 @@ function eligibleTiers(word) {
 // existing per-rat chain), not in sample choice.
 
 // tierSkew personality → syllables per second. Manic rats talk fast.
+// V70: lifted ~20% across the board — the V68 rates read fine per
+// word but dragged over a full review.
 const SYLLABLE_RATES = {
-  'short-dominant': 6,
-  'short-across-all': 6,
-  'short with occasional long': 5.5,
-  chaotic: 5,
-  mixed: 5,
-  'medium-dominant': 4.5,
-  'medium/long dominant': 4,
+  'short-dominant': 7,
+  'short-across-all': 7,
+  'short with occasional long': 6.5,
+  chaotic: 6,
+  mixed: 6,
+  'medium-dominant': 5.5,
+  'medium/long dominant': 5,
 };
 
 // Pools from the general bank, filtered by the analyzed effective
@@ -383,8 +385,10 @@ export class RatGenerator {
       this.activeSources.push(src);
       if (k === n - 1) lastDur = dur;
     }
-    const gap = Math.max(0.14, slot * 0.75);
-    return (n - 1) * slot + Math.max(lastDur, slot * 0.6) + gap;
+    // V70: tighter word boundaries — the gap carries the word
+    // separation, the last syllable no longer pads past its sound.
+    const gap = Math.max(0.11, slot * 0.5);
+    return (n - 1) * slot + Math.max(lastDur, slot * 0.5) + gap;
   }
 
   start() {
