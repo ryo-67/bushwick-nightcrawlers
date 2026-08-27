@@ -83,6 +83,14 @@ Query-param-gated; production users see nothing unless the param is set.
 - `?debug=viewport` — live readout inside any open modal showing `innerHeight`, `visualViewport` state, bounding rects, computed heights, and safe-area insets. Used to diagnose iOS Safari-specific layout state. Tap to dismiss.
 - `?voice=syllabic` — dev override forcing the syllabic voice regardless of the footer mode.
 
+## License
+
+Split license — see [LICENSE](LICENSE):
+
+- **Code** (`src/`, `api/`, `scripts/`, the HTML/CSS) — MIT. Take the engine, learn from it, build with it.
+- **Creative content** (reviews, rat characters, map and pin art, photos, copy) — all rights reserved. The piece is the piece; ask before reusing.
+- **Third-party assets** (portions of `assets/sounds/`, the loading-screen rat) — their own licenses, credited in full on the [About page](https://bushwick-nightcrawlers.vercel.app/about.html).
+
 ## Repository conventions
 
 Repo conventions for AI coding agents live in `CLAUDE.md` (project structure, audio rules that are load-bearing, code style, common pitfalls, what not to touch). Read it before making changes to audio, modals, or the body-lock layout pattern.
