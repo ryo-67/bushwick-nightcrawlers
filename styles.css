@@ -2268,7 +2268,7 @@ main {
   .review-report {
     flex-basis: 100%;
     margin: 0.5rem 0 0;
-    text-align: right;
+    text-align: center;
     font-size: 0.75rem;
   }
 
