@@ -143,7 +143,20 @@ main {
      the actual header height. Toolbar collapse cascades through
      body 100dvh → main flex:1 → wrapper 100% → map height:100%. */
   height: 100%;
-  overflow: hidden;
+  /* V25: overflow auto (was hidden) + container-type: size so the
+     map's anchoring can switch on the wrapper's own aspect ratio
+     (see the @container rule below .map-bg). Width-anchored maps
+     overflow the wrapper's top edge only — unreachable overflow is
+     clipped, never scrollable, so wide viewports render exactly as
+     the old overflow:hidden did. Height-anchored maps overflow to
+     the right and the wrapper becomes the pan surface (previously
+     gated to the ≤768px media query). */
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  container-type: size;
   /* z-index + isolation creates a stacking context below the page
      header (z-index 100) so the wide scrollable map content can't
      visually escape past the wrapper edge during momentum scroll. */
@@ -151,29 +164,37 @@ main {
   isolation: isolate;
 }
 
-/* V21: width-anchored on desktop, height-anchored on mobile.
-   Both share aspect-ratio: 1920 / 1334 (map.mp4's intrinsic
-   dimensions) so .map-bg and .pin-layer always render at
-   identical sizes — pin percentages from venues.js land on the
-   same map points regardless of viewport.
+.map-wrapper::-webkit-scrollbar {
+  display: none;
+}
 
-   Desktop (width:100%, height auto via aspect-ratio): fills the
-   wrapper edge-to-edge horizontally. On viewports wider than
-   1.44:1 (every standard widescreen) the map's height exceeds
-   the wrapper, and `bottom: 0` + wrapper overflow:hidden crops
-   the top of the map. This matches the original design intent
-   (see .map-wrapper comment) — pins are calibrated to the lower
-   portion of the map, so cropping the sparser upper streets
+/* V21/V25: width-anchored on wide wrappers, height-anchored on
+   tall ones. Both share aspect-ratio: 1920 / 1334 (map.mp4's
+   intrinsic dimensions) so .map-bg and .pin-layer always render
+   at identical sizes — pin percentages from venues.js land on
+   the same map points regardless of viewport.
+
+   Wide wrappers (width:100%, height auto via aspect-ratio): fills
+   the wrapper edge-to-edge horizontally. The map's height exceeds
+   the wrapper, and `bottom: 0` + unreachable-overflow clipping
+   crops the top of the map. This matches the original design
+   intent (see .map-wrapper comment) — pins are calibrated to the
+   lower portion of the map, so cropping the sparser upper streets
    brings the venues into the visible band.
 
-   Mobile portrait (height:100%, width auto via aspect-ratio):
-   produces a map wider than the wrapper, enabling the horizontal
-   pan that .map-wrapper { overflow:auto; touch-action:pan-x }
-   uses to navigate between pins.
+   Tall wrappers (height:100%, width auto, via the @container rule
+   below): produces a map wider than the wrapper, enabling the
+   horizontal pan that .map-wrapper { overflow:auto } uses to
+   navigate between pins. V25 moved this switch from the ≤768px
+   media query to a container query on the wrapper's own aspect
+   ratio — device width was a proxy that failed on tablet portrait
+   and tall desktop windows (width-anchored map fell short of the
+   wrapper height, leaving a void above the map).
 
    FILE DEPENDENCY: if assets/map.mp4 is replaced with a video
    at a different aspect ratio, update the aspect-ratio value
-   below to match the new file's intrinsic width/height. */
+   below AND the @container query to match the new file's
+   intrinsic width/height. */
 .map-bg,
 .pin-layer {
   position: absolute;
@@ -181,6 +202,20 @@ main {
   left: 0;
   width: 100%;
   aspect-ratio: 1920 / 1334;
+}
+
+/* V25: flip to height-anchored the moment the wrapper is
+   proportionally taller than the map. Container query (not media
+   query) so the threshold measures the wrapper itself — viewport
+   ratio is off by the header height. JS side: main.js
+   centerMapOnVenueCluster() detects the resulting overflow and
+   scrolls to the venue-cluster centroid. */
+@container (max-aspect-ratio: 1920 / 1334) {
+  .map-bg,
+  .pin-layer {
+    width: auto;
+    height: 100%;
+  }
 }
 
 .pin-layer {
@@ -1411,30 +1446,12 @@ main {
     display: none;
   }
 
-  /* Scrollable map: 200% width + JS-centered initial scroll. */
-  .map-wrapper {
-    overflow: auto;
-    -webkit-overflow-scrolling: touch;
-    touch-action: pan-x pan-y;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-  }
-
-  .map-wrapper::-webkit-scrollbar {
-    display: none;
-  }
-
-  /* V21: mobile portrait flips back to height-anchored sizing so
-     map width exceeds wrapper width — the horizontal-pan content
-     for .map-wrapper { overflow:auto; touch-action:pan-x }. Same
-     aspect-ratio (1920/1334) as desktop so pin coordinates stay
-     consistent. iPhone 14 Pro (393×779 wrapper) → map width ≈
-     779 × 1.44 ≈ 1122px ≈ 286% of wrapper width. */
-  .map-bg,
-  .pin-layer {
-    width: auto;
-    height: 100%;
-  }
+  /* V25: map pan + height-anchored sizing moved out of this media
+     query — the wrapper's overflow/pan rules live on the base
+     .map-wrapper, and anchoring switches via the @container
+     aspect-ratio rule next to .map-bg. Phone portrait wrappers are
+     far narrower than 1920/1334, so the container query covers the
+     old mobile behavior identically. */
 
   /* Modal becomes a bottom sheet on mobile. Backdrop is dimmer
      (sheet doesn't cover full viewport) and the card slides up

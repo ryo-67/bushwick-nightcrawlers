@@ -255,20 +255,31 @@ function setupPinPositions() {
   }
 }
 
-// Mobile-only: the .map-wrapper is overflow:auto with the map at 200%
-// width. Scroll the viewport to the centroid of the venue cluster on
-// first paint so the user sees the action area immediately rather
-// than the upper-left corner.
+// Pannable map: when the wrapper is proportionally taller than the
+// map (phones, tablet portrait, tall desktop windows — the
+// @container rule in styles.css flips to height-anchored sizing),
+// the map overflows horizontally and the wrapper scrolls. Center
+// the view on the venue-cluster centroid so the first pannable
+// paint shows the action area rather than the map's left edge.
+// Gated on actual overflow, not a breakpoint, so it tracks whatever
+// the CSS decides. Re-fires only when a resize newly tips the
+// wrapper into pannable mode (e.g. tablet rotation) — re-centering
+// on every resize would yank a pan position the visitor chose.
+let mapPanWasActive = false;
+
 function centerMapOnVenueCluster() {
   const wrapper = document.querySelector('.map-wrapper');
   if (!wrapper) return;
-  if (!window.matchMedia('(max-width: 768px)').matches) return;
 
   requestAnimationFrame(() => {
     const sw = wrapper.scrollWidth;
     const sh = wrapper.scrollHeight;
     const cw = wrapper.clientWidth;
     const ch = wrapper.clientHeight;
+    const pannable = sw > cw || sh > ch;
+    const newlyPannable = pannable && !mapPanWasActive;
+    mapPanWasActive = pannable;
+    if (!newlyPannable) return;
     // Centroid of the 10-venue spread: roughly 45% x, 58% y of the
     // map. Updated if venues.js coordinates shift significantly.
     const centerX = sw * 0.45 - cw / 2;
@@ -662,6 +673,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupPinPositions();
   updateAlleyPinState();
   centerMapOnVenueCluster();
+  window.addEventListener('resize', centerMapOnVenueCluster);
   const tooltip = setupPinTooltip();
   setupHeaderModeToggle();
   setupHeaderAudioControls();
