@@ -116,13 +116,13 @@ function eligibleTiers(word) {
 // V70: lifted ~20% across the board — the V68 rates read fine per
 // word but dragged over a full review.
 const SYLLABLE_RATES = {
-  'short-dominant': 7,
-  'short-across-all': 7,
-  'short with occasional long': 6.5,
-  chaotic: 6,
-  mixed: 6,
-  'medium-dominant': 5.5,
-  'medium/long dominant': 5,
+  'short-dominant': 8,
+  'short-across-all': 8,
+  'short with occasional long': 7.5,
+  chaotic: 7,
+  mixed: 7,
+  'medium-dominant': 6.5,
+  'medium/long dominant': 6,
 };
 
 // Pools from the general bank, filtered by the analyzed effective
@@ -387,7 +387,7 @@ export class RatGenerator {
     }
     // V70: tighter word boundaries — the gap carries the word
     // separation, the last syllable no longer pads past its sound.
-    const gap = Math.max(0.11, slot * 0.5);
+    const gap = Math.max(0.09, slot * 0.45);
     return (n - 1) * slot + Math.max(lastDur, slot * 0.5) + gap;
   }
 
