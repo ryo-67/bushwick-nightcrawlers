@@ -471,18 +471,33 @@ main {
    untouched. */
 /* (see .photo-treatment group below the tooltip rules) */
 
-/* V62: teaser peek rows — name left, CTA chip right on the same
-   line; stars beneath the title. */
+/* V63: teaser peek rows — title + aggregate stack on the left,
+   CTA chip centered against the whole stack on the right. */
 .pin-tooltip-name-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  margin-top: 0.1rem;
+  margin: 0.1rem 0;
+}
+
+.pin-tooltip-title-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
 }
 
 .pin-tooltip-rating {
-  margin: 0.45rem 0 0.1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.pin-tooltip-review-count {
+  font-family: var(--font-data);
+  font-size: 0.6875rem;
+  opacity: 0.55;
 }
 
 .pin-tooltip-tally {

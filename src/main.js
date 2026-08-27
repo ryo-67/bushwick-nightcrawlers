@@ -72,15 +72,38 @@ function setupPinTooltip() {
       tooltip.appendChild(img);
     }
 
-    // V62: teaser peek — name left with the CTA chip on the right,
-    // stars on their own line beneath. Nothing that spoils the
+    // V63: teaser peek — title stacked over the venue aggregate
+    // (stars · review count), with the CTA chip centered against
+    // the whole stack on the right. Nothing that spoils the
     // reviewer.
     const nameRow = document.createElement('div');
     nameRow.className = 'pin-tooltip-name-row';
+    const titleStack = document.createElement('div');
+    titleStack.className = 'pin-tooltip-title-stack';
     const name = document.createElement('div');
     name.className = 'pin-tooltip-name';
     name.textContent = venue.displayName;
-    nameRow.appendChild(name);
+    titleStack.appendChild(name);
+
+    const venueReviews = Object.values(reviews).filter(
+      (r) => r.venueId === venue.id
+    );
+    if (venueReviews.length) {
+      const avg =
+        venueReviews.reduce((sum, r) => sum + r.rating, 0) /
+        venueReviews.length;
+      const rating = document.createElement('div');
+      rating.className = 'pin-tooltip-rating';
+      rating.appendChild(buildStarRow(Math.round(avg), { small: true }));
+      const count = document.createElement('span');
+      count.className = 'pin-tooltip-review-count';
+      count.textContent = `· ${formatCount(venueReviews.length)} ${
+        venueReviews.length === 1 ? 'review' : 'reviews'
+      }`;
+      rating.appendChild(count);
+      titleStack.appendChild(rating);
+    }
+    nameRow.appendChild(titleStack);
 
     const cta = document.createElement('div');
     cta.className = 'pin-tooltip-cta';
@@ -88,15 +111,8 @@ function setupPinTooltip() {
     nameRow.appendChild(cta);
     tooltip.appendChild(nameRow);
 
-    const primary = Object.values(reviews).find(
-      (r) => r.venueId === venue.id
-    );
+    const primary = venueReviews[0];
     if (primary) {
-      const rating = document.createElement('div');
-      rating.className = 'pin-tooltip-rating';
-      rating.appendChild(buildStarRow(primary.rating, { small: true }));
-      tooltip.appendChild(rating);
-
       // Tally whisper: only rendered once real reactions exist.
       const tally = document.createElement('div');
       tally.className = 'pin-tooltip-tally';
