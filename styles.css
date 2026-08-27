@@ -1221,6 +1221,15 @@ main {
   opacity: 1;
 }
 
+/* Active hover swaps the token roles: the border goes page-black
+   against the accent fill (text/icon already are), so the hover
+   reads on a filled chip without accent-on-accent text. */
+.review-reaction.is-active:hover,
+.review-reaction.is-active:focus-visible {
+  border-color: var(--color-bg);
+  color: var(--color-bg);
+}
+
 .reaction-icon {
   display: inline-flex;
   align-items: center;
@@ -1297,18 +1306,6 @@ main {
 }
 
 
-.review-reaction:hover,
-.review-reaction:focus-visible {
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-}
-
-.review-reaction:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
-}
-
-
 .word {
   transition: color 80ms ease, font-weight 80ms ease;
 }
@@ -1357,10 +1354,9 @@ main {
 
 /* V65: Rash tombstone — the review anatomy, dead. Empty aggregate
    under the headline, a stamped closure notice on the photo, an
-   obit-halftone photo treatment, a flatlined scope strip, obituary
-   double-rules around the epitaph, and a pay-respects chip. */
+   obit-halftone photo treatment, and a pay-respects chip. */
 .tombstone-rating {
-  margin: -0.5rem 0 1.25rem;
+  margin: 0.25rem 0 1.5rem;
 }
 
 .modal-card-tombstone .modal-venue-photo {
@@ -1374,8 +1370,8 @@ main {
 }
 
 /* The closure label stamped across the photo's lower corner —
-   condemnation-notice red, tilted like the peeks, dark backing so
-   it reads over any photo. */
+   condemnation-notice red, tilted like the peeks. Opaque page-black
+   backing: the label must stay readable over any photo. */
 .tombstone-closed-stamp {
   position: absolute;
   left: 1rem;
@@ -1387,24 +1383,7 @@ main {
   border: 2px solid var(--color-stars);
   padding: 0.35rem 0.65rem;
   transform: rotate(-3deg);
-  background: rgba(10, 10, 10, 0.6);
-}
-
-/* Dead scope: same strip as the review player, shorter and with no
-   transport — a monitor left on in an empty room. */
-.tombstone-osc {
-  margin-top: 1.5rem;
-}
-
-.modal-card-tombstone .oscilloscope {
-  height: 56px;
-}
-
-/* Obituary column rules around the epitaph. */
-.modal-card-tombstone .tombstone-epitaph {
-  border-top: 4px double rgba(197, 191, 174, 0.45);
-  border-bottom: 4px double rgba(197, 191, 174, 0.45);
-  padding: 1.25rem 0;
+  background: var(--color-bg);
 }
 
 .tombstone-respects {

@@ -1050,16 +1050,6 @@ export class Modal {
       card.appendChild(closed);
     }
 
-    // V65: dead oscilloscope — the same strip as the review player,
-    // no transport. main.js points it at the master bus at ambient
-    // scale, so it lies near-flat and stirs only when the corner
-    // (and Rash's lingering siren bed) does.
-    const oscPlayer = document.createElement('div');
-    oscPlayer.className = 'osc-player tombstone-osc';
-    this.oscilloscope = new Oscilloscope();
-    oscPlayer.appendChild(this.oscilloscope.element);
-    card.appendChild(oscPlayer);
-
     // Optional epitaph (Rash currently the only tombstone). Array
     // of strings → one <p> per paragraph; the last paragraph
     // renders at full opacity (the punchline closer), others at
