@@ -610,28 +610,48 @@ main {
 }
 
 .reviewer-block {
-  display: flex;
-  gap: var(--space-lg);
-  align-items: flex-start;
+  /* V44: the info stack (name row + oscilloscope) is the only
+     in-flow child, so IT defines the row height; the selfie is
+     absolutely positioned to fill the reserved left column
+     exactly. This is the only arrangement where the portrait can
+     match the component's height with zero feedback loops — any
+     in-flow image ends up negotiating the row height with the
+     text column. */
+  position: relative;
+  display: block;
+  padding-left: calc(200px + var(--space-lg));
+  min-height: 200px;
   margin-bottom: 0;
 }
 
 .reviewer-info {
-  flex: 1 1 auto;
+  /* V43/V44: column — top row (meta + play), then the full-width
+     oscilloscope beneath. Fills the selfie's 200px height with
+     the scope pushed to the bottom edge so both columns end on
+     the same line. */
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   gap: var(--space-md);
+  min-height: 200px;
+  flex: 1 1 auto;
   min-width: 0;
 }
 
 .reviewer-meta {
+  /* Name column holds its natural width; the play/osc column
+     flexes instead. */
+  flex: 0 0 auto;
   min-width: 0;
 }
 
 .rat-selfie {
-  /* V36: trimmed from 240px — the selfie set the reviewer block's
-     height; 200px keeps the portrait prominent while reclaiming
-     40px of card height toward the no-scroll budget. */
+  /* V44: square 200×200 in the reserved left column; the info
+     stack beside it space-betweens to the same 200px (see
+     .reviewer-info) so both columns bottom out together. */
+  position: absolute;
+  left: 0;
+  top: 0;
   width: 200px;
   height: 200px;
   aspect-ratio: 1 / 1;
@@ -661,12 +681,6 @@ main {
   opacity: 0.7;
 }
 
-.reviewer-location {
-  font-family: var(--font-data);
-  font-size: 0.8125rem;
-  margin: 0;
-  opacity: 0.55;
-}
 
 .reviewer-elite {
   /* V35: Yelp Elite in the house hand — gold chip, rat mark, year. */
@@ -941,11 +955,34 @@ main {
   outline: none;
 }
 
+/* V37: pagination is the card's pinned footer bar — sticky at the
+   scroll context's bottom edge, styled like the page footer
+   (opaque bar + hairline top rule) so the chrome grammar stays
+   consistent. Full-bleed via negative margins against the card's
+   2rem padding. */
 .review-pagination {
-  display: inline-flex;
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  margin-bottom: var(--space-md);
+  /* Full-bleed sides only; the bottom flush comes from the card
+     dropping its own bottom padding (below) — a negative bottom
+     margin here would push the bar past its sticky containing
+     block and clamp it up over the reactions. */
+  margin: var(--space-md) calc(-1 * var(--space-lg)) 0;
+  padding: 0.5rem var(--space-lg);
+  background: var(--color-bg);
+  border-top: 1px solid rgba(184, 255, 0, 0.15);
+}
+
+/* When the card ends in the pinned pagination bar, the bar IS the
+   bottom edge — the card's own bottom padding would leave a
+   floating strip beneath it. */
+.modal-card:has(.review-pagination) {
+  padding-bottom: 0;
 }
 
 .pagination-arrow {
@@ -1001,17 +1038,12 @@ main {
   margin-top: 1.5rem;
 }
 
-.review-pagination + .review-content {
-  margin-top: 0;
-}
-
+/* V42: stars alone under the handle. */
 .review-rating {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-md);
-  flex-wrap: wrap;
-  margin-bottom: var(--space-md);
+  justify-content: flex-start;
+  margin: 1rem 0 0;
 }
 
 .star-rating {
@@ -1068,38 +1100,41 @@ main {
   height: auto;
 }
 
-.review-squeaks {
-  font-family: var(--font-ui);
-  letter-spacing: 0.02em;
-  font-size: 0.6875rem;
-  margin: var(--space-md) 0 0;
-  padding-top: var(--space-md);
-  border-top: 1px solid rgba(184, 255, 0, 0.15);
-  opacity: 0.6;
+/* V43: one combined meta line ("April 2026 · Translated from 134
+   squeaks"), bottom-right under the review text, in the date's
+   style — no rule of its own (the reactions row and pagination
+   bar carry the only two rules below the text). */
+.review-meta-row {
+  display: flex;
+  justify-content: flex-start;
+  margin: 0.5rem 0 0;
 }
 
 .review-reactions {
   display: flex;
-  gap: var(--space-md);
+  gap: 1.75rem;
   flex-wrap: wrap;
   margin: var(--space-md) 0 0;
   padding-top: var(--space-md);
   border-top: 1px solid rgba(184, 255, 0, 0.15);
 }
 
+/* V37: flat Yelp-style action links — no boxes. Quiet icon +
+   label + count, generous spacing, accent on hover/active. */
 .review-reaction {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.45rem;
   font-family: var(--font-ui);
   letter-spacing: 0.02em;
-  font-size: 0.6875rem;
-  padding: 0.4rem 0.75rem;
+  font-size: 0.75rem;
+  padding: 0.25rem 0;
   background: transparent;
   color: var(--color-text);
-  border: 1px solid rgba(197, 191, 174, 0.4);
+  border: none;
+  opacity: 0.75;
   cursor: pointer;
-  transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
+  transition: color 150ms ease, opacity 150ms ease;
 }
 
 .reaction-icon {
@@ -1120,21 +1155,6 @@ main {
   margin: 0.5rem 0 0;
 }
 
-/* Venue aggregate under the headline: small star row + "4.5 (2
-   reviews)". */
-.venue-aggregate {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0.25rem 0 0.5rem;
-}
-
-.venue-aggregate-text {
-  font-family: var(--font-data);
-  font-size: 0.75rem;
-  letter-spacing: 0.02em;
-  opacity: 0.7;
-}
 
 .review-reaction:hover,
 .review-reaction:focus-visible {
@@ -1148,16 +1168,14 @@ main {
 }
 
 .review-reaction.is-active {
-  background: var(--color-accent);
-  color: var(--color-bg);
-  border-color: var(--color-accent);
+  color: var(--color-accent);
+  opacity: 1;
 }
 
 .review-reaction.is-active:hover,
 .review-reaction.is-active:focus-visible {
-  background: var(--color-accent);
-  color: var(--color-bg);
-  border-color: var(--color-accent);
+  color: var(--color-accent);
+  opacity: 1;
 }
 
 .word {
@@ -1167,16 +1185,6 @@ main {
 .word.is-active {
   color: var(--color-accent);
   font-weight: 600;
-}
-
-.play-osc-block {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-}
-
-.play-osc-block .play-button {
-  align-self: flex-start;
 }
 
 .venue-framing {
@@ -1242,22 +1250,35 @@ main {
   display: block;
 }
 
-.play-button {
-  font-family: var(--font-ui);
-  letter-spacing: 0.04em;
-  background: transparent;
-  color: var(--color-accent);
-  border: 1px solid var(--color-accent);
-  padding: var(--space-sm) var(--space-lg);
-  cursor: pointer;
-  transition: background 150ms ease, color 150ms ease;
+/* V45: SoundCloud-embed-style player — the waveform canvas is the
+   player surface; the transport button overlays its left edge,
+   vertically centered. Solid accent square with a bg-color icon
+   (the piece's active-control treatment). */
+.osc-player {
+  position: relative;
 }
 
-.play-button:hover:not(:disabled),
-.play-button:focus-visible:not(:disabled) {
+.play-button {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
   background: var(--color-accent);
   color: var(--color-bg);
-  outline: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  z-index: 2;
+  transition: opacity 150ms ease;
+}
+
+.play-button:hover:not(:disabled) {
+  opacity: 0.85;
 }
 
 .play-button:focus-visible {
@@ -1917,18 +1938,21 @@ main {
     text-align: center;
   }
 
+  .review-rating {
+    justify-content: center;
+  }
+
   /* V7: removed tombstone height overrides — with the Rash
      epitaph added in V6, the sheet fills 100dvh naturally via
      the default .modal-card rule. The .modal-card-tombstone
      class remains on the element for any future variant styling. */
 
-  /* Full-bleed PLAY button: chunky touch target across the sheet
-     width with comfortable vertical padding. */
+  /* V45: same overlay transport on mobile — the scope is the
+     full-width player, button riding its right edge. */
   .play-button {
-    width: 100%;
-    padding: 0.875rem 1rem;
-    font-size: 0.9375rem;
-    letter-spacing: 0.04em;
+    width: 44px;
+    height: 44px;
+    left: 10px;
   }
 
   .modal-card .oscilloscope,
@@ -2050,9 +2074,15 @@ main {
    only on mobile as intended. */
 @media (max-width: 768px) {
   .reviewer-block {
+    /* V44: back to a simple stacked flow on phones — the selfie
+       returns to the normal flow, centered above the meta. */
+    display: flex;
     flex-direction: column;
     align-items: flex-start;
     gap: var(--space-md);
+    padding-left: 0;
+    padding-right: 0;
+    min-height: 0;
   }
 
   .reviewer-info {
@@ -2062,6 +2092,7 @@ main {
   /* Rat photo: 70% sheet width centered, square aspect, no
      radius (V7: rounded corners removed across photos). */
   .rat-selfie {
+    position: static;
     width: 70%;
     max-width: 70%;
     height: auto;
@@ -2147,20 +2178,24 @@ main {
   }
 
   .review-reaction {
-    padding: 0.625rem 0.875rem;
+    /* Flat links (V37): vertical padding alone provides the
+       touch target height. */
+    padding: 0.625rem 0;
     font-size: 0.75rem;
     min-height: 2.5rem;
   }
 
-  /* Pagination row stretches edge-to-edge with chunky touch
-     targets on the arrows and the counter centered between. */
+  /* Mobile: static end-of-sheet row, not pinned — the V23 lvh
+     sheet extends the card's scrollport below the visible screen,
+     so sticky would pin the bar into the URL-bar zone / over
+     content. Real mobile Yelp paginates at the end of the scroll
+     anyway. Chunky touch targets on the arrows. */
   .review-pagination {
-    display: flex;
-    align-items: center;
+    position: static;
     justify-content: space-between;
     width: 100%;
-    padding: 0.75rem 0;
-    margin: 0.5rem 0;
+    padding: 0.75rem 1rem;
+    margin: 0.5rem 0 0;
     gap: 1rem;
   }
 
@@ -3164,9 +3199,9 @@ main {
     margin-top: 1.5rem;
     margin-bottom: 0.75rem;
   }
-  .review-content > .review-squeaks {
+  .review-content > .review-meta-row {
     margin: 0;
-    padding: 0.75rem 0;
+    padding: 0.5rem 0 0.75rem;
   }
   .review-content > .review-reactions {
     margin: 0;

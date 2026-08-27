@@ -1,7 +1,6 @@
 import { Oscilloscope } from './oscilloscope.js';
 import { RAT_PATH_D, RAT_VIEWBOX } from './rat-silhouette.js';
 
-const REVIEWER_LOCATION = 'Bushwick, Brooklyn';
 const ALLEY_FRAMING = 'the alley between Mr Kiwi and the JMZ';
 // Alley modal framing line — describes the alley's social function,
 // not its location. Edit this single line to change the framing copy.
@@ -44,9 +43,17 @@ function buildStarRow(rating, { small = false } = {}) {
   return stars;
 }
 
+// SoundCloud-embed-style transport icons for the waveform player.
+const PLAY_ICON =
+  '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">' +
+  '<path d="M8.2 5.4 L19 12 L8.2 18.6 Z" fill="currentColor"/></svg>';
+const PAUSE_ICON =
+  '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">' +
+  '<path d="M7.4 5.6h3.6v12.8H7.4z M13.2 5.6h3.6v12.8h-3.6z" fill="currentColor"/></svg>';
+
 function reactionIconSvg(pathMarkup) {
   return (
-    '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true" ' +
+    '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" ' +
     'fill="none" stroke="currentColor" stroke-width="1.2" ' +
     'stroke-linecap="round" stroke-linejoin="round">' +
     pathMarkup +
@@ -280,15 +287,18 @@ export class Modal {
     if (!btn) return;
     if (state === 'loading') {
       btn.disabled = true;
-      btn.textContent = 'loading…';
+      btn.innerHTML = PLAY_ICON;
+      btn.setAttribute('aria-label', 'Play review (audio loading)');
       btn.title = 'audio loading…';
     } else if (state === 'idle') {
       btn.disabled = false;
-      btn.textContent = 'play';
+      btn.innerHTML = PLAY_ICON;
+      btn.setAttribute('aria-label', 'Play review');
       btn.title = '';
     } else if (state === 'playing') {
       btn.disabled = false;
-      btn.textContent = 'pause';
+      btn.innerHTML = PAUSE_ICON;
+      btn.setAttribute('aria-label', 'Pause review');
       btn.title = '';
     }
   }
@@ -406,25 +416,6 @@ export class Modal {
     return headline;
   }
 
-  buildPlayOscBlock(ariaLabel) {
-    const wrap = document.createElement('div');
-    wrap.className = 'play-osc-block';
-
-    const play = document.createElement('button');
-    play.type = 'button';
-    play.className = 'play-button';
-    play.disabled = true;
-    play.title = 'audio loading…';
-    play.setAttribute('aria-label', ariaLabel);
-    play.textContent = 'play';
-    wrap.appendChild(play);
-
-    this.oscilloscope = new Oscilloscope();
-    wrap.appendChild(this.oscilloscope.element);
-
-    return wrap;
-  }
-
   buildReviewPagination(allReviews) {
     const wrap = document.createElement('div');
     wrap.className = 'review-pagination';
@@ -462,32 +453,20 @@ export class Modal {
     const headline = this.buildModalHeadline(card, venue.displayName);
     card.appendChild(headline);
 
-    // Venue aggregate, Yelp-style: star row + "4.5 (2 reviews)".
-    // Computed honestly from the venue's actual reviews.
-    if (allReviews.length > 0) {
-      const avg =
-        allReviews.reduce((s, r) => s + r.rating, 0) / allReviews.length;
-      const avgLabel = Number.isInteger(avg) ? String(avg) : avg.toFixed(1);
-      const agg = document.createElement('div');
-      agg.className = 'venue-aggregate';
-      agg.appendChild(buildStarRow(Math.round(avg), { small: true }));
-      const text = document.createElement('span');
-      text.className = 'venue-aggregate-text';
-      text.textContent = `${avgLabel} (${allReviews.length} ${
-        allReviews.length === 1 ? 'review' : 'reviews'
-      })`;
-      agg.appendChild(text);
-      card.appendChild(agg);
-    }
-
-    if (allReviews.length >= 2) {
-      card.appendChild(this.buildReviewPagination(allReviews));
-    }
-
+    // V40: no venue aggregate — with at most two reviews per venue
+    // an average reads as filler, not information.
     const reviewContent = document.createElement('div');
     reviewContent.className = 'review-content';
     card.appendChild(reviewContent);
     this.populateReviewContent(reviewContent, venue, reviewer, review);
+
+    // V37: pagination lives at the END of the reviews, Yelp-style,
+    // as a bar pinned to the card's visible bottom edge (sticky
+    // within the card scroll context) — consistent with the page
+    // footer's bar treatment.
+    if (allReviews.length >= 2) {
+      card.appendChild(this.buildReviewPagination(allReviews));
+    }
 
     return card;
   }
@@ -505,18 +484,6 @@ export class Modal {
     }
     container.replaceChildren();
 
-    const ratingRow = document.createElement('div');
-    ratingRow.className = 'review-rating';
-
-    ratingRow.appendChild(buildStarRow(review.rating));
-
-    const date = document.createElement('span');
-    date.className = 'review-date';
-    date.textContent = review.date;
-    ratingRow.appendChild(date);
-
-    container.appendChild(ratingRow);
-
     const reviewerBlock = document.createElement('header');
     reviewerBlock.className = 'reviewer-block';
 
@@ -533,6 +500,10 @@ export class Modal {
     const meta = document.createElement('div');
     meta.className = 'reviewer-meta';
 
+    // V42 layout: name / handle / stars stacked in the meta
+    // cluster; the play + oscilloscope group rides the right side
+    // of the same row (see .reviewer-info). The date moves to the
+    // meta line under the review, opposite the squeaks count.
     const name = document.createElement('h2');
     name.className = 'reviewer-name';
     name.textContent = reviewer.displayName;
@@ -543,11 +514,13 @@ export class Modal {
     handle.textContent = reviewer.handle;
     meta.appendChild(handle);
 
-    const location = document.createElement('p');
-    location.className = 'reviewer-location';
-    location.textContent = REVIEWER_LOCATION;
-    meta.appendChild(location);
+    const ratingRow = document.createElement('div');
+    ratingRow.className = 'review-rating';
+    ratingRow.appendChild(buildStarRow(review.rating));
+    meta.appendChild(ratingRow);
 
+    // V40: no per-review location line — every rat is from
+    // Bushwick; repeating it under each name was filler.
     if (reviewer.elite) {
       // Yelp Elite badge, house style: gold rat mark + year chip
       // (ASSETS §1.5 called for exactly this silhouette).
@@ -561,7 +534,26 @@ export class Modal {
     }
 
     info.appendChild(meta);
-    info.appendChild(this.buildPlayOscBlock('Play review (audio loading)'));
+
+    // V45: SoundCloud-embed-style player — the waveform canvas is
+    // the player surface, with an icon play/pause button overlaid
+    // at its left edge.
+    const oscPlayer = document.createElement('div');
+    oscPlayer.className = 'osc-player';
+
+    this.oscilloscope = new Oscilloscope();
+    oscPlayer.appendChild(this.oscilloscope.element);
+
+    const play = document.createElement('button');
+    play.type = 'button';
+    play.className = 'play-button';
+    play.disabled = true;
+    play.title = 'audio loading…';
+    play.setAttribute('aria-label', 'Play review (audio loading)');
+    play.innerHTML = PLAY_ICON;
+    oscPlayer.appendChild(play);
+
+    info.appendChild(oscPlayer);
 
     reviewerBlock.appendChild(info);
     container.appendChild(reviewerBlock);
@@ -571,10 +563,14 @@ export class Modal {
     const wordCount = appendReviewBodyWithWordSpans(body, review.text);
     container.appendChild(body);
 
-    const squeaks = document.createElement('p');
-    squeaks.className = 'review-squeaks';
-    squeaks.textContent = `${wordCount} squeaks`;
-    container.appendChild(squeaks);
+    // V43: one combined meta line, bottom-right under the review.
+    const metaRow = document.createElement('p');
+    metaRow.className = 'review-meta-row';
+    const metaLine = document.createElement('span');
+    metaLine.className = 'review-date';
+    metaLine.textContent = `${review.date} · Translated from ${wordCount} squeaks`;
+    metaRow.appendChild(metaLine);
+    container.appendChild(metaRow);
 
     container.appendChild(this.buildReactions(review));
   }
