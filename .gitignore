@@ -11,3 +11,5 @@ build/
 assets/source-pins/
 scripts/rename-usvs.sh
 scripts/rename_bank.sh
+.vercel
+.env*
