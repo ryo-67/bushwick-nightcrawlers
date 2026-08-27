@@ -1122,73 +1122,84 @@ main {
   margin: 0.75rem 0 0;
 }
 
-/* V51: modern-Yelp reaction buttons — a squared hand-drawn icon
-   with the label + count beneath. Active state fills the square
-   with the accent (the piece's active-control treatment).
-   Fixed width + nowrap labels so state-swapped copy ("leave
-   crumb" → "left a crumb") can't reflow the row. */
+/* V57: one bordered chip per reaction — icon, label, count inline
+   inside the box, fit-content width. The .reaction-label::after
+   trick reserves the longest state-swapped copy's width so
+   toggling can't reflow the row. Active fills the box accent. */
 .review-reaction {
   display: inline-flex;
-  flex-direction: column;
-  /* V55: left-anchored chip content — the first icon square sits
-     flush with the text bound, labels hang left beneath their
-     squares. Fixed width + nowrap still guarantee zero reflow on
-     state swaps. */
-  align-items: flex-start;
-  text-align: left;
-  gap: 0.4rem;
-  width: 4.75rem;
+  align-items: center;
+  gap: 0.45rem;
   font-family: var(--font-ui);
   letter-spacing: 0.02em;
   font-size: 0.6875rem;
-  padding: 0.25rem 0;
+  padding: 0.45rem 0.7rem;
   white-space: nowrap;
   background: transparent;
   color: var(--color-text);
-  border: none;
-  opacity: 0.8;
+  border: 1px solid rgba(197, 191, 174, 0.45);
+  opacity: 0.85;
   cursor: pointer;
-  transition: color 150ms ease, opacity 150ms ease;
+  transition: color 150ms ease, opacity 150ms ease,
+    background 150ms ease, border-color 150ms ease;
+}
+
+.review-reaction:hover:not(.is-active),
+.review-reaction:focus-visible:not(.is-active) {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  opacity: 1;
+  outline: none;
+}
+
+.review-reaction:focus-visible {
+  outline: none;
+}
+
+.review-reaction.is-active {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-bg);
+  opacity: 1;
 }
 
 .reaction-icon {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 46px;
-  height: 46px;
-  border: 1px solid rgba(197, 191, 174, 0.45);
-  /* V53: hard-edged square chips — the house geometry (boxed
-     stars, transport square). */
-  border-radius: 0;
-  transition: background 150ms ease, border-color 150ms ease,
-    color 150ms ease, transform 150ms ease;
 }
 
-.review-reaction:hover:not(.is-active) .reaction-icon,
-.review-reaction:focus-visible .reaction-icon {
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-  transform: rotate(-4deg);
+.reaction-label {
+  /* inline-block so the ::after width reservation actually
+     establishes the element's min width. */
+  display: inline-block;
 }
 
-.review-reaction.is-active .reaction-icon {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
-  color: var(--color-bg);
+.reaction-label::after,
+.review-report::after {
+  content: attr(data-alt);
+  display: block;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
 }
 
 .reaction-count {
   opacity: 0.65;
+  display: inline-block;
+  font-variant-numeric: tabular-nums;
 }
 
 /* V52: the report analogue — quiet text action at the row's far
    edge, Yelp's "Report review" in city terms. */
 .review-report {
   /* V56: lives in the chip row — far right, centered against the
-     icon squares. */
+     chips. Width reserved for the longer state (::after data-alt)
+     with text right-anchored, so toggling to 'reported' changes
+     neither size nor the right edge. */
   margin-left: auto;
   align-self: center;
+  display: inline-block;
+  text-align: right;
   background: transparent;
   border: none;
   padding: 0;
@@ -1213,22 +1224,6 @@ main {
   color: var(--color-stars);
 }
 
-/* Yelp's tally line. Hidden at zero (JS). */
-.review-helpful-note {
-  font-family: var(--font-data);
-  font-size: 0.6875rem;
-  letter-spacing: 0.02em;
-  opacity: 0.5;
-  margin: 0.375rem 0 0;
-}
-
-/* One text line under each icon: "helpful 3". */
-.reaction-text {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.35rem;
-}
-
 
 .review-reaction:hover,
 .review-reaction:focus-visible {
@@ -1241,16 +1236,6 @@ main {
   outline-offset: 2px;
 }
 
-.review-reaction.is-active {
-  color: var(--color-accent);
-  opacity: 1;
-}
-
-.review-reaction.is-active:hover,
-.review-reaction.is-active:focus-visible {
-  color: var(--color-accent);
-  opacity: 1;
-}
 
 .word {
   transition: color 80ms ease, font-weight 80ms ease;

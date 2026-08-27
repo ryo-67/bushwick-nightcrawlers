@@ -23,13 +23,13 @@ const REACTIONS = [
     label: 'leave crumb',
     labelActive: 'left a crumb',
     // A crumb: irregular morsel with specks.
-    icon: '<path d="M7.2 14.8 C5.9 13.2 6.3 10.9 7.9 9.6 L11.3 6.9 C13 5.6 15.4 6 16.6 7.7 C17.4 8.8 17.5 10.2 17 11.4 C18 11.9 18.6 13 18.4 14.2 C18.1 15.9 16.5 17 14.8 16.8 L9.9 16.2 C8.8 16.1 7.8 15.6 7.2 14.8 Z M10.5 10.3 L10.6 10.4 M13.4 9.4 L13.5 9.5 M12.3 13.2 L12.4 13.3"/>',
+    icon: '<path d="M4.8 16.2 C2.9 13.8 3.5 10.4 5.9 8.4 L10.9 4.4 C13.4 2.5 17 3.1 18.8 5.6 C20 7.2 20.2 9.3 19.4 11.1 C20.9 11.8 21.8 13.4 21.5 15.2 C21.1 17.7 18.7 19.4 16.2 19.1 L8.9 18.2 C7.3 18 5.8 17.4 4.8 16.2 Z M9.8 9.5 L9.9 9.6 M14.1 8.2 L14.2 8.3 M12.5 13.8 L12.6 13.9"/>',
   },
   {
     type: 'love',
     label: 'love this',
     // Heart.
-    icon: '<path d="M12 19.3 C7.5 15.8 4.6 13.1 4.7 9.9 C4.8 7.7 6.5 6.1 8.5 6.2 C10 6.3 11.2 7.2 12 8.5 C12.8 7.2 14 6.3 15.5 6.2 C17.5 6.1 19.3 7.8 19.2 10 C19.1 13.2 16.4 15.9 12 19.3 Z"/>',
+    icon: '<path d="M12 20.6 C6.6 16.4 3.1 13.2 3.2 9.3 C3.3 6.7 5.3 4.7 7.7 4.8 C9.5 4.9 11 6 12 7.6 C13 6 14.5 4.9 16.3 4.8 C18.7 4.7 20.8 6.8 20.7 9.4 C20.6 13.3 17.4 16.5 12 20.6 Z"/>',
   },
   {
     type: 'ohno',
@@ -63,10 +63,31 @@ const PAUSE_ICON =
   '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">' +
   '<path d="M7.4 5.6h3.6v12.8H7.4z M13.2 5.6h3.6v12.8h-3.6z" fill="currentColor"/></svg>';
 
+// Compact tallies: 999 → then 1k, 1.1k, 12k, 1m, 1.1b… One
+// decimal below 10 units, floor above. Optimism about the rat
+// internet, encoded for completeness.
+function formatCount(n) {
+  if (n < 1000) return String(n);
+  const units = [
+    [1e9, 'b'],
+    [1e6, 'm'],
+    [1e3, 'k'],
+  ];
+  for (const [div, suffix] of units) {
+    if (n >= div) {
+      const v = n / div;
+      if (v >= 10) return `${Math.floor(v)}${suffix}`;
+      const one = (Math.floor(v * 10) / 10).toFixed(1).replace(/\.0$/, '');
+      return `${one}${suffix}`;
+    }
+  }
+  return String(n);
+}
+
 function reactionIconSvg(pathMarkup) {
   return (
-    '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" ' +
-    'fill="none" stroke="currentColor" stroke-width="1.4" ' +
+    '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" ' +
+    'fill="none" stroke="currentColor" stroke-width="1.6" ' +
     'stroke-linecap="round" stroke-linejoin="round">' +
     pathMarkup +
     '</svg>'
@@ -607,20 +628,17 @@ export class Modal {
     const displayCount = (type) =>
       shared ? sharedCounts[type] : readCount(reviewId, type);
 
-    // Yelp's classic tally line under the buttons. Tracks the
-    // 'useful' count live.
-    const note = document.createElement('p');
-    note.className = 'review-helpful-note';
-    const renderNote = () => {
-      const n = displayCount('helpful');
-      note.textContent = `${n} ${n === 1 ? 'human' : 'humans'} found this helpful`;
-      note.style.display = n > 0 ? '' : 'none';
+    const setCount = (el, n) => {
+      const text = formatCount(n);
+      el.textContent = text;
+      // Reserve whole-character width so 0↔1 (or 9↔10 within the
+      // same length) can't resize the chip.
+      el.style.minWidth = `${text.length}ch`;
     };
     const renderCounts = () => {
       for (const [type, el] of countEls) {
-        el.textContent = String(displayCount(type));
+        setCount(el, displayCount(type));
       }
-      renderNote();
     };
 
     REACTIONS.forEach(({ type, label, labelActive, icon }) => {
@@ -637,19 +655,22 @@ export class Modal {
       iconEl.innerHTML = reactionIconSvg(icon);
       btn.appendChild(iconEl);
 
-      // One text line under the icon, Yelp-style: "helpful 3".
-      const textRow = document.createElement('span');
-      textRow.className = 'reaction-text';
       const labelEl = document.createElement('span');
       labelEl.className = 'reaction-label';
-      labelEl.textContent = labelFor(initialActive);
-      textRow.appendChild(labelEl);
+      // The hidden ::after (reading data-alt) always carries the
+      // OPPOSITE state's copy, so the box width is max(both
+      // labels) in real pixels and toggling can't reflow the row.
+      const applyLabel = (active) => {
+        labelEl.textContent = labelFor(active);
+        labelEl.dataset.alt = active ? label : labelActive || label;
+      };
+      applyLabel(initialActive);
+      btn.appendChild(labelEl);
       const countEl = document.createElement('span');
       countEl.className = 'reaction-count';
-      countEl.textContent = String(readCount(reviewId, type));
-      textRow.appendChild(countEl);
-      btn.appendChild(textRow);
+      btn.appendChild(countEl);
       countEls.set(type, countEl);
+      setCount(countEl, readCount(reviewId, type));
 
       if (initialActive) {
         btn.classList.add('is-active');
@@ -664,7 +685,7 @@ export class Modal {
         writeHasReacted(reviewId, type, nextActive);
         btn.classList.toggle('is-active', nextActive);
         btn.setAttribute('aria-pressed', nextActive ? 'true' : 'false');
-        labelEl.textContent = labelFor(nextActive);
+        applyLabel(nextActive);
 
         if (shared) {
           // Optimistic bump, then reconcile with the server tally.
@@ -703,6 +724,7 @@ export class Modal {
     const report = document.createElement('button');
     report.type = 'button';
     report.className = 'review-report';
+    report.dataset.alt = 'report to 311';
     const renderReport = (reported) => {
       report.textContent = reported ? 'reported' : 'report to 311';
       report.classList.toggle('is-active', reported);
@@ -722,8 +744,6 @@ export class Modal {
       }
     });
 
-    renderNote();
-
     // Adopt the shared tallies when the API answers; stay on local
     // counts (current behavior) when it doesn't.
     fetch(`/api/reactions?review=${encodeURIComponent(reviewId)}`)
@@ -736,11 +756,10 @@ export class Modal {
       .catch(() => {});
 
     // V56: report rides the chip row itself — far right, vertically
-    // centered against the squares. The tally note keeps its own
-    // quiet line beneath.
+    // centered against the chips. (No tally line — the counts live
+    // in the chips.)
     reactions.appendChild(report);
     wrap.appendChild(reactions);
-    wrap.appendChild(note);
     return wrap;
   }
 
