@@ -11,6 +11,22 @@
   --space-sm: 0.5rem;
   --space-md: 1rem;
   --space-lg: 2rem;
+
+  /* V30: shared chrome geometry. The map page's header and the
+     loading screen's header are the SAME bar: identical height,
+     padding, and a single vertical midline every chrome element
+     centers on (title, about link, status text, the enter/skip
+     button). Alignment through the loading→map fade holds by
+     construction — change these tokens and both bars move
+     together. --chrome-control-h is the tallest chrome control
+     (the loading CTA); the bar is sized from it. */
+  --chrome-pad-x: 1.5rem;
+  --chrome-pad-y: 0.875rem;
+  --chrome-control-h: 2.25rem;
+  /* +1px = the bar's border-bottom (border-box): keeps a
+     min-height-governed bar (map header) exactly as tall as a
+     content-governed one (loading header wrapping the control). */
+  --chrome-bar-h: calc(var(--chrome-control-h) + 2 * var(--chrome-pad-y) + 1px);
 }
 
 *,
@@ -1194,21 +1210,19 @@ main {
      media query (V15 scope-down) so chromium desktop, which
      correctly resolves env() to 0, doesn't pick up an
      unnecessary 44px header push. */
-  padding: calc(0.875rem + env(safe-area-inset-top)) 1.5rem 0.875rem;
+  padding: calc(var(--chrome-pad-y) + env(safe-area-inset-top)) var(--chrome-pad-x) var(--chrome-pad-y);
   display: flex;
-  /* flex-start + fixed title line box (below), not center: with
-     center, the title's vertical position depends on the tallest
-     sibling — .footer-mode-set wraps to two lines between ~769
-     and ~1000px viewports, growing the row and shoving the title
-     down. Top-aligning and giving title + controls their own
-     1.75rem (= 3.5rem min-height − 2 × 0.875rem padding) line
-     boxes keeps the title at an identical position at every
-     width — and identical to .loading-title, so the title
-     doesn't jump during the loading→map fade. */
-  align-items: flex-start;
+  /* V30: centered on the shared chrome midline. Centering was
+     unsafe when the mode/volume controls lived here (their wrap
+     between ~769-1000px grew the row and shoved the title), but
+     the header is title + about only now — nothing can outgrow
+     the bar. The loading header uses the same tokens, so title,
+     about link, status text, and the enter button all share one
+     centerline through the loading→map fade. */
+  align-items: center;
   justify-content: space-between;
   gap: 1.5rem;
-  min-height: 3.5rem;
+  min-height: var(--chrome-bar-h);
 }
 
 .page-title {
@@ -2540,14 +2554,11 @@ main {
      peek through at the bottom edge. */
   height: 100vh;
   height: 100dvh;
-  /* Top/horizontal padding aligned to .page-header values
-     (0.875rem top + safe-area, 1.5rem horizontal) so the
-     loading-screen title and main-page title share visual
-     position — title doesn't jump during fade-out transition.
-     V28: bottom padding moved onto .loading-footer, which now
-     mirrors .page-footer's geometry for the same reason at the
-     bottom edge. */
-  padding: calc(0.875rem + env(safe-area-inset-top)) 1.5rem 0;
+  /* V30: no container padding — the header carries the full
+     .page-header bar geometry itself (shared chrome tokens), and
+     cards/returning content self-center. No bottom chrome; the
+     scuttle rats own the bottom band. */
+  padding: 0;
   display: flex;
   flex-direction: column;
   opacity: 1;
@@ -2582,12 +2593,15 @@ main {
   z-index: 2;
   display: flex;
   justify-content: space-between;
-  /* Mirror .page-header geometry (flex-start + 1.75rem title
-     line box) so the title holds its exact position through the
-     loading→map fade. See the .page-header comment. */
-  align-items: flex-start;
-  min-height: 1.75rem;
+  /* V30: this IS the .page-header bar — same tokens, same border,
+     same centered midline — so every piece of top chrome (title,
+     status, button here; title, about there) holds its position
+     through the loading→map fade. */
+  align-items: center;
   gap: 1rem;
+  padding: calc(var(--chrome-pad-y) + env(safe-area-inset-top)) var(--chrome-pad-x) var(--chrome-pad-y);
+  min-height: var(--chrome-bar-h);
+  border-bottom: 1px solid rgba(184, 255, 0, 0.15);
 }
 
 .loading-title {
@@ -2604,27 +2618,6 @@ main {
   letter-spacing: 0.01em;
   margin: 0;
   opacity: 0.85;
-}
-
-.loading-skip {
-  /* Center against the title's 1.75rem line box. */
-  align-self: center;
-  background: transparent;
-  border: none;
-  color: var(--color-text);
-  opacity: 0.5;
-  font-family: var(--font-data);
-  font-size: 0.75rem;
-  letter-spacing: 0.05em;
-  cursor: pointer;
-  padding: 0.25rem 0.5rem;
-  transition: opacity 200ms ease;
-}
-
-.loading-skip:hover,
-.loading-skip:focus-visible {
-  opacity: 1;
-  outline: none;
 }
 
 .loading-cards {
@@ -2684,24 +2677,30 @@ main {
     0 18px 36px rgba(0, 0, 0, 0.6);
 }
 
+/* V32: scatter offsets scale with the viewport (vw for the spread,
+   vh for the vertical drift) instead of fixed rem distances — the
+   paste-up breathes apart on wide screens and pulls together on
+   narrow or short ones. clamp() bounds keep every card fully
+   on-canvas at the extremes. The old fixed values are the clamp
+   midpoints at a ~1280×900 viewport. */
 .loading-card[data-card-index="0"] {
   --card-rotate: -2deg;
-  --card-x: -10rem;
-  --card-y: -8rem;
+  --card-x: clamp(-16rem, -13vw, -6rem);
+  --card-y: clamp(-9rem, -14vh, -4rem);
   z-index: 1;
 }
 
 .loading-card[data-card-index="1"] {
   --card-rotate: 1.2deg;
-  --card-x: 9rem;
+  --card-x: clamp(5rem, 12vw, 15rem);
   --card-y: 1rem;
   z-index: 2;
 }
 
 .loading-card[data-card-index="2"] {
   --card-rotate: -1deg;
-  --card-x: -2rem;
-  --card-y: 9rem;
+  --card-x: clamp(-5rem, -2.5vw, -1rem);
+  --card-y: clamp(4rem, 16vh, 10rem);
   z-index: 3;
 }
 
@@ -2735,7 +2734,9 @@ main {
 
 .loading-rat {
   position: absolute;
-  bottom: 5.5rem;
+  /* V29: run along the bottom band where the map footer will be —
+     centered on its 1.5rem controls line (strip is 16px tall). */
+  bottom: calc(1rem + env(safe-area-inset-bottom));
   left: 0;
   right: 0;
   height: 16px;
@@ -2826,25 +2827,20 @@ main {
   to   { transform: translateY(-4%) scaleY(0.93) rotate(-0.8deg); }
 }
 
-/* V28: mirrors .page-footer's geometry (0.625rem vertical padding
-   + safe-area, 1.75rem centered content row; sides come from the
-   loading-screen's 1.5rem padding) so the status line sits exactly
-   where the map footer's controls line lands — the bottom chrome
-   holds position through the loading→map fade, like the title does
-   at the top. The CTA is absolutely centered on the same line (see
-   .loading-cta) so its height can't stretch the row. */
-.loading-footer {
-  position: relative;
-  z-index: 2;
+/* V29: status message + button live in the loading header's right
+   slot (see buildHeader). The header is a top-anchored bar: each
+   slot hangs from the same top line (the container's flex-start),
+   so a control of ANY height simply extends downward instead of
+   overflowing toward the viewport edge. The title keeps its own
+   fixed 1.75rem line box for the loading→map fade alignment; the
+   status centers against the button so the pair reads as one
+   unit. No fixed heights here — swap the button for a taller or
+   shorter control and the bar accommodates it. */
+.loading-header-status {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  /* Border-box: min-height must include the padding to leave the
-     1.75rem content row (0.625 + 1.75 + 0.625 = 3rem). */
-  min-height: calc(3rem + env(safe-area-inset-bottom));
   gap: 1rem;
-  margin-top: auto;
-  padding: 0.625rem 0 calc(0.625rem + env(safe-area-inset-bottom));
+  margin-left: auto;
 }
 
 .loading-status {
@@ -2854,30 +2850,42 @@ main {
   opacity: 0.6;
   margin: 0;
   min-height: 1.2em; /* reserve line height during typewriter clears */
+  text-align: right;
 }
 
 .loading-cta {
-  /* Centered on the footer's content-row centerline (padding-top
-     0.625rem + half the 1.75rem row = 1.5rem) so the button's
-     height extends symmetrically instead of stretching the row and
-     shifting the status line off the map footer's. --cta-shift
-     (not a bare transform) so the ctaPulse keyframes can compose
-     with it; mobile resets both. */
-  position: absolute;
-  right: 0;
-  top: 1.5rem;
-  --cta-shift: -50%;
-  transform: translateY(var(--cta-shift));
+  /* Sized by the shared chrome token so the bar wraps it with
+     exactly --chrome-pad-y above and below. */
+  height: var(--chrome-control-h);
+  display: inline-flex;
+  align-items: center;
   background: transparent;
   border: 1px solid currentColor;
   color: var(--color-text);
   font-family: var(--font-ui);
   font-size: 0.9375rem;
   letter-spacing: 0.04em;
-  padding: 0.75rem 1.5rem;
+  padding: 0 1.25rem;
   cursor: pointer;
   opacity: 0.35;
   transition: opacity 300ms ease, color 300ms ease, border-color 300ms ease;
+  white-space: nowrap;
+}
+
+/* Skip state: the same button, dressed down to the old skip
+   affordance — borderless, dim, data font. The box metrics stay
+   put so the skip → waiting → ready transformation doesn't jump. */
+.loading-cta.is-skip {
+  border-color: transparent;
+  opacity: 0.5;
+  font-family: var(--font-data);
+  cursor: pointer;
+}
+
+.loading-cta.is-skip:hover,
+.loading-cta.is-skip:focus-visible {
+  opacity: 1;
+  outline: none;
 }
 
 .loading-cta:disabled {
@@ -2901,8 +2909,8 @@ main {
 }
 
 @keyframes ctaPulse {
-  0%, 100% { transform: translateY(var(--cta-shift, 0%)) scale(1); }
-  50%      { transform: translateY(var(--cta-shift, 0%)) scale(1.02); }
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.02); }
 }
 
 /* Returning-visitor variant */
@@ -2926,37 +2934,19 @@ main {
   opacity: 0.85;
 }
 
-.loading-returning-title {
-  font-family: var(--font-editorial);
-  font-style: italic;
-  font-weight: normal;
-  font-size: clamp(2rem, 4.5vw, 2.75rem);
-  letter-spacing: 0.01em;
-  color: var(--color-text);
-  opacity: 0.92;
-  margin: 0;
-  text-align: center;
-  line-height: 1.15;
-}
-
-.loading-screen.is-returning .loading-header {
-  display: none;
-}
-
 @media (max-width: 768px) {
   .loading-screen {
-    /* Top/horizontal padding mirror mobile .page-header
-       (calc(0.5rem + safe-area) top, 1rem sides) so the title
-       doesn't jump during the loading→map fade on mobile. */
-    padding: calc(0.5rem + env(safe-area-inset-top)) 1rem 1.5rem;
+    padding: 0;
   }
 
-  /* Mobile .page-header drops min-height (auto) and top-aligns;
-     undo the desktop centering box so the title sits flush at
-     the padding edge, same as the map header. */
+  /* Mirror mobile .page-header (its padding, auto height); the
+     status + button group wraps to its own row under the title. */
   .loading-header {
+    padding: calc(0.5rem + env(safe-area-inset-top)) 1rem 0.5rem;
     min-height: 0;
     align-items: flex-start;
+    flex-wrap: wrap;
+    row-gap: 0.5rem;
   }
 
   .loading-title {
@@ -2982,26 +2972,13 @@ main {
     -webkit-mask-image: none;
   }
 
-  /* Footer is the fixed bottom strip; opaque background sits above
-     .loading-noise (z-index:2 vs noise z-index:0) and prevents
-     scrolling cards from showing through. The bg color is the
-     same var(--color-bg) as the screen, but the noise overlay
-     makes the screen read as grain-textured while the footer
-     reads as a flat, slightly darker band.
-     Negative horizontal margins pull the box out past the
-     .loading-screen's 16px horizontal padding so the flat band +
-     top border run edge-to-edge. padding-left/right restore the
-     content inset (status text + button stay at the same 16px
-     position). overflow:hidden on .loading-screen clips at its
-     padding box (x=0 to x=full), so the breakout sits inside
-     the clip region. */
-  .loading-footer {
-    flex: 0 0 auto;
-    background: var(--color-bg);
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
-    margin-left: -16px;
-    margin-right: -16px;
-    padding: 0.75rem 16px 0;
+  .loading-header-status {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .loading-status {
+    text-align: left;
   }
 
   /* V7 tightened the three loading cards but V8 listen-test
@@ -3052,27 +3029,13 @@ main {
     padding-left: 0.625rem;
   }
 
-  .loading-rat {
-    bottom: 7rem;
-  }
-
-  .loading-footer {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.875rem;
-  }
-
-  .loading-status {
-    text-align: left;
-  }
-
   .loading-cta {
-    /* Back into the column flow; undo the desktop centerline hang. */
-    position: static;
-    --cta-shift: 0%;
-    transform: none;
-    width: 100%;
-    text-align: center;
+    /* Compact header button on phones — still a comfortable tap
+       target, but sized to the header row rather than a
+       full-width block. */
+    height: 2rem;
+    font-size: 0.8125rem;
+    padding: 0 0.875rem;
   }
 
   .loading-greeting {

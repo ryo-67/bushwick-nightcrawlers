@@ -35,7 +35,7 @@ export class LoadingScreen {
     this.el = null;
     this.statusEl = null;
     this.ctaBtn = null;
-    this.skipBtn = null;
+
     this.cardEls = [];
     this.cardIndex = -1;
     this.audioReady = false;
@@ -91,7 +91,9 @@ export class LoadingScreen {
     el.dataset.state = 'initial';
 
     el.appendChild(this.buildNoise());
-    el.appendChild(this.buildHeader({ withSkip: true }));
+    el.appendChild(
+      this.buildHeader({ withTitle: true, ctaLabel: LOADING_NARRATIVE.cta })
+    );
 
     const cards = document.createElement('div');
     cards.className = 'loading-cards';
@@ -101,17 +103,19 @@ export class LoadingScreen {
       this.cardEls.push(cardEl);
     });
     el.appendChild(cards);
+    // buildHeader ran refreshCta before cardEls existed (empty list
+    // reads as "on last card"); re-sync now so the button opens in
+    // its skip state while the cards play.
+    this.refreshCta();
 
     el.appendChild(this.buildRat());
-    el.appendChild(this.buildFooter({ ctaLabel: LOADING_NARRATIVE.cta }));
 
-    // Tap anywhere on the overlay (outside CTA / skip) advances cards.
-    // A card that was just dragged sets dragJustEnded on itself; we
-    // honor that flag so a drag-release click doesn't double as an
-    // advance trigger.
+    // Tap anywhere on the overlay (outside the header button)
+    // advances cards. A card that was just dragged sets
+    // dragJustEnded on itself; we honor that flag so a
+    // drag-release click doesn't double as an advance trigger.
     this.advanceClickHandler = (e) => {
       if (e.target.closest('.loading-cta')) return;
-      if (e.target.closest('.loading-skip')) return;
       const card = e.target.closest('.loading-card');
       if (card && card.dataset.dragJustEnded === 'true') return;
       this.advanceCard();
@@ -146,18 +150,19 @@ export class LoadingScreen {
     el.dataset.state = 'returning';
 
     el.appendChild(this.buildNoise());
-    // Returning variant: no upper-left header. With nothing else on
-    // screen, the title becomes the centerpiece — promoted into the
-    // center stack as a large element above the greeting.
+    // V31: same header as the first-visit variant — title top-left,
+    // status + button top-right. The greeting alone holds the
+    // center (a large duplicate title there read as clutter once
+    // the header title returned).
+    el.appendChild(
+      this.buildHeader({
+        withTitle: true,
+        ctaLabel: LOADING_NARRATIVE.returningCta,
+      })
+    );
 
     const center = document.createElement('div');
     center.className = 'loading-returning';
-
-    const titleEl = document.createElement('h1');
-    titleEl.className = 'loading-returning-title';
-    titleEl.id = 'loading-title';
-    titleEl.textContent = LOADING_NARRATIVE.title;
-    center.appendChild(titleEl);
 
     const greeting = document.createElement('p');
     greeting.className = 'loading-greeting';
@@ -167,10 +172,6 @@ export class LoadingScreen {
     el.appendChild(center);
 
     el.appendChild(this.buildRat());
-    // CTA lives in the footer (bottom-right) so the returning variant
-    // mirrors the cards variant's bottom chrome: status BL + CTA BR.
-    // buildFooter assigns the created button to this.ctaBtn.
-    el.appendChild(this.buildFooter({ ctaLabel: LOADING_NARRATIVE.returningCta }));
 
     this.root.appendChild(el);
     this.el = el;
@@ -186,28 +187,51 @@ export class LoadingScreen {
     return noise;
   }
 
-  buildHeader({ withSkip }) {
+  buildHeader({ withTitle = true, ctaLabel }) {
+    // V29: the header owns the whole top chrome — title left, and
+    // a right-side group of status message + THE button. Skip is a
+    // state of that button (see refreshCta), not a separate
+    // control: skip → (waiting) → enter-CTA as the screen
+    // progresses. The returning variant reuses this header without
+    // the title (its title is the centerpiece mid-screen).
     const header = document.createElement('header');
     header.className = 'loading-header';
 
-    const title = document.createElement('h1');
-    title.className = 'loading-title';
-    title.id = 'loading-title';
-    title.textContent = LOADING_NARRATIVE.title;
-    header.appendChild(title);
-
-    if (withSkip) {
-      const skip = document.createElement('button');
-      skip.type = 'button';
-      skip.className = 'loading-skip';
-      skip.textContent = 'skip →';
-      skip.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this.skipToLastCard();
-      });
-      header.appendChild(skip);
-      this.skipBtn = skip;
+    if (withTitle) {
+      const title = document.createElement('h1');
+      title.className = 'loading-title';
+      title.id = 'loading-title';
+      title.textContent = LOADING_NARRATIVE.title;
+      header.appendChild(title);
     }
+
+    const group = document.createElement('div');
+    group.className = 'loading-header-status';
+
+    const status = document.createElement('p');
+    status.className = 'loading-status';
+    status.setAttribute('aria-live', 'polite');
+    group.appendChild(status);
+    this.statusEl = status;
+
+    const cta = document.createElement('button');
+    cta.type = 'button';
+    cta.className = 'loading-cta';
+    cta.disabled = true;
+    this.ctaLabel = ctaLabel;
+    cta.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (cta.classList.contains('is-ready')) {
+        this.handleEnter();
+      } else if (cta.classList.contains('is-skip')) {
+        this.skipToLastCard();
+      }
+    });
+    group.appendChild(cta);
+    this.ctaBtn = cta;
+
+    header.appendChild(group);
+    this.refreshCta();
     return header;
   }
 
@@ -369,32 +393,6 @@ export class LoadingScreen {
     return wrap;
   }
 
-  buildFooter({ ctaLabel }) {
-    const footer = document.createElement('footer');
-    footer.className = 'loading-footer';
-
-    const status = document.createElement('p');
-    status.className = 'loading-status';
-    status.setAttribute('aria-live', 'polite');
-    footer.appendChild(status);
-    this.statusEl = status;
-
-    if (ctaLabel) {
-      const cta = document.createElement('button');
-      cta.type = 'button';
-      cta.className = 'loading-cta';
-      cta.disabled = true;
-      cta.textContent = ctaLabel;
-      cta.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this.handleEnter();
-      });
-      footer.appendChild(cta);
-      this.ctaBtn = cta;
-    }
-    return footer;
-  }
-
   // ---- card sequence ----
 
   advanceCard() {
@@ -508,10 +506,18 @@ export class LoadingScreen {
 
   refreshCta() {
     if (!this.ctaBtn) return;
+    // Three states of the one header button:
+    //   skip    — cards still playing: acts as "skip →"
+    //   waiting — on the last card but audio not loaded: shows the
+    //             CTA label, disabled/dim
+    //   ready   — enterable: accent + pulse
     const onLastCard = this.isReturning || this.cardIndex >= this.cardEls.length - 1;
     const ready = this.audioReady && onLastCard;
-    this.ctaBtn.disabled = !ready;
+    const skippable = !ready && !onLastCard;
+    this.ctaBtn.disabled = !ready && !skippable;
     this.ctaBtn.classList.toggle('is-ready', ready);
+    this.ctaBtn.classList.toggle('is-skip', skippable);
+    this.ctaBtn.textContent = skippable ? 'skip →' : this.ctaLabel;
   }
 
   // ---- rat silhouette scheduling ----
