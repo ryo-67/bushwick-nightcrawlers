@@ -72,9 +72,9 @@ function setupPinTooltip() {
       tooltip.appendChild(img);
     }
 
-    // V61: teaser peek — name left, stars on the right edge,
-    // nothing that spoils the reviewer. (The met stamp and
-    // reviewed-by line gave the game away.)
+    // V62: teaser peek — name left with the CTA chip on the right,
+    // stars on their own line beneath. Nothing that spoils the
+    // reviewer.
     const nameRow = document.createElement('div');
     nameRow.className = 'pin-tooltip-name-row';
     const name = document.createElement('div');
@@ -82,15 +82,21 @@ function setupPinTooltip() {
     name.textContent = venue.displayName;
     nameRow.appendChild(name);
 
+    const cta = document.createElement('div');
+    cta.className = 'pin-tooltip-cta';
+    cta.textContent = ctaCopyForVenue(venue);
+    nameRow.appendChild(cta);
+    tooltip.appendChild(nameRow);
+
     const primary = Object.values(reviews).find(
       (r) => r.venueId === venue.id
     );
     if (primary) {
-      nameRow.appendChild(buildStarRow(primary.rating, { small: true }));
-    }
-    tooltip.appendChild(nameRow);
+      const rating = document.createElement('div');
+      rating.className = 'pin-tooltip-rating';
+      rating.appendChild(buildStarRow(primary.rating, { small: true }));
+      tooltip.appendChild(rating);
 
-    if (primary) {
       // Tally whisper: only rendered once real reactions exist.
       const tally = document.createElement('div');
       tally.className = 'pin-tooltip-tally';
@@ -105,10 +111,6 @@ function setupPinTooltip() {
       });
     }
 
-    const cta = document.createElement('div');
-    cta.className = 'pin-tooltip-cta';
-    cta.textContent = ctaCopyForVenue(venue);
-    tooltip.appendChild(cta);
   }
 
   // Session cache for peek tallies — one fetch per reviewer, and
@@ -178,6 +180,11 @@ function setupPinTooltip() {
     currentPin = pin;
     tooltip.style.setProperty('--peek-rotate', `${peekAngleFor(venue.id)}deg`);
     populate(venue);
+    // Force the drop-in to replay on every hover — without the
+    // reflow, re-hovering the same pin resumes from an interrupted
+    // exit transition and the settle barely registers.
+    tooltip.classList.remove('is-visible');
+    void tooltip.offsetWidth;
     position(pin);
   }
 
