@@ -20,8 +20,8 @@ const REACTIONS = [
   },
   {
     type: 'thanks',
-    label: 'leave a crumb',
-    labelActive: 'left crumb',
+    label: 'leave crumb',
+    labelActive: 'left a crumb',
     // A crumb: irregular morsel with specks.
     icon: '<path d="M7.2 14.8 C5.9 13.2 6.3 10.9 7.9 9.6 L11.3 6.9 C13 5.6 15.4 6 16.6 7.7 C17.4 8.8 17.5 10.2 17 11.4 C18 11.9 18.6 13 18.4 14.2 C18.1 15.9 16.5 17 14.8 16.8 L9.9 16.2 C8.8 16.1 7.8 15.6 7.2 14.8 Z M10.5 10.3 L10.6 10.4 M13.4 9.4 L13.5 9.5 M12.3 13.2 L12.4 13.3"/>',
   },
@@ -701,23 +701,23 @@ export class Modal {
     report.type = 'button';
     report.className = 'review-report';
     const renderReport = (reported) => {
-      report.textContent = reported ? 'reported to 311' : 'report to 311';
-      report.disabled = reported;
+      report.textContent = reported ? 'reported' : 'report to 311';
+      report.classList.toggle('is-active', reported);
+      report.setAttribute('aria-pressed', reported ? 'true' : 'false');
     };
     renderReport(readHasReacted(reviewId, 'report'));
     report.addEventListener('click', () => {
-      if (readHasReacted(reviewId, 'report')) return;
-      writeHasReacted(reviewId, 'report', true);
-      renderReport(true);
+      const next = !readHasReacted(reviewId, 'report');
+      writeHasReacted(reviewId, 'report', next);
+      renderReport(next);
       if (shared) {
         fetch('/api/reactions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ review: reviewId, type: 'report', delta: 1 }),
+          body: JSON.stringify({ review: reviewId, type: 'report', delta: next ? 1 : -1 }),
         }).catch(() => {});
       }
     });
-    reactions.appendChild(report);
 
     renderNote();
 
@@ -733,7 +733,14 @@ export class Modal {
       .catch(() => {});
 
     wrap.appendChild(reactions);
-    wrap.appendChild(note);
+
+    // V54 (option A): the two system-voice texts share one quiet
+    // line — tally left, report right — under the icon row.
+    const socialMeta = document.createElement('div');
+    socialMeta.className = 'review-social-meta';
+    socialMeta.appendChild(note);
+    socialMeta.appendChild(report);
+    wrap.appendChild(socialMeta);
     return wrap;
   }
 
