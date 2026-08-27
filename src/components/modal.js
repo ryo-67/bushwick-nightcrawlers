@@ -582,21 +582,39 @@ export class Modal {
     const reactions = document.createElement('div');
     reactions.className = 'review-reactions';
 
+    // V50: shared social counts. The server (api/reactions.js) is
+    // the source of truth when reachable — every visitor sees the
+    // accumulated tallies. localStorage keeps exactly two jobs:
+    // remembering whether YOU reacted (the no-account dedup), and
+    // serving as the count store when the API is absent (local dev
+    // on the static server, or store outage).
+    const countEls = new Map();
+    let shared = false;
+    const sharedCounts = { helpful: 0, funny: 0, cool: 0 };
+
+    const displayCount = (type) =>
+      shared ? sharedCounts[type] : readCount(reviewId, type);
+
     // Yelp's classic tally line under the buttons. Tracks the
     // 'useful' count live.
     const note = document.createElement('p');
     note.className = 'review-helpful-note';
     const renderNote = () => {
-      const n = readCount(reviewId, 'helpful');
+      const n = displayCount('helpful');
       note.textContent = `${n} ${n === 1 ? 'person' : 'people'} found this useful`;
       note.style.display = n > 0 ? '' : 'none';
+    };
+    const renderCounts = () => {
+      for (const [type, el] of countEls) {
+        el.textContent = String(displayCount(type));
+      }
+      renderNote();
     };
 
     REACTIONS.forEach(({ type, label, icon }) => {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'review-reaction';
-      const initialCount = readCount(reviewId, type);
       const initialActive = readHasReacted(reviewId, type);
 
       const iconEl = document.createElement('span');
@@ -612,8 +630,9 @@ export class Modal {
 
       const countEl = document.createElement('span');
       countEl.className = 'reaction-count';
-      countEl.textContent = String(initialCount);
+      countEl.textContent = String(readCount(reviewId, type));
       btn.appendChild(countEl);
+      countEls.set(type, countEl);
 
       if (initialActive) {
         btn.classList.add('is-active');
@@ -623,20 +642,56 @@ export class Modal {
       }
       btn.addEventListener('click', () => {
         const wasActive = readHasReacted(reviewId, type);
-        const currentCount = readCount(reviewId, type);
-        const nextCount = wasActive ? Math.max(0, currentCount - 1) : currentCount + 1;
         const nextActive = !wasActive;
-        writeCount(reviewId, type, nextCount);
+        const step = nextActive ? 1 : -1;
         writeHasReacted(reviewId, type, nextActive);
-        countEl.textContent = String(nextCount);
         btn.classList.toggle('is-active', nextActive);
         btn.setAttribute('aria-pressed', nextActive ? 'true' : 'false');
-        if (type === 'helpful') renderNote();
+
+        if (shared) {
+          // Optimistic bump, then reconcile with the server tally.
+          sharedCounts[type] = Math.max(0, sharedCounts[type] + step);
+          renderCounts();
+          fetch('/api/reactions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ review: reviewId, type, delta: step }),
+          })
+            .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+            .then((counts) => {
+              Object.assign(sharedCounts, counts);
+              renderCounts();
+            })
+            .catch(() => {
+              // Server refused (rate limit / outage): the optimistic
+              // value stands locally for this session; next fetch
+              // reconciles.
+            });
+        } else {
+          writeCount(
+            reviewId,
+            type,
+            Math.max(0, readCount(reviewId, type) + step)
+          );
+          renderCounts();
+        }
       });
       reactions.appendChild(btn);
     });
 
     renderNote();
+
+    // Adopt the shared tallies when the API answers; stay on local
+    // counts (current behavior) when it doesn't.
+    fetch(`/api/reactions?review=${encodeURIComponent(reviewId)}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((counts) => {
+        shared = true;
+        Object.assign(sharedCounts, counts);
+        renderCounts();
+      })
+      .catch(() => {});
+
     wrap.appendChild(reactions);
     wrap.appendChild(note);
     return wrap;

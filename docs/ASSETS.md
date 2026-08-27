@@ -399,7 +399,7 @@ A 4-6 paragraph manifesto articulating the project's generative aesthetic. What 
 | GitHub repo | Create (Shoro decides public/private) |
 | Vercel project | Create, link to GitHub |
 | Domain | Default `bushwick-nightcrawlers.vercel.app` for tonight; custom domain Phase 2 |
-| Environment variables | None required (no API keys in tonight's build) |
+| Environment variables | None for the static piece. Aug 2026: `KV_REST_API_URL`/`KV_REST_API_TOKEN` (Upstash Redis via Vercel Marketplace, store `upstash-kv-aero-basket`) power `api/reactions.js` — the shared visitor-reaction counters. First runtime dependency; the front-end degrades to local-only counts if the API is absent. |
 | Build command | None (pure static HTML/JS) |
 
 ---
