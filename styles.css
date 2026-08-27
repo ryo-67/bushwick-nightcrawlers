@@ -1447,10 +1447,19 @@ main {
      lock didn't push the page down. */
   /* V26: header holds only title + about on all sizes now, so the
      mobile column layout (which existed to give the controls a
-     second row) is gone — the base single-row layout works. */
+     second row) is gone — the base single-row layout works.
+     Baseline alignment (not the desktop flex-start + fixed line
+     boxes) keeps the smaller about link on the title's text
+     baseline; the title is the taller item, so its top — the
+     loading-screen alignment anchor — stays at the padding edge. */
   .page-header {
+    align-items: baseline;
     padding: calc(0.5rem + env(safe-area-inset-top)) 1rem 0.5rem;
     min-height: auto;
+  }
+
+  .page-controls {
+    min-height: 0;
   }
 
   .page-title {
