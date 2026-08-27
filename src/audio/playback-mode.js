@@ -1,11 +1,15 @@
 /**
  * src/audio/playback-mode.js — playback mode controller.
  *
- * Two modes:
+ * Three modes:
  *   'moment' — generative. Each playback differs (Math.random).
  *              Default. The rats are speaking, not replaying.
  *   'record' — fixed. Same review = same audio every time.
  *              Seeded RNG keyed off reviewerId + reviewText.
+ *   'tongue' — syllabic voice (V71): words render as syllable-core
+ *              USV runs (see rat-generator.js scheduleSyllabicWord).
+ *              Residual randomness behaves like 'moment' — the
+ *              syllable sequences are word-deterministic by design.
  *
  * Persisted in localStorage under bushwick.playback.mode.
  * The footer toggle calls setMode(); RatGenerator calls getMode()
@@ -14,7 +18,7 @@
  */
 
 const STORAGE_KEY = 'bushwick.playback.mode';
-const VALID_MODES = new Set(['moment', 'record']);
+const VALID_MODES = new Set(['moment', 'record', 'tongue']);
 const DEFAULT_MODE = 'moment';
 
 let currentMode = DEFAULT_MODE;

@@ -1645,6 +1645,14 @@ main {
   opacity: 0.7; /* V66: AA floor */
 }
 
+/* V71: three modes can wrap on narrow widths — each pipe travels
+   with its following button so a line never ends on a bare pipe. */
+.footer-mode-pair {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
 .footer-audio-set {
   display: inline-flex;
   align-items: center;
@@ -1793,6 +1801,18 @@ main {
 
   .footer-reset-full { display: none; }
   .footer-reset-short { display: inline; }
+
+  /* V71: three speak-modes don't fit a single phone row beside the
+     action cluster — deliberate two-row footer: the mode set owns
+     row one, mute + reset right-align on row two. */
+  .footer-controls {
+    flex-wrap: wrap;
+    row-gap: 0.4rem;
+  }
+
+  .footer-mode-set {
+    flex-basis: 100%;
+  }
 
   /* V25: map pan + height-anchored sizing moved out of this media
      query — the wrapper's overflow/pan rules live on the base

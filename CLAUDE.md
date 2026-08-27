@@ -4,7 +4,7 @@
 
 Single-page sound piece. Hand-drawn map of the Myrtle-Broadway JMZ intersection in Bushwick. Ten pins; click a pin and a rat reviews the venue in Yelp pastiche, with USV (rat ultrasonic-vocalization) audio synced to the review text.
 
-Sound art piece, NOT a website with audio. The interactive interface is the score. Audio playback is generative by default — different sample selection per click. A footer toggle ('in the moment' vs 'on record') lets visitors switch to a seeded, deterministic playback when they want to return to a specific performance. Conceptually: rats don't archive their language, so 'in the moment' is the baseline; 'on record' is opt-in.
+Sound art piece, NOT a website with audio. The interactive interface is the score. Audio playback is generative by default — different sample selection per click. A footer toggle ('in the moment' / 'on record' / 'in their tongue') lets visitors switch to seeded deterministic playback ('on record') or the syllabic voice ('in their tongue' — words render as syllable-core USV runs, the same word squeaking identically everywhere). Conceptually: rats don't archive their language, so 'in the moment' is the baseline; 'on record' is opt-in.
 
 ## Authoritative spec
 
@@ -133,7 +133,7 @@ V24 update: V22/V23's lvh extension didn't visibly help on iOS — Safari clips 
 
 Query-param-gated diagnostics. Production users see nothing unless the param is set.
 
-- `?voice=syllabic` — A/B flag for the syllabic voice mode (V68): general-register words render as syllable-rate USV runs (word-hash-seeded, so a given word always sounds the same) instead of one sample per word. Cocaine-register words stay word-level in both modes. Default remains the word-level engine until the syllabic mode is approved. Implementation: `scheduleSyllabicWord` in `src/audio/rat-generator.js`, feature data in `src/audio/usv-features.js` (regenerate via `scripts/analyze_usv_features.py`).
+- `?voice=syllabic` — dev override forcing the syllabic voice regardless of the footer mode (the user-facing switch is the 'in their tongue' footer mode, V71). Cocaine-register words stay word-level in every mode. Implementation: `scheduleSyllabicWord` in `src/audio/rat-generator.js`, feature data in `src/audio/usv-features.js` (regenerate via `scripts/analyze_usv_features.py`).
 - `?debug=viewport` — attaches a live readout inside any open modal-card showing innerHeight/Width, visualViewport (height/offsetTop/scale), modal + modal-card bounding rects, computed heights, and safe-area inset values. Updates on window/visualViewport resize and scroll. Tap the readout to dismiss for the session. Used to capture iPhone Safari-specific layout state that chromium emulation can't reproduce. Implementation: `src/debug/viewport-readout.js`; wired into `src/main.js` at module top. Zero overhead when the param is absent.
 
 ## When in doubt

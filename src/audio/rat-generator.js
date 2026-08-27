@@ -30,11 +30,11 @@ import { panForVenue } from './spatial.js';
 import { USV_FEATURES } from './usv-features.js';
 import { syllableChunks } from './syllables.js';
 
-// V68 A/B flag: `?voice=syllabic` switches the general register from
-// one-sample-per-word to syllabic synthesis (see scheduleSyllabicWord).
-// Default stays the word-level engine until the syllabic mode is
-// approved by ear. Cocaine-register words are word-level in BOTH
-// modes — the drug register smears the language (user call, Aug 2026).
+// V71: the syllabic voice ships as the footer mode 'in their tongue'
+// (playback-mode.js). This URL flag survives as a dev override that
+// forces syllabic scheduling regardless of the selected mode.
+// Cocaine-register words are word-level in EVERY mode — the drug
+// register smears the language (user call, Aug 2026).
 const VOICE_MODE = (() => {
   try {
     return new URLSearchParams(window.location.search).get('voice') || 'word';
@@ -404,11 +404,14 @@ export class RatGenerator {
     const chainHead = this.ensurePerRatChain();
     let cursor = Tone.now() + 0.05;
 
-    // Syllabic voice mode: general-register words run through the
-    // syllable scheduler; cocaine-register words stay word-level in
-    // both modes (the drug register smears the language).
+    // Syllabic voice ('in their tongue', or the ?voice=syllabic dev
+    // override): general-register words run through the syllable
+    // scheduler; cocaine-register words stay word-level in every
+    // mode (the drug register smears the language).
     const syllabicPools =
-      VOICE_MODE === 'syllabic' ? getSyllablePools() : null;
+      this.mode === 'tongue' || VOICE_MODE === 'syllabic'
+        ? getSyllablePools()
+        : null;
 
     for (let i = 0; i < this.words.length; i += 1) {
       const word = this.words[i];
