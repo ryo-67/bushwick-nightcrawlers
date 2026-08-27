@@ -62,6 +62,24 @@ export class LoadingScreen {
       this.renderInitial();
     }
     this.subscribePreload();
+
+    // V32: the field-note scatter positions are viewport-relative
+    // (clamp/vw/vh). While the window is actively resizing, the
+    // cards' 600ms reveal transition would restart on every resize
+    // frame and ease toward stale targets — jitter, then a final
+    // snap. .is-resizing turns the transition off so cards track
+    // their computed positions live; it debounces away 150ms after
+    // the last resize event.
+    this.resizeSettleTimer = null;
+    this.resizeHandler = () => {
+      if (!this.el) return;
+      this.el.classList.add('is-resizing');
+      clearTimeout(this.resizeSettleTimer);
+      this.resizeSettleTimer = setTimeout(() => {
+        this.el?.classList.remove('is-resizing');
+      }, 150);
+    };
+    window.addEventListener('resize', this.resizeHandler);
   }
 
   checkReturning() {
@@ -91,9 +109,7 @@ export class LoadingScreen {
     el.dataset.state = 'initial';
 
     el.appendChild(this.buildNoise());
-    el.appendChild(
-      this.buildHeader({ withTitle: true, ctaLabel: LOADING_NARRATIVE.cta })
-    );
+    el.appendChild(this.buildHeader());
 
     const cards = document.createElement('div');
     cards.className = 'loading-cards';
@@ -103,19 +119,18 @@ export class LoadingScreen {
       this.cardEls.push(cardEl);
     });
     el.appendChild(cards);
-    // buildHeader ran refreshCta before cardEls existed (empty list
-    // reads as "on last card"); re-sync now so the button opens in
-    // its skip state while the cards play.
-    this.refreshCta();
 
     el.appendChild(this.buildRat());
+    // Footer builds after the cards so its initial refreshCta sees
+    // the real card list and opens in the skip state.
+    el.appendChild(this.buildFooter({ ctaLabel: LOADING_NARRATIVE.cta }));
 
     // Tap anywhere on the overlay (outside the header button)
     // advances cards. A card that was just dragged sets
     // dragJustEnded on itself; we honor that flag so a
     // drag-release click doesn't double as an advance trigger.
     this.advanceClickHandler = (e) => {
-      if (e.target.closest('.loading-cta')) return;
+      if (e.target.closest('.loading-footer')) return;
       const card = e.target.closest('.loading-card');
       if (card && card.dataset.dragJustEnded === 'true') return;
       this.advanceCard();
@@ -150,16 +165,10 @@ export class LoadingScreen {
     el.dataset.state = 'returning';
 
     el.appendChild(this.buildNoise());
-    // V31: same header as the first-visit variant — title top-left,
-    // status + button top-right. The greeting alone holds the
-    // center (a large duplicate title there read as clutter once
-    // the header title returned).
-    el.appendChild(
-      this.buildHeader({
-        withTitle: true,
-        ctaLabel: LOADING_NARRATIVE.returningCta,
-      })
-    );
+    // V31/V33: same chrome as the first-visit variant — title-only
+    // header, footer-as-button. The greeting alone holds the
+    // center.
+    el.appendChild(this.buildHeader());
 
     const center = document.createElement('div');
     center.className = 'loading-returning';
@@ -172,6 +181,9 @@ export class LoadingScreen {
     el.appendChild(center);
 
     el.appendChild(this.buildRat());
+    el.appendChild(
+      this.buildFooter({ ctaLabel: LOADING_NARRATIVE.returningCta })
+    );
 
     this.root.appendChild(el);
     this.el = el;
@@ -187,52 +199,56 @@ export class LoadingScreen {
     return noise;
   }
 
-  buildHeader({ withTitle = true, ctaLabel }) {
-    // V29: the header owns the whole top chrome — title left, and
-    // a right-side group of status message + THE button. Skip is a
-    // state of that button (see refreshCta), not a separate
-    // control: skip → (waiting) → enter-CTA as the screen
-    // progresses. The returning variant reuses this header without
-    // the title (its title is the centerpiece mid-screen).
+  buildHeader() {
+    // V33: header is title-only chrome (same shared bar as
+    // .page-header). Status + action moved to the footer bar,
+    // which is itself the button — see buildFooter.
     const header = document.createElement('header');
     header.className = 'loading-header';
 
-    if (withTitle) {
-      const title = document.createElement('h1');
-      title.className = 'loading-title';
-      title.id = 'loading-title';
-      title.textContent = LOADING_NARRATIVE.title;
-      header.appendChild(title);
-    }
+    const title = document.createElement('h1');
+    title.className = 'loading-title';
+    title.id = 'loading-title';
+    title.textContent = LOADING_NARRATIVE.title;
+    header.appendChild(title);
 
-    const group = document.createElement('div');
-    group.className = 'loading-header-status';
+    return header;
+  }
 
-    const status = document.createElement('p');
+  buildFooter({ ctaLabel }) {
+    // V33: the ENTIRE footer bar is the button. Status message on
+    // the left, action label on the right (stacked on mobile);
+    // tapping anywhere on the bar skips during the cards, enters
+    // when ready. Skip is a state of the bar (see refreshCta):
+    // skip → waiting → ready.
+    const footer = document.createElement('button');
+    footer.type = 'button';
+    footer.className = 'loading-footer';
+    footer.disabled = true;
+
+    const status = document.createElement('span');
     status.className = 'loading-status';
     status.setAttribute('aria-live', 'polite');
-    group.appendChild(status);
+    footer.appendChild(status);
     this.statusEl = status;
 
-    const cta = document.createElement('button');
-    cta.type = 'button';
-    cta.className = 'loading-cta';
-    cta.disabled = true;
+    const label = document.createElement('span');
+    label.className = 'loading-footer-label';
+    footer.appendChild(label);
+    this.ctaLabelEl = label;
     this.ctaLabel = ctaLabel;
-    cta.addEventListener('click', (e) => {
+
+    footer.addEventListener('click', (e) => {
       e.stopPropagation();
-      if (cta.classList.contains('is-ready')) {
+      if (footer.classList.contains('is-ready')) {
         this.handleEnter();
-      } else if (cta.classList.contains('is-skip')) {
+      } else if (footer.classList.contains('is-skip')) {
         this.skipToLastCard();
       }
     });
-    group.appendChild(cta);
-    this.ctaBtn = cta;
-
-    header.appendChild(group);
+    this.ctaBtn = footer;
     this.refreshCta();
-    return header;
+    return footer;
   }
 
   buildCard(card, idx) {
@@ -506,18 +522,20 @@ export class LoadingScreen {
 
   refreshCta() {
     if (!this.ctaBtn) return;
-    // Three states of the one header button:
-    //   skip    — cards still playing: acts as "skip →"
+    // Three states of the footer-as-button:
+    //   skip    — cards still playing: the bar acts as "skip →"
     //   waiting — on the last card but audio not loaded: shows the
     //             CTA label, disabled/dim
-    //   ready   — enterable: accent + pulse
+    //   ready   — enterable: solid accent bar, bg-color text
     const onLastCard = this.isReturning || this.cardIndex >= this.cardEls.length - 1;
     const ready = this.audioReady && onLastCard;
     const skippable = !ready && !onLastCard;
     this.ctaBtn.disabled = !ready && !skippable;
     this.ctaBtn.classList.toggle('is-ready', ready);
     this.ctaBtn.classList.toggle('is-skip', skippable);
-    this.ctaBtn.textContent = skippable ? 'skip →' : this.ctaLabel;
+    if (this.ctaLabelEl) {
+      this.ctaLabelEl.textContent = skippable ? 'skip →' : this.ctaLabel;
+    }
   }
 
   // ---- rat silhouette scheduling ----
@@ -600,6 +618,11 @@ export class LoadingScreen {
     if (this.ratClearTimer) clearTimeout(this.ratClearTimer);
     for (const t of this.typewriterTimers) clearTimeout(t);
     this.typewriterTimers = [];
+    if (this.resizeSettleTimer) clearTimeout(this.resizeSettleTimer);
+    if (this.resizeHandler) {
+      window.removeEventListener('resize', this.resizeHandler);
+      this.resizeHandler = null;
+    }
     if (this.escHandler) {
       document.removeEventListener('keydown', this.escHandler);
       this.escHandler = null;

@@ -2669,6 +2669,15 @@ main {
     rotate(var(--card-rotate));
 }
 
+/* V32: cards track their viewport-relative positions instantly
+   during a live resize — the 600ms reveal transition would restart
+   on every resize frame and ease toward stale targets (jitter,
+   then a snap when the resize stops). loading-screen.js debounces
+   the class off 150ms after the last resize event. */
+.loading-screen.is-resizing .loading-card {
+  transition: none;
+}
+
 .loading-card.is-dragging {
   cursor: grabbing;
   transition: none;
