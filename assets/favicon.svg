@@ -2,12 +2,12 @@
      fill="none" stroke="#0A0A0A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
   <!-- Lucide "rat" (lucide-static v1.47.0, ISC). Paths verbatim; only the
        stroke colour is ours. Light-mode browser chrome gets the page black,
-       dark-mode chrome gets the bone from color-text. The icon inverts against
-       the surrounding UI, not against the site. Chrome ignores the media
+       dark-mode chrome gets the acid green from color-accent. The icon inverts
+       against the surrounding UI, not against the site. Chrome ignores the media
        attribute on rel="icon" links, so both variants live here as internal
        CSS, which every SVG-favicon browser does honour. -->
   <style>
-    @media (prefers-color-scheme: dark) { svg { stroke: #C5BFAE; } }
+    @media (prefers-color-scheme: dark) { svg { stroke: #B8FF00; } }
   </style>
   <path d="M13 22H4a2 2 0 0 1 0-4h12" />
   <path d="M13.236 18a3 3 0 0 0-2.2-5" />
