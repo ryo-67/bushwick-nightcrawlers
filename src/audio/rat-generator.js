@@ -29,6 +29,7 @@ import { matchKeyword } from './keyword-effects.js';
 import { matchProcessor } from './keyword-processors.js';
 import { panForVenue } from './spatial.js';
 import { USV_FEATURES } from './usv-features.js';
+import { USVS } from './manifest.js';
 import { syllableChunks } from './syllables.js';
 
 // V71: the syllabic voice ships as the footer mode 'in their tongue'
@@ -129,18 +130,27 @@ const SYLLABLE_RATES = {
 // Pools from the general bank, filtered by the analyzed effective
 // duration (usv-features.js): syllables need <=250ms of actual
 // sound; sentence tails may run longer for word-final lengthening.
+//
+// V74: pools are built from the full manifest, not just the samples
+// that loaded, so pool membership and indices never depend on the
+// network. A sample that failed to load stays in as a placeholder
+// (buffer: null) and resolveAvailable() substitutes deterministically
+// — 'in their tongue' stays identical for every visitor with the full
+// bank, and only the syllables that hit a gap change for one without.
 let syllablePools = null;
 function getSyllablePools() {
   if (syllablePools) return syllablePools;
   const bank = engine.getBank('usvs');
   if (!bank || bank.length === 0) return null;
+  const loaded = new Map(bank.map((s) => [s.filename, s]));
   const feats = USV_FEATURES.usvs;
   const short = [];
   const tails = [];
   const byContour = {};
-  for (const s of bank) {
-    const f = feats[s.filename];
+  for (const filename of USVS) {
+    const f = feats[filename];
     if (!f) continue;
+    const s = loaded.get(filename) || { filename, buffer: null };
     const entry = { ...s, eff: f.eff, onset: f.onset, contour: f.contour };
     // 300ms ceiling: slightly past the syllable slot (samples get
     // capped to the slot at schedule time) — the wider pool matters
@@ -154,9 +164,20 @@ function getSyllablePools() {
       tails.push(entry);
     }
   }
-  if (short.length === 0) return null;
+  if (!short.some((e) => e.buffer)) return null;
   syllablePools = { short, tails, byContour };
   return syllablePools;
+}
+
+// V74: the entry at idx, or — if its file failed to load — the next
+// loaded entry in the same pool (wrapping). Consumes no randomness,
+// so the seeded stream stays aligned with a full-bank playback.
+function resolveAvailable(pool, idx) {
+  for (let step = 0; step < pool.length; step += 1) {
+    const entry = pool[(idx + step) % pool.length];
+    if (entry.buffer) return entry;
+  }
+  return null;
 }
 
 // Contour seasoning: a soft positional bias — multi-syllable words
@@ -172,7 +193,7 @@ function pickSyllableSample(pools, chunkRng, pos, n) {
   const biased = pools.byContour[biasClass];
   const useBias = chunkRng() < 0.45 && biased && biased.length > 0;
   const pool = useBias ? biased : pools.short;
-  return pool[Math.floor(chunkRng() * pool.length)];
+  return resolveAvailable(pool, Math.floor(chunkRng() * pool.length));
 }
 
 function applyTierSkew(eligible, skew, rng) {
@@ -369,10 +390,14 @@ export class RatGenerator {
       const isTail = word.isSentenceEnd && k === n - 1;
       let sample;
       if (isTail && pools.tails.length > 0) {
-        sample = pools.tails[Math.floor(chunkRng() * pools.tails.length)];
+        sample = resolveAvailable(
+          pools.tails,
+          Math.floor(chunkRng() * pools.tails.length)
+        );
       } else {
         sample = pickSyllableSample(pools, chunkRng, k, n);
       }
+      if (!sample) continue;
       const src = new Tone.ToneBufferSource(sample.buffer);
       src.fadeOut = 0.015;
       // Core-seeded transposition (±6%): the same sample landing in

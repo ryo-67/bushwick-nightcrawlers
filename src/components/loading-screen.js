@@ -497,8 +497,24 @@ export class LoadingScreen {
         console.error('Audio preload failed:', e);
         this.preloadFailed = true;
         this.clearPreloadFallback();
+        this.showFailedMessage();
         this.refreshCta();
       });
+  }
+
+  // V74: once the preload has failed, the cycling loading messages
+  // would promise a load that isn't coming. failedMessage replaces
+  // them. While the copy slot still holds its TODO placeholder,
+  // render nothing new and leave the cycle running.
+  showFailedMessage() {
+    const msg = LOADING_NARRATIVE.failedMessage;
+    if (!msg || msg.startsWith('TODO')) return;
+    if (this.entered || !this.el) return;
+    if (this.statusTimer) {
+      clearInterval(this.statusTimer);
+      this.statusTimer = null;
+    }
+    this.typeMessage(msg);
   }
 
   // V74: escape hatch only. Enables Enter in the late state; leaves

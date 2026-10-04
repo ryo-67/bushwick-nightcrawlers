@@ -744,6 +744,10 @@ document.addEventListener('DOMContentLoaded', () => {
     engine.start().catch((e) => {
       // eslint-disable-next-line no-console
       console.error('Audio engine failed to start:', e);
+      // V74: if the engine still allows another load attempt, the
+      // next gesture (a pin, the footer, a key) retries — Tone.start()
+      // stays inside that gesture's handler.
+      if (engine.canRetryStart()) armGestureBoot();
     });
     const mapVideo = document.querySelector('.map-bg');
     if (mapVideo && typeof mapVideo.play === 'function') {
@@ -753,6 +757,21 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   };
+
+  // One-shot: boot audio/video on the next click, keydown, or
+  // touchstart (capture phase, so it runs before the target's own
+  // handler). Used for mid-session returns and for V74 retries.
+  function armGestureBoot() {
+    const start = () => {
+      document.removeEventListener('click', start, true);
+      document.removeEventListener('keydown', start, true);
+      document.removeEventListener('touchstart', start, true);
+      bootAudioAndVideo();
+    };
+    document.addEventListener('click', start, true);
+    document.addEventListener('keydown', start, true);
+    document.addEventListener('touchstart', start, true);
+  }
 
   // V12 P1: audio + image preload runs on every map page mount,
   // independently of loading screen visibility. Without this kickoff,
@@ -835,15 +854,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // the next user gesture (any click, keydown, or touchstart).
     // Tone.start() needs a gesture and pre-loading the audio
     // context without one fails silently on iOS.
-    const start = () => {
-      document.removeEventListener('click', start, true);
-      document.removeEventListener('keydown', start, true);
-      document.removeEventListener('touchstart', start, true);
-      bootAudioAndVideo();
-    };
-    document.addEventListener('click', start, true);
-    document.addEventListener('keydown', start, true);
-    document.addEventListener('touchstart', start, true);
+    armGestureBoot();
   }
 
   const modalRoot = document.getElementById('modal-root');

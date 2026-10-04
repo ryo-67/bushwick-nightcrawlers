@@ -76,6 +76,13 @@ export const LOADING_NARRATIVE = {
   // the Enter button activates.
   readyMessage: 'the rats are ready.',
 
+  // V74: replaces the cycling messages if the audio preload fails
+  // outright (a USV bank came back empty — single bad files are
+  // skipped silently). Enter stays clickable and entering retries the
+  // load once. A 'TODO…' value renders nothing and keeps the loading
+  // messages cycling.
+  failedMessage: 'the colony went quiet.',
+
   cta: 'enter the intersection',
 
   // Returning visitor variant. Skips the card sequence and shows a

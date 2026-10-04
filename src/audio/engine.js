@@ -21,6 +21,7 @@
 
 import { USVS, USVS_COCAINE } from './manifest.js';
 import { preloadBeds, startBedsPlayback } from './beds.js';
+import { loadBufferWithRetry } from './load-buffer.js';
 import { reviews } from '../content/reviews.js';
 import { rats } from '../content/rats.js';
 import { venues } from '../content/venues.js';
@@ -96,13 +97,15 @@ function tierForDuration(d) {
   return 'extra-long';
 }
 
+// V74: a file that fails (after one retry) is dropped from the bank
+// rather than failing the load. Survivors keep manifest order, which
+// the syllable pools depend on (see rat-generator getSyllablePools).
 async function loadBank(name) {
   const dir = BANK_DIRS[name];
   const files = BANK_FILES[name];
   const promises = files.map(async (filename) => {
-    const url = `${dir}/${filename}`;
-    const buffer = new window.Tone.ToneAudioBuffer();
-    await buffer.load(url);
+    const buffer = await loadBufferWithRetry(`${dir}/${filename}`);
+    if (!buffer) return null;
     return {
       filename,
       buffer,
@@ -110,7 +113,7 @@ async function loadBank(name) {
       tier: tierForDuration(buffer.duration),
     };
   });
-  return Promise.all(promises);
+  return (await Promise.all(promises)).filter(Boolean);
 }
 
 function tierCounts(samples) {
@@ -121,6 +124,11 @@ function tierCounts(samples) {
 
 async function loadBanks() {
   const [u, c] = await Promise.all([loadBank('usvs'), loadBank('usvs-cocaine')]);
+  // An empty bank means the network is gone, not one bad file — that
+  // is a real failure, so let preload reject (and become retryable).
+  if (u.length === 0 || c.length === 0) {
+    throw new Error('USV bank empty: no samples loaded');
+  }
   banks.usvs = u;
   banks['usvs-cocaine'] = c;
 
@@ -161,10 +169,12 @@ function preloadImages() {
 }
 
 async function loadEffectBuffers() {
+  // V74: a missing effect just doesn't fire — RatGenerator already
+  // treats a null getEffectBuffer() as "skip".
   const tasks = EFFECT_NAMES.map(async (name) => {
-    const buf = new window.Tone.ToneAudioBuffer();
-    await buf.load(`assets/sounds/effects/${name}.webm`);
-    effectBuffers.set(name, buf);
+    if (effectBuffers.has(name)) return;
+    const buf = await loadBufferWithRetry(`assets/sounds/effects/${name}.webm`);
+    if (buf) effectBuffers.set(name, buf);
   });
   await Promise.all(tasks);
 }
@@ -174,16 +184,27 @@ async function loadEffectBuffers() {
 // the user clicks Enter. No AudioContext resume happens here — the
 // context stays suspended; nodes and decoded buffers hold fine in that
 // state. Idempotent: subsequent calls return the same promise.
+//
+// V74: a rejected preload is forgotten so the next call (Enter, or
+// the next gesture after a failed start) retries — up to
+// PRELOAD_MAX_ATTEMPTS in total, then the rejection sticks. Node
+// creation is guarded so a retry never duplicates the graph.
+const PRELOAD_MAX_ATTEMPTS = 2;
+let preloadAttempts = 0;
+
 export function preload() {
   if (preloadPromise) return preloadPromise;
-  preloadPromise = (async () => {
+  preloadAttempts += 1;
+  const attempt = (async () => {
     const Tone = window.Tone;
-    ratGain = new Tone.Gain(RAT_FOREGROUND_GAIN).toDestination();
-    sharedRatReverb = new Tone.Reverb({
-      decay: 5,
-      preDelay: 0.03,
-      wet: 1.0,
-    }).connect(ratGain);
+    if (!ratGain) {
+      ratGain = new Tone.Gain(RAT_FOREGROUND_GAIN).toDestination();
+      sharedRatReverb = new Tone.Reverb({
+        decay: 5,
+        preDelay: 0.03,
+        wet: 1.0,
+      }).connect(ratGain);
+    }
     await sharedRatReverb.generate();
     await Promise.all([
       loadBanks(),
@@ -192,7 +213,13 @@ export function preload() {
       preloadImages(),
     ]);
   })();
-  return preloadPromise;
+  preloadPromise = attempt;
+  attempt.catch(() => {
+    if (preloadPromise === attempt && preloadAttempts < PRELOAD_MAX_ATTEMPTS) {
+      preloadPromise = null;
+    }
+  });
+  return attempt;
 }
 
 // Gesture-bound: must be called from inside a user-gesture handler so
@@ -206,7 +233,7 @@ export function start() {
   // gesture handler. The promise it returns can be awaited later;
   // the resume request itself is what needs the gesture.
   const tonePromise = Tone.start();
-  startPromise = (async () => {
+  const attempt = (async () => {
     await tonePromise;
     await preload();
     // Apply persisted master volume / mute before any audio starts.
@@ -223,7 +250,20 @@ export function start() {
       }
     }
   })();
-  return startPromise;
+  startPromise = attempt;
+  // V74: forget a failed start so the next gesture can retry it
+  // (preload() decides whether another load attempt is allowed).
+  attempt.catch(() => {
+    if (startPromise === attempt) startPromise = null;
+  });
+  return attempt;
+}
+
+// V74: true when a failed preload has been forgotten and another
+// attempt is still allowed — main.js uses it to decide whether to
+// re-arm a retry on the next gesture.
+export function canRetryStart() {
+  return !ready && preloadPromise === null && preloadAttempts > 0;
 }
 
 export function isReady() {
