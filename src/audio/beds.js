@@ -25,6 +25,7 @@
  */
 
 import { panForVenue } from './spatial.js';
+import { loadBufferWithRetry } from './load-buffer.js';
 
 // Component gainDb values anchored to the established baseline
 // (see git history for previous tuning passes). Primary loop
@@ -130,35 +131,40 @@ let activeBedVenueId = null;
 // Pre-gesture: build node graph and load buffers. The Player.start()
 // call must wait until the AudioContext is running, so it's deferred
 // to startBedsPlayback().
+//
+// V74: each bed loads on its own (one retry, then left silent)
+// instead of awaiting Tone.loaded() — that waits on EVERY in-flight
+// Tone download, so one failed USV file used to reject the beds too.
+// Nodes are created once, so a preload retry only refetches what's
+// still missing.
 export async function preloadBeds() {
   const Tone = window.Tone;
-  jmzGain = new Tone.Gain(Tone.dbToGain(JMZ_GAIN_DB)).toDestination();
-  jmzPlayer = new Tone.Player({
-    url: JMZ_FILE,
-    loop: true,
-    autostart: false,
-  }).connect(jmzGain);
-  myrtleTrafficGain = new Tone.Gain(Tone.dbToGain(MYRTLE_TRAFFIC_GAIN_DB)).toDestination();
-  myrtleTrafficPlayer = new Tone.Player({
-    url: MYRTLE_TRAFFIC_FILE,
-    loop: true,
-    autostart: false,
-  }).connect(myrtleTrafficGain);
-  trainGain = new Tone.Gain(Tone.dbToGain(TRAIN_GAIN_DB)).toDestination();
-  trainPlayer = new Tone.Player({
-    url: TRAIN_FILE,
-    loop: false,
-    autostart: false,
-  }).connect(trainGain);
-  await Tone.loaded();
+  if (!jmzPlayer) {
+    jmzGain = new Tone.Gain(Tone.dbToGain(JMZ_GAIN_DB)).toDestination();
+    jmzPlayer = new Tone.Player({ loop: true, autostart: false }).connect(jmzGain);
+    myrtleTrafficGain = new Tone.Gain(Tone.dbToGain(MYRTLE_TRAFFIC_GAIN_DB)).toDestination();
+    myrtleTrafficPlayer = new Tone.Player({ loop: true, autostart: false }).connect(myrtleTrafficGain);
+    trainGain = new Tone.Gain(Tone.dbToGain(TRAIN_GAIN_DB)).toDestination();
+    trainPlayer = new Tone.Player({ loop: false, autostart: false }).connect(trainGain);
+  }
+  await Promise.all([
+    [jmzPlayer, JMZ_FILE],
+    [myrtleTrafficPlayer, MYRTLE_TRAFFIC_FILE],
+    [trainPlayer, TRAIN_FILE],
+  ].map(async ([player, url]) => {
+    if (player.loaded) return;
+    const buffer = await loadBufferWithRetry(url);
+    if (buffer) player.buffer = buffer;
+  }));
 }
 
 // Gesture-bound (or post-gesture): kicks off the JMZ rumble loop,
 // the Myrtle traffic noise floor, and the recursive train-pass
-// scheduler. Must run after the audio context has resumed.
+// scheduler. Must run after the audio context has resumed. A bed
+// whose file never loaded stays silent (V74).
 export function startBedsPlayback() {
-  if (jmzPlayer && jmzPlayer.state !== 'started') jmzPlayer.start();
-  if (myrtleTrafficPlayer && myrtleTrafficPlayer.state !== 'started') {
+  if (jmzPlayer?.loaded && jmzPlayer.state !== 'started') jmzPlayer.start();
+  if (myrtleTrafficPlayer?.loaded && myrtleTrafficPlayer.state !== 'started') {
     myrtleTrafficPlayer.start();
   }
   scheduleNextTrainPass();
@@ -173,7 +179,7 @@ export async function initBeds() {
 }
 
 function playTrainNow() {
-  if (!trainPlayer) return;
+  if (!trainPlayer?.loaded) return;
   try {
     if (trainPlayer.state === 'started') trainPlayer.stop();
     trainPlayer.start();

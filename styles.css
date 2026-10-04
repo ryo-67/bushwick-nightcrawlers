@@ -3228,9 +3228,11 @@ main {
    buildFooter). Same bar geometry as .page-footer via the shared
    chrome tokens, so the loading footer dissolves into the map
    footer on the same lines. Status message left, action label
-   right; tapping anywhere on the bar acts. Three states:
+   right; tapping anywhere on the bar acts. States:
    skip (dim label, acts as skip) → waiting (disabled) →
-   ready (solid accent bar, bg-color text). */
+   ready (solid accent bar, bg-color text). V74: .is-late (preload
+   slow or failed) deliberately has no rules — it renders as
+   waiting, just enabled, so it never reads as ready. */
 .loading-footer {
   position: relative;
   z-index: 2;
