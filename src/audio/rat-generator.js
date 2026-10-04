@@ -29,7 +29,7 @@ import { matchKeyword } from './keyword-effects.js';
 import { matchProcessor } from './keyword-processors.js';
 import { panForVenue } from './spatial.js';
 import { USV_FEATURES } from './usv-features.js';
-import { USVS } from './manifest.js';
+import { USVS, USVS_COCAINE } from './manifest.js';
 import { syllableChunks } from './syllables.js';
 
 // V71: the syllabic voice ships as the footer mode 'in their tongue'
@@ -127,30 +127,51 @@ const SYLLABLE_RATES = {
   'medium/long dominant': 6,
 };
 
+// V74: every sample pick (syllable pools and word-level pickSample)
+// runs over the full manifest, not just the samples that loaded, so
+// pool membership and indices never depend on the network. A sample
+// whose file failed to load stays in as a placeholder (buffer: null)
+// tiered from its analyzed duration (usv-features.js dur), and
+// resolveAvailable() substitutes deterministically — 'in their
+// tongue' stays identical for every visitor with the full bank, and
+// only the picks that land on a gap change for one without.
+const BANK_MANIFESTS = { usvs: USVS, 'usvs-cocaine': USVS_COCAINE };
+const fullBanks = {};
+function getFullBank(name) {
+  if (fullBanks[name]) return fullBanks[name];
+  const bank = engine.getBank(name);
+  if (!bank || bank.length === 0) return null;
+  const loaded = new Map(bank.map((s) => [s.filename, s]));
+  const feats = USV_FEATURES[name] || {};
+  const full = [];
+  for (const filename of BANK_MANIFESTS[name]) {
+    const s = loaded.get(filename);
+    if (s) {
+      full.push(s);
+    } else if (feats[filename]) {
+      const duration = feats[filename].dur;
+      full.push({ filename, buffer: null, duration, tier: engine.tierForDuration(duration) });
+    }
+  }
+  fullBanks[name] = full;
+  return full;
+}
+
 // Pools from the general bank, filtered by the analyzed effective
 // duration (usv-features.js): syllables need <=250ms of actual
 // sound; sentence tails may run longer for word-final lengthening.
-//
-// V74: pools are built from the full manifest, not just the samples
-// that loaded, so pool membership and indices never depend on the
-// network. A sample that failed to load stays in as a placeholder
-// (buffer: null) and resolveAvailable() substitutes deterministically
-// — 'in their tongue' stays identical for every visitor with the full
-// bank, and only the syllables that hit a gap change for one without.
 let syllablePools = null;
 function getSyllablePools() {
   if (syllablePools) return syllablePools;
-  const bank = engine.getBank('usvs');
-  if (!bank || bank.length === 0) return null;
-  const loaded = new Map(bank.map((s) => [s.filename, s]));
+  const bank = getFullBank('usvs');
+  if (!bank) return null;
   const feats = USV_FEATURES.usvs;
   const short = [];
   const tails = [];
   const byContour = {};
-  for (const filename of USVS) {
-    const f = feats[filename];
+  for (const s of bank) {
+    const f = feats[s.filename];
     if (!f) continue;
-    const s = loaded.get(filename) || { filename, buffer: null };
     const entry = { ...s, eff: f.eff, onset: f.onset, contour: f.contour };
     // 300ms ceiling: slightly past the syllable slot (samples get
     // capped to the slot at schedule time) — the wider pool matters
@@ -359,15 +380,15 @@ export class RatGenerator {
 
   pickSample(word, useCocaine) {
     const bankName = useCocaine ? 'usvs-cocaine' : 'usvs';
-    const bank = engine.getBank(bankName);
-    if (bank.length === 0) return null;
+    const bank = getFullBank(bankName);
+    if (!bank) return null;
 
     const eligible = eligibleTiers(word);
     const skewed = applyTierSkew(eligible, this.profile.tierSkew, this.rng);
     let pool = bank.filter((s) => skewed.includes(s.tier));
     if (pool.length === 0) pool = bank.filter((s) => eligible.includes(s.tier));
     if (pool.length === 0) pool = bank;
-    return pool[Math.floor(this.rng() * pool.length)];
+    return resolveAvailable(pool, Math.floor(this.rng() * pool.length));
   }
 
   // V68/V69: one word as a run of syllable-rate USVs. Each syllable

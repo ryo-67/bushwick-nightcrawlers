@@ -90,7 +90,9 @@ const ratRegistry = new Map();
 // (currently the alley modal's mini-cards) can reflect rank changes.
 const activeRatsListeners = new Set();
 
-function tierForDuration(d) {
+// Exported so RatGenerator can tier a sample whose file failed to
+// load from its analyzed duration (usv-features.js dur) — V74.
+export function tierForDuration(d) {
   if (d < 0.4) return 'short';
   if (d < 0.9) return 'medium';
   if (d < 2.0) return 'long';
@@ -116,12 +118,6 @@ async function loadBank(name) {
   return (await Promise.all(promises)).filter(Boolean);
 }
 
-function tierCounts(samples) {
-  const counts = { short: 0, medium: 0, long: 0, 'extra-long': 0 };
-  for (const s of samples) counts[s.tier] += 1;
-  return counts;
-}
-
 async function loadBanks() {
   const [u, c] = await Promise.all([loadBank('usvs'), loadBank('usvs-cocaine')]);
   // An empty bank means the network is gone, not one bad file — that
@@ -131,14 +127,6 @@ async function loadBanks() {
   }
   banks.usvs = u;
   banks['usvs-cocaine'] = c;
-
-  const uc = tierCounts(u);
-  const cc = tierCounts(c);
-  // eslint-disable-next-line no-console
-  console.log(
-    `Audio banks loaded: ${u.length} general (s=${uc.short} m=${uc.medium} l=${uc.long} x=${uc['extra-long']}), ` +
-      `${c.length} cocaine (s=${cc.short} m=${cc.medium} l=${cc.long} x=${cc['extra-long']})`
-  );
 }
 
 // Warms the browser cache for every selfie + venue photo during the
