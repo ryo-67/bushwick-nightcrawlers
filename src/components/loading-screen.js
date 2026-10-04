@@ -14,10 +14,11 @@ const RAT_DURATION_MS = 6000;
 // Widths (px) of the scuttle crew; heights follow the viewBox
 // aspect. A run picks 1..3 of these, leader first.
 const RAT_WIDTHS = [28, 22, 25];
-// Hard cap on buffer-load wait. If onReady never fires (network or
-// engine pathology), unblock the user at this mark with the ready
-// message anyway. Six seconds matches the prompt's worst-case escape.
-const PRELOAD_FALLBACK_MS = 6000;
+// V74: escape hatch for a hung or very slow preload. At this mark the
+// footer becomes enterable (late state) so nobody is stuck forever,
+// but it does NOT claim readiness — only a resolved engine.preload()
+// types the ready message. Sized past a slow-4G full bank load.
+const PRELOAD_FALLBACK_MS = 45000;
 
 export class LoadingScreen {
   constructor(root, { onEnter } = {}) {
@@ -29,7 +30,13 @@ export class LoadingScreen {
 
     this.cardEls = [];
     this.cardIndex = -1;
+    // V74: three separate signals. audioReady means exactly one
+    // thing — engine.preload() resolved. fallbackFired (escape-hatch
+    // timer) and preloadFailed (preload rejected) only make the
+    // footer enterable; neither announces the rats as ready.
     this.audioReady = false;
+    this.fallbackFired = false;
+    this.preloadFailed = false;
     this.entered = false;
     this.isReturning = this.checkReturning();
 
@@ -211,7 +218,7 @@ export class LoadingScreen {
     // the left, action label on the right (stacked on mobile);
     // tapping anywhere on the bar skips during the cards, enters
     // when ready. Skip is a state of the bar (see refreshCta):
-    // skip → waiting → ready.
+    // skip → waiting → (late →) ready.
     const footer = document.createElement('button');
     footer.type = 'button';
     footer.className = 'loading-footer';
@@ -231,7 +238,10 @@ export class LoadingScreen {
 
     footer.addEventListener('click', (e) => {
       e.stopPropagation();
-      if (footer.classList.contains('is-ready')) {
+      if (
+        footer.classList.contains('is-ready') ||
+        footer.classList.contains('is-late')
+      ) {
         this.handleEnter();
       } else if (footer.classList.contains('is-skip')) {
         this.skipToLastCard();
@@ -448,9 +458,10 @@ export class LoadingScreen {
       this.typeMessage(messages[this.statusMsgIndex]);
     }, STATUS_CYCLE_MS);
 
-    this.preloadFallbackTimer = setTimeout(() => {
-      if (!this.audioReady) this.setAudioReady();
-    }, PRELOAD_FALLBACK_MS);
+    this.preloadFallbackTimer = setTimeout(
+      () => this.setPreloadFallback(),
+      PRELOAD_FALLBACK_MS
+    );
   }
 
   typeMessage(msg) {
@@ -473,9 +484,9 @@ export class LoadingScreen {
   subscribePreload() {
     // Loading screen owns the preload kickoff. engine.preload is
     // idempotent — calling it from main.js too returns the same
-    // promise. Errors fall through to the same setAudioReady so the
-    // user can still try Enter (in which case engine.start() will
-    // surface the actual error if it persists).
+    // promise. V74: a rejection marks preloadFailed, which makes the
+    // footer enterable (late state) without announcing readiness;
+    // engine.start() will surface the error again on Enter.
     engine
       .preload()
       .then(() => {
@@ -484,19 +495,41 @@ export class LoadingScreen {
       .catch((e) => {
         // eslint-disable-next-line no-console
         console.error('Audio preload failed:', e);
-        if (!this.audioReady) this.setAudioReady();
+        this.preloadFailed = true;
+        this.clearPreloadFallback();
+        this.refreshCta();
       });
   }
 
-  setAudioReady() {
-    this.audioReady = true;
-    if (this.statusTimer) {
-      clearInterval(this.statusTimer);
-      this.statusTimer = null;
-    }
+  // V74: escape hatch only. Enables Enter in the late state; leaves
+  // the loading messages cycling and types nothing. If preload
+  // resolves afterwards, setAudioReady upgrades the bar in place.
+  setPreloadFallback() {
+    this.preloadFallbackTimer = null;
+    if (this.audioReady) return;
+    this.fallbackFired = true;
+    this.refreshCta();
+  }
+
+  clearPreloadFallback() {
     if (this.preloadFallbackTimer) {
       clearTimeout(this.preloadFallbackTimer);
       this.preloadFallbackTimer = null;
+    }
+  }
+
+  // Called only from the preload .then — the one true readiness
+  // signal. May arrive after the late state, or after the visitor
+  // already entered.
+  setAudioReady() {
+    this.audioReady = true;
+    this.clearPreloadFallback();
+    // Already entered (late-state Enter) or unmounted: the screen
+    // is fading or gone, so there's nobody to announce to.
+    if (this.entered || !this.el) return;
+    if (this.statusTimer) {
+      clearInterval(this.statusTimer);
+      this.statusTimer = null;
     }
     this.typeMessage(LOADING_NARRATIVE.readyMessage);
     this.refreshCta();
@@ -513,17 +546,22 @@ export class LoadingScreen {
 
   refreshCta() {
     if (!this.ctaBtn) return;
-    // Three states of the footer-as-button:
+    // V74: four states of the footer-as-button:
     //   skip    — cards still playing: the bar acts as "skip →"
     //   waiting — on the last card but audio not loaded: shows the
     //             CTA label, disabled/dim
-    //   ready   — enterable: solid accent bar, bg-color text
+    //   late    — fallback fired or preload failed: looks like
+    //             waiting (no styles of its own) but is enterable.
+    //             Upgrades to ready in place if preload resolves.
+    //   ready   — preload resolved: solid accent bar, bg-color text
     const onLastCard = this.isReturning || this.cardIndex >= this.cardEls.length - 1;
-    const ready = this.audioReady && onLastCard;
-    const skippable = !ready && !onLastCard;
-    this.ctaBtn.disabled = !ready && !skippable;
-    this.ctaBtn.classList.toggle('is-ready', ready);
+    const skippable = !onLastCard;
+    const ready = onLastCard && this.audioReady;
+    const late = onLastCard && !ready && (this.fallbackFired || this.preloadFailed);
+    this.ctaBtn.disabled = !(skippable || ready || late);
     this.ctaBtn.classList.toggle('is-skip', skippable);
+    this.ctaBtn.classList.toggle('is-late', late);
+    this.ctaBtn.classList.toggle('is-ready', ready);
     if (this.ctaLabelEl) {
       this.ctaLabelEl.textContent = skippable ? 'skip →' : this.ctaLabel;
     }
