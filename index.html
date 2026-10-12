@@ -9,8 +9,67 @@
   <meta name="theme-color" content="#0A0A0A">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>The Bushwick Nightcrawlers</title>
+  <!-- Search and share copy. The description is the About page's opening sentence. -->
+  <meta name="description" content="A sound piece scored for the corner of Myrtle and Broadway at night, narrated as Yelp reviews by the rats who live there.">
+  <meta name="author" content="Shoro Roy">
+  <link rel="canonical" href="https://bushwick-nightcrawlers.vercel.app/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="The Bushwick Nightcrawlers">
+  <meta property="og:title" content="The Bushwick Nightcrawlers">
+  <meta property="og:description" content="A sound piece scored for the corner of Myrtle and Broadway at night, narrated as Yelp reviews by the rats who live there.">
+  <meta property="og:url" content="https://bushwick-nightcrawlers.vercel.app/">
+  <meta property="og:image" content="https://bushwick-nightcrawlers.vercel.app/assets/og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Hand-drawn map of Myrtle and Broadway at night, with the venue pins">
+  <meta property="og:locale" content="en_US">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="The Bushwick Nightcrawlers">
+  <meta name="twitter:description" content="A sound piece scored for the corner of Myrtle and Broadway at night, narrated as Yelp reviews by the rats who live there.">
+  <meta name="twitter:image" content="https://bushwick-nightcrawlers.vercel.app/assets/og.jpg">
+  <meta name="twitter:image:alt" content="Hand-drawn map of Myrtle and Broadway at night, with the venue pins">
+  <!-- The creator's @id is the Person on shoro.space, so search engines tie the piece to the portfolio. -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "CreativeWork",
+    "@id": "https://bushwick-nightcrawlers.vercel.app/#work",
+    "name": "The Bushwick Nightcrawlers",
+    "alternateName": "Bushwick Nightcrawlers",
+    "url": "https://bushwick-nightcrawlers.vercel.app/",
+    "description": "A sound piece scored for the corner of Myrtle and Broadway at night, narrated as Yelp reviews by the rats who live there.",
+    "image": "https://bushwick-nightcrawlers.vercel.app/assets/og.jpg",
+    "genre": ["Sound art", "Interactive art", "Net art"],
+    "keywords": "Bushwick, Myrtle-Broadway, JMZ, New York City rats, ultrasonic vocalizations, sound art, generative audio, Yelp",
+    "dateCreated": "2026-05",
+    "inLanguage": "en",
+    "isAccessibleForFree": true,
+    "contentLocation": {
+      "@type": "Place",
+      "name": "Myrtle Avenue and Broadway, Bushwick, Brooklyn",
+      "address": { "@type": "PostalAddress", "addressLocality": "Brooklyn", "addressRegion": "NY", "addressCountry": "US" }
+    },
+    "creator": {
+      "@type": "Person",
+      "@id": "https://shoro.space/#person",
+      "name": "Shoro Roy",
+      "url": "https://shoro.space",
+      "sameAs": ["https://www.linkedin.com/in/royshoro"]
+    },
+    "contributor": {
+      "@type": "Person",
+      "name": "Madhura Redij",
+      "sameAs": ["https://www.linkedin.com/in/madhura-redij"]
+    },
+    "subjectOf": {
+      "@type": "CreativeWork",
+      "@id": "https://shoro.space/records/bushwick-nightcrawlers#work",
+      "url": "https://shoro.space/records/bushwick-nightcrawlers"
+    }
+  }
+  </script>
   <link rel="icon" href="assets/favicon.svg?v=26" type="image/svg+xml">
-  <link rel="stylesheet" href="styles.css?v=25">
+  <link rel="stylesheet" href="styles.css?v=26">
   <script src="https://unpkg.com/tone@15.1.22/build/Tone.js"></script>
   <script type="module" src="src/main.js?v=25"></script>
   <script>
@@ -26,6 +85,9 @@
 <body>
   <header class="page-header">
     <h1 class="page-title">The Bushwick Nightcrawlers</h1>
+    <!-- What the piece is, in the About page's own words, for screen readers and crawlers: the map itself is drawn,
+         and the page otherwise holds almost no text. -->
+    <p class="visually-hidden">A sound piece scored for the corner of Myrtle and Broadway at night, narrated as Yelp reviews by the rats who live there. Click any pin on the map to read a review and hear it spoken in ultrasonic vocalizations slowed down to human hearing range.</p>
     <nav class="page-controls">
       <a class="header-about" href="about.html">about</a>
     </nav>
