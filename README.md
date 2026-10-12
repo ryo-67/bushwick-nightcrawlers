@@ -1,6 +1,6 @@
 # The Bushwick Nightcrawlers
 
-A sound piece scored for the corner of Myrtle and Broadway at night, narrated as Yelp reviews by the rats who live there. Ten pins on a hand-drawn map; click one to read a review and hear it spoken in ultrasonic vocalizations slowed down to human hearing range.
+A sound piece scored for the corner of Myrtle and Broadway at night, narrated as Yelp reviews by the rats who live there. Ten pins on a hand-drawn map; click one to read a review and hear it spoken in rat vocalizations, some slowed from ultrasound into human hearing range.
 
 A sound art piece, not a website with audio. The interactive interface is the score. The piece sits over a continuous score of the intersection itself — the JMZ overhead, the ambient drone of the corner, small punctuations of street activity. Reviews layer in as you click, and stay layered.
 
@@ -12,7 +12,7 @@ Headphones recommended. The piece needs a first user gesture to start (Web Audio
 
 ## How the rats speak
 
-Every word of a review is voiced with rat ultrasonic vocalizations (USVs), pitch-shifted into human hearing range. A footer toggle picks the register:
+Every word of a review is voiced with rat vocalizations (USVs): ultrasonic laboratory recordings slowed into human hearing range, and Freesound squeaks played as recorded. A footer toggle picks the register:
 
 - **in the moment** (default) — generative. One USV per word, chosen fresh on every click by duration tier, punctuation context, and each rat's personality skew. No two playbacks are alike; the rats are speaking, not replaying.
 - **in their tongue** — the rats' language. Words render as runs of short USVs at syllable rate, and each syllable's sound is seeded from its *core* (leading consonants + vowel nucleus) — so "rat" and "rats" squeak identically, "cheese" and "cheesy" share their opening, and every rat pronounces a given syllable with the same sample, transposed by its own voice. Fully deterministic: the same review plays identically every time, because the language itself is stable — not because anything was recorded.
