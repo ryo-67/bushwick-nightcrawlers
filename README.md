@@ -6,7 +6,7 @@ A sound art piece, not a website with audio. The interactive interface is the sc
 
 ## Live
 
-→ [bushwick-nightcrawlers.vercel.app](https://bushwick-nightcrawlers.vercel.app)
+→ [bushwick.shoro.space](https://bushwick.shoro.space)
 
 Headphones recommended. The piece needs a first user gesture to start (Web Audio API requirement); the loading screen's enter bar is the gesture target.
 
@@ -72,7 +72,7 @@ CLAUDE.md               # repo conventions for AI coding agents
 
 ## Credits and attribution
 
-Full credits — concept, art, voice register reference, USV recordings, sound design samples, license terms — live on the [About page](https://bushwick-nightcrawlers.vercel.app/about.html).
+Full credits — concept, art, voice register reference, USV recordings, sound design samples, license terms — live on the [About page](https://bushwick.shoro.space/about.html).
 
 Notable: USV cocaine bank samples come from the [USVSEG dataset](https://doi.org/10.5281/zenodo.3428024) (Tachibana et al., 2020, *PLOS ONE*) — recorded from rats given cocaine, who vocalize with pleasure. The loading screen's rat is by [Danil Polshin](https://thenounproject.com/icon/rat-8308195/) (the Noun Project, CC BY 3.0). Sound design samples are mostly Freesound CC0 with a few CC BY 3.0 / 4.0 entries (all credited on the About page).
 
@@ -89,7 +89,7 @@ Split license — see [LICENSE](LICENSE):
 
 - **Code** (`src/`, `api/`, `scripts/`, the HTML/CSS) — MIT. Take the engine, learn from it, build with it.
 - **Creative content** (reviews, rat characters, map and pin art, photos, copy) — all rights reserved. The piece is the piece; ask before reusing.
-- **Third-party assets** (portions of `assets/sounds/`, the loading-screen rat) — their own licenses, credited in full on the [About page](https://bushwick-nightcrawlers.vercel.app/about.html).
+- **Third-party assets** (portions of `assets/sounds/`, the loading-screen rat) — their own licenses, credited in full on the [About page](https://bushwick.shoro.space/about.html).
 
 ## Repository conventions
 
