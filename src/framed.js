@@ -3,6 +3,8 @@
 // back through this frame. Opened on its own, nothing changes.
 (function () {
   if (window.self === window.top) return;
+  // Lets CSS drop links that only make sense standalone (the header's portfolio-record link).
+  document.documentElement.classList.add("is-framed");
   document.addEventListener("click", function (e) {
     if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     var a = e.target && e.target.closest ? e.target.closest("a[href]") : null;

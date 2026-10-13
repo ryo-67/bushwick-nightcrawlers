@@ -1639,6 +1639,26 @@ main {
   outline: none;
 }
 
+/* Keyboard focus gets a ring as well as the colour shift, so it
+   reads without relying on the green alone. */
+.page-controls a:focus-visible {
+  outline: 1px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+/* Portfolio record link: the case file's ID in a monospace face, a
+   quiet nod to the portfolio's Syne Mono labels without loading it.
+   Dropped when the portfolio frames the piece (html.is-framed, set
+   by src/framed.js) — there it would point at its own host page. */
+.header-record-id {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: 0.04em;
+}
+
+.is-framed .header-record {
+  display: none;
+}
+
 /* ===== Footer control bar (V26) =====
    The playback-mode toggle, volume/mute, and reset moved out of
    the header into a dedicated bar at the bottom of the body flex
@@ -1856,6 +1876,12 @@ main {
   .page-title {
     font-size: 0.875rem;
     line-height: 1.2;
+  }
+
+  /* Phone header: "record 0019 ↗" only, so title and links stay on
+     one line at 375px. */
+  .header-record-prefix {
+    display: none;
   }
 
   /* Footer controls, phone sizing. Volume slider stays hidden

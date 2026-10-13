@@ -767,7 +767,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // touchstart (capture phase, so it runs before the target's own
   // handler). Used for mid-session returns and for V74 retries.
   function armGestureBoot() {
-    const start = () => {
+    const start = (event) => {
+      // Links marked data-no-audio-boot (the portfolio record link opens a new tab) leave the corner quiet;
+      // the boot stays armed for the next gesture.
+      if (event?.target?.closest?.('[data-no-audio-boot]')) return;
       document.removeEventListener('click', start, true);
       document.removeEventListener('keydown', start, true);
       document.removeEventListener('touchstart', start, true);
