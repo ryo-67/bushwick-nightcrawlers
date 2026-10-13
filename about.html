@@ -23,7 +23,22 @@
   <meta name="twitter:image" content="https://bushwick.shoro.space/assets/og.jpg">
   <meta name="twitter:image:alt" content="Hand-drawn map of Myrtle and Broadway at night, with the venue pins">
   <link rel="icon" href="assets/favicon.svg?v=26" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <link rel="stylesheet" href="styles.css?v=26">
+  <!-- The About page describes the work on the map page; its @id ties the two together. -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "AboutPage",
+    "@id": "https://bushwick.shoro.space/about.html#page",
+    "url": "https://bushwick.shoro.space/about.html",
+    "name": "About — The Bushwick Nightcrawlers",
+    "description": "Why The Bushwick Nightcrawlers exists, how its rat voices were made, some slowed from ultrasound into human hearing, and full credits and sources.",
+    "inLanguage": "en",
+    "about": { "@id": "https://bushwick.shoro.space/#work" },
+    "mainEntity": { "@id": "https://bushwick.shoro.space/#work" }
+  }
+  </script>
   <script>
     window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
   </script>
