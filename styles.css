@@ -1661,11 +1661,12 @@ main {
   outline-offset: 3px;
 }
 
-/* Portfolio record link: the case file's ID in a monospace face, a
-   quiet nod to the portfolio's Syne Mono labels without loading it.
+/* Portfolio record link: "on file" in a monospace face, a quiet nod
+   to the portfolio's Syne Mono labels without loading it. No record
+   number anywhere: the portfolio renumbers records by date.
    Dropped when the portfolio frames the piece (html.is-framed, set
    by src/framed.js) — there it would point at its own host page. */
-.header-record-id {
+.header-record-file {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   letter-spacing: 0.04em;
 }
@@ -1893,8 +1894,8 @@ main {
     line-height: 1.2;
   }
 
-  /* Phone header: "record 0019 ↗" only, so title and links stay on
-     one line at 375px. */
+  /* Phone header: "on file ↗" only, so title and links stay on one
+     line at 375px. */
   .header-record-prefix {
     display: none;
   }
