@@ -119,8 +119,8 @@ export const venues = {
     // No photo: none could be licensed (urban75's terms forbid web
     // reuse). The peek shows a redaction frame instead.
     photoRedacted: {
-      stamp: '[photo redacted]',
-      note: 'no cameras past the steam grate',
+      stamp: '[no signal]',
+      note: "photos don't develop this far down",
     },
     bedComponents: ['pipe-drip', 'foil-crinkle'],
     mapCoordinates: { x: 80, y: 70 },
