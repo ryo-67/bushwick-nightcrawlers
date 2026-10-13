@@ -1661,16 +1661,10 @@ main {
   outline-offset: 3px;
 }
 
-/* Portfolio record link: "on file" in a monospace face, a quiet nod
-   to the portfolio's Syne Mono labels without loading it. No record
-   number anywhere: the portfolio renumbers records by date.
-   Dropped when the portfolio frames the piece (html.is-framed, set
-   by src/framed.js) — there it would point at its own host page. */
-.header-record-file {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  letter-spacing: 0.04em;
-}
-
+/* Portfolio record link: same face as "about"; no record number
+   anywhere, since the portfolio renumbers records by date. Dropped
+   when the portfolio frames the piece (html.is-framed, set by
+   src/framed.js) — there it would point at its own host page. */
 .is-framed .header-record {
   display: none;
 }
