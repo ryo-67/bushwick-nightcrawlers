@@ -1888,12 +1888,6 @@ main {
     line-height: 1.2;
   }
 
-  /* Phone header: "on file ↗" only, so title and links stay on one
-     line at 375px. */
-  .header-record-prefix {
-    display: none;
-  }
-
   /* Footer controls, phone sizing. Volume slider stays hidden
      (hardware buttons own volume on phones); reset shortens to
      one word; the mode prefix drops. V34: mode toggle anchors
