@@ -1,5 +1,6 @@
 import { LoadingScreen } from './components/loading-screen.js';
 import { Modal, buildStarRow, formatCount } from './components/modal.js';
+import { buildRedactedPhoto } from './components/redacted-photo.js';
 import { rats } from './content/rats.js';
 import { venues } from './content/venues.js';
 import { reviews } from './content/reviews.js';
@@ -70,6 +71,10 @@ function setupPinTooltip() {
         if (currentPin) position(currentPin);
       });
       tooltip.appendChild(img);
+    } else if (venue.photoRedacted) {
+      tooltip.appendChild(
+        buildRedactedPhoto(venue.photoRedacted, 'pin-tooltip-photo')
+      );
     }
 
     // V63: teaser peek — title stacked over the venue aggregate

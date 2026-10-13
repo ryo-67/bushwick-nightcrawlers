@@ -1,5 +1,6 @@
 import { Oscilloscope } from './oscilloscope.js';
 import { RAT_PATH_D, RAT_VIEWBOX } from './rat-silhouette.js';
+import { buildRedactedPhoto } from './redacted-photo.js';
 
 const ALLEY_FRAMING = 'the alley between Mr Kiwi and the JMZ';
 // Alley modal framing line — describes the alley's social function,
@@ -176,7 +177,11 @@ function findReviewsForVenue(venueId, reviews) {
 }
 
 function buildVenuePhoto(venue) {
-  if (!venue.photoPath) return null;
+  if (!venue.photoPath) {
+    return venue.photoRedacted
+      ? buildRedactedPhoto(venue.photoRedacted, 'modal-venue-photo')
+      : null;
+  }
   const wrap = document.createElement('figure');
   wrap.className = 'modal-venue-photo';
   const img = document.createElement('img');

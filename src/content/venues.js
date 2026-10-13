@@ -116,7 +116,12 @@ export const venues = {
     displayName: 'Caffeine Underground',
     address: 'Beneath Popeyes via steam grate',
     reviewerId: 'rosemary-rib',
-    photoPath: 'assets/photos/caffeine-underground.webp',
+    // No photo: none could be licensed (urban75's terms forbid web
+    // reuse). The peek shows a redaction frame instead.
+    photoRedacted: {
+      stamp: '[photo redacted]',
+      note: 'no cameras past the steam grate',
+    },
     bedComponents: ['pipe-drip', 'foil-crinkle'],
     mapCoordinates: { x: 80, y: 70 },
   },
