@@ -9,7 +9,7 @@ This repository contains three kinds of material under different terms:
 2. CREATIVE CONTENT — All rights reserved.
    The written reviews, rat characters and bios, alley one-liners,
    loading-screen narrative, About-page copy, the hand-drawn map and
-   pin artwork, venue photos, and rat portrait images (everything in
+   pin artwork, and rat portrait images (everything in
    src/content/ and assets/ except as noted in 3). You may not
    republish, redistribute, or reuse this material without
    permission. Ask: open an issue on this repository.
@@ -18,7 +18,9 @@ This repository contains three kinds of material under different terms:
    Portions of assets/sounds/ derive from third-party recordings
    (Freesound CC0, CC BY 3.0/4.0, CC BY-NC 3.0; the USVSEG dataset,
    CC BY 4.0) and the loading-screen rat silhouette derives from a
-   CC BY 3.0 icon by Danil Polshin (the Noun Project). Full
+   CC BY 3.0 icon by Danil Polshin (the Noun Project). The venue
+   photos in assets/photos/ are third-party photographs, not licensed
+   for reuse here; their photographers are credited where known. Full
    per-asset credits and license terms are listed on the About page
    (about.html). Those licenses govern those assets, including the
    non-commercial restriction on CC BY-NC material.

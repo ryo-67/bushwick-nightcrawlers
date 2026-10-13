@@ -88,8 +88,8 @@ Query-param-gated; production users see nothing unless the param is set.
 Split license — see [LICENSE](LICENSE):
 
 - **Code** (`src/`, `api/`, `scripts/`, the HTML/CSS) — MIT. Take the engine, learn from it, build with it.
-- **Creative content** (reviews, rat characters, map and pin art, photos, copy) — all rights reserved. The piece is the piece; ask before reusing.
-- **Third-party assets** (portions of `assets/sounds/`, the loading-screen rat) — their own licenses, credited in full on the [About page](https://bushwick.shoro.space/about.html).
+- **Creative content** (reviews, rat characters, map and pin art, rat portraits, copy) — all rights reserved. The piece is the piece; ask before reusing.
+- **Third-party assets** (portions of `assets/sounds/`, the loading-screen rat, the venue photos in `assets/photos/`) — their own licenses, credited in full on the [About page](https://bushwick.shoro.space/about.html).
 
 ## Repository conventions
 
