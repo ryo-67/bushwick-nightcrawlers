@@ -2,14 +2,14 @@
  * api/reactions.js — shared reaction counters (Vercel Function).
  *
  * The piece's first social layer: visitor reactions persist
- * globally, so the next visitor sees everyone's useful/funny/cool
- * tallies. The rats speak in the moment; the visitors accumulate
- * on record.
+ * globally, so the next visitor sees everyone's tallies. The rats
+ * speak in the moment; the visitors accumulate on record.
  *
- * GET  /api/reactions?review=<reviewerId>
- *        → { helpful: n, funny: n, cool: n }
+ * GET  /api/reactions?review=<reviewerId | 'rash'>
+ *        → { helpful, thanks, love, ohno, respects }   (counts ≥ 0)
  * POST /api/reactions  { review, type, delta }  (delta ∈ {1, -1})
- *        → { helpful: n, funny: n, cool: n }   (post-update)
+ *        → the same map, after the update. type is one of the keys
+ *          above, or 'report' (counted, never returned).
  *
  * Storage: Upstash Redis via its REST API — plain fetch, zero npm
  * dependencies, no build step (keeps the project's no-bundler
@@ -130,10 +130,9 @@ export default async function handler(req, res) {
         ['HINCRBY', key, type, String(step)],
         ['HGETALL', key],
       ]);
-      const counts = countsFromHgetall(result?.result);
-      // Un-reactions can't push a public tally below zero.
-      if (counts[type] < 0) counts[type] = 0;
-      res.status(200).json(counts);
+      // countsFromHgetall clamps at zero, so un-reactions can't push
+      // a public tally negative.
+      res.status(200).json(countsFromHgetall(result?.result));
       return;
     }
 

@@ -26,6 +26,7 @@
 
 import { panForVenue } from './spatial.js';
 import { loadBufferWithRetry } from './load-buffer.js';
+import { rampParam } from './ramp.js';
 
 // Component gainDb values anchored to the established baseline
 // (see git history for previous tuning passes). Primary loop
@@ -125,7 +126,16 @@ let trainPlayer = null;
 let trainGain = null;
 let trainTimerId = null;
 
+// venueId → Promise<bed|null>, stored before the first await so a
+// quick close-and-reopen reuses the in-flight build instead of
+// building (and fading in) a second, orphaned bed.
+const bedBuilds = new Map();
+// venueId → built bed, for the synchronous fade-out path.
 const venueBeds = new Map();
+// file → Promise<ToneAudioBuffer|null>. Several venues share files
+// (fridge-hum, fluoro-hum, ambulance, leaky-pipe); each is fetched
+// and decoded once.
+const bedBuffers = new Map();
 let activeBedVenueId = null;
 
 // Pre-gesture: build node graph and load buffers. The Player.start()
@@ -170,15 +180,11 @@ export function startBedsPlayback() {
   scheduleNextTrainPass();
 }
 
-// Backwards compat: combined preload + start. Loading-screen flow
-// uses the split functions instead, but this one-step variant stays
-// available for any caller that wants the legacy single-call shape.
-export async function initBeds() {
-  await preloadBeds();
-  startBedsPlayback();
-}
-
-function playTrainNow() {
+// Fires a train pass immediately. Used by the recursive schedule and
+// by pin-open hooks (e.g. clicking jmz-platform); the schedule keeps
+// running alongside. A pass already in flight restarts from the top
+// so the click gets a clear "train arriving" event.
+export function triggerTrainPass() {
   if (!trainPlayer?.loaded) return;
   try {
     if (trainPlayer.state === 'started') trainPlayer.stop();
@@ -192,27 +198,36 @@ function scheduleNextTrainPass() {
   const range = TRAIN_INTERVAL_MAX_SEC - TRAIN_INTERVAL_MIN_SEC;
   const delaySec = TRAIN_INTERVAL_MIN_SEC + Math.random() * range;
   trainTimerId = setTimeout(() => {
-    playTrainNow();
+    triggerTrainPass();
     scheduleNextTrainPass();
   }, delaySec * 1000);
 }
 
-// Fires a train pass immediately. Site-wide intermittent schedule
-// continues running in parallel — this is an additive trigger for
-// pin-open hooks (e.g., clicking jmz-platform). If a pass is already
-// in flight, it's restarted from the top so the user gets a clear
-// "train arriving" event tied to their click.
-export function triggerTrainPass() {
-  playTrainNow();
+// A failed file isn't cached, so the next open of a venue that uses
+// it tries again.
+function loadBedBuffer(file) {
+  if (!bedBuffers.has(file)) {
+    bedBuffers.set(file, loadBufferWithRetry(`${BED_DIR}/${file}`).then((buffer) => {
+      if (!buffer) bedBuffers.delete(file);
+      return buffer;
+    }));
+  }
+  return bedBuffers.get(file);
 }
 
-async function ensureBed(venueId) {
-  if (venueBeds.has(venueId)) return venueBeds.get(venueId);
+function ensureBed(venueId) {
+  if (!bedBuilds.has(venueId)) {
+    const entry = VENUE_BED_MAP[venueId];
+    bedBuilds.set(venueId, entry?.components?.length ? buildBed(venueId, entry) : Promise.resolve(null));
+  }
+  return bedBuilds.get(venueId);
+}
+
+// V74 loading, as for the site-wide layers: each component loads on
+// its own (one retry), and a component whose file never loads is
+// left out rather than failing the whole bed.
+async function buildBed(venueId, entry) {
   const Tone = window.Tone;
-  const entry = VENUE_BED_MAP[venueId];
-  if (!entry) return null;
-  const components = entry.components || [];
-  if (components.length === 0) return null;
 
   // Shared gain controls fade-in/out. Component gains set fixed
   // relative levels within the bed: each component routes through
@@ -223,37 +238,43 @@ async function ensureBed(venueId) {
   // train) stay centered.
   const bedPanner = new Tone.Panner(panForVenue(venueId)).toDestination();
   const sharedGain = new Tone.Gain(0).connect(bedPanner);
-  const componentObjs = [];
-
-  for (const comp of components) {
+  const components = await Promise.all(entry.components.map(async (comp) => {
+    const buffer = await loadBedBuffer(comp.file);
+    if (!buffer) return null;
     const componentGain = new Tone.Gain(Tone.dbToGain(comp.gainDb)).connect(sharedGain);
-    const player = new Tone.Player({
-      url: `${BED_DIR}/${comp.file}`,
-      loop: true,
-      autostart: false,
-    }).connect(componentGain);
-    componentObjs.push({ player, componentGain, file: comp.file });
+    const player = new Tone.Player({ loop: true, autostart: false }).connect(componentGain);
+    player.buffer = buffer;
+    return { player, componentGain, file: comp.file };
+  }));
+
+  const loaded = components.filter(Boolean);
+  if (loaded.length === 0) {
+    // Nothing loaded: drop the empty graph and forget the build so
+    // the next open retries.
+    sharedGain.dispose();
+    bedPanner.dispose();
+    bedBuilds.delete(venueId);
+    return null;
   }
 
-  await Tone.loaded();
-
   const bed = {
-    components: componentObjs,
+    components: loaded,
     sharedGain,
     persistent: !!entry.persistent,
     persistentGainDb: entry.persistentGainDb ?? -6,
+    // Pending stop from a non-persistent fade-out; a quick reopen
+    // cancels it so the old timer can't silence the reopened bed.
+    stopTimer: null,
   };
   venueBeds.set(venueId, bed);
   return bed;
 }
 
 function fadeIn(bed) {
-  const Tone = window.Tone;
-  const now = Tone.now();
-  const target = 1; // shared gain at unity; components carry the mix
-  bed.sharedGain.gain.cancelScheduledValues(now);
-  bed.sharedGain.gain.setValueAtTime(bed.sharedGain.gain.value, now);
-  bed.sharedGain.gain.linearRampToValueAtTime(target, now + BED_FADE_IN);
+  clearTimeout(bed.stopTimer);
+  bed.stopTimer = null;
+  // Shared gain at unity; the component gains carry the mix.
+  rampParam(bed.sharedGain.gain, 1, BED_FADE_IN);
   for (const comp of bed.components) {
     if (comp.player.state !== 'started') comp.player.start();
   }
@@ -262,24 +283,19 @@ function fadeIn(bed) {
 function fadeOut(venueId) {
   const bed = venueBeds.get(venueId);
   if (!bed) return;
-  const Tone = window.Tone;
-  const now = Tone.now();
-  bed.sharedGain.gain.cancelScheduledValues(now);
-  bed.sharedGain.gain.setValueAtTime(bed.sharedGain.gain.value, now);
-
   if (bed.persistent) {
     // Persistent: fade shared gain to reduced level, components keep
     // looping. The bed becomes a background layer once the user has
     // experienced it.
-    const target = Tone.dbToGain(bed.persistentGainDb);
-    bed.sharedGain.gain.linearRampToValueAtTime(target, now + BED_FADE_OUT);
+    rampParam(bed.sharedGain.gain, window.Tone.dbToGain(bed.persistentGainDb), BED_FADE_OUT);
     return;
   }
 
   // Non-persistent: fade shared gain to silence and stop all
   // component players.
-  bed.sharedGain.gain.linearRampToValueAtTime(0, now + BED_FADE_OUT);
-  setTimeout(() => {
+  rampParam(bed.sharedGain.gain, 0, BED_FADE_OUT);
+  bed.stopTimer = setTimeout(() => {
+    bed.stopTimer = null;
     for (const comp of bed.components) {
       try {
         if (comp.player.state === 'started') comp.player.stop();

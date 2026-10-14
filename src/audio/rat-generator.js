@@ -28,6 +28,7 @@ import { getMode } from './playback-mode.js';
 import { matchKeyword } from './keyword-effects.js';
 import { matchProcessor } from './keyword-processors.js';
 import { panForVenue } from './spatial.js';
+import { rampParam } from './ramp.js';
 import { USV_FEATURES } from './usv-features.js';
 import { USVS, USVS_COCAINE } from './manifest.js';
 import { syllableChunks } from './syllables.js';
@@ -89,7 +90,6 @@ function tokenize(text, triggerSet) {
       isAllCaps,
       isSentenceEnd: /[.!?]$/.test(t),
       isCommaEnd: /[,;:]$/.test(t),
-      isParenthetical: /^\(/.test(t) || /\)$/.test(t),
       isKeywordTrigger: triggerSet.has(lower),
     });
     index += 1;
@@ -101,7 +101,6 @@ function eligibleTiers(word) {
   if (word.isSentenceEnd) return ['long', 'extra-long'];
   if (word.isCommaEnd) return ['medium'];
   if (word.isAllCaps) return ['medium', 'long'];
-  if (word.isParenthetical) return ['short', 'medium'];
   return ['short', 'medium'];
 }
 
@@ -273,6 +272,7 @@ export class RatGenerator {
     this.perRatGain = null;
     this.perRatLPF = null;
     this.perRatReverbSend = null;
+    this.perRatPanner = null;
     // §12.4c processor nodes — created only if profile.processors
     // declares them. Sit upstream of perRatLPF so processor-modulated
     // voice still rides the recency-ladder spatial treatment.
@@ -620,6 +620,7 @@ export class RatGenerator {
     this.perRatLPF = null;
     this.perRatGain = null;
     this.perRatReverbSend = null;
+    this.perRatPanner = null;
     this.kHolePhaser = null;
     this.kHolePingPong = null;
     this.kHoleLPF = null;
@@ -634,14 +635,10 @@ export class RatGenerator {
     if (this._disposed) return;
     // Ramp both the dry path and the wet send to 0 so the rat fades
     // out cleanly through whichever path was carrying it.
-    const Tone = window.Tone;
-    const now = Tone.now();
     for (const gainNode of [this.perRatGain, this.perRatReverbSend]) {
       if (!gainNode) continue;
       try {
-        gainNode.gain.cancelScheduledValues(now);
-        gainNode.gain.setValueAtTime(gainNode.gain.value, now);
-        gainNode.gain.linearRampToValueAtTime(0, now + seconds);
+        rampParam(gainNode.gain, 0, seconds);
       } catch {
         // gain node already torn down
       }

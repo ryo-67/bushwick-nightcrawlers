@@ -71,7 +71,10 @@
   <link rel="icon" href="assets/favicon.svg?v=26" type="image/svg+xml">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <link rel="stylesheet" href="styles.css?v=26">
-  <script src="https://unpkg.com/tone@15.1.22/build/Tone.js"></script>
+  <!-- Deferred so it doesn't hold up the first paint. Deferred and module scripts run in document order, so Tone is
+       defined before src/main.js runs. -->
+  <link rel="preconnect" href="https://unpkg.com">
+  <script defer src="https://unpkg.com/tone@15.1.22/build/Tone.js"></script>
   <script type="module" src="src/main.js?v=25"></script>
   <script>
     window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };

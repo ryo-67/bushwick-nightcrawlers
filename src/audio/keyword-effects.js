@@ -16,6 +16,8 @@
  * glitch on time-words) are §12.4c, not here.
  */
 
+import { lettersOnly } from './normalize.js';
+
 export const KEYWORD_EFFECTS = {
   tagged:     { effect: 'chime', volume: -5, layered: ['vibrate'] },
   immaculate: { effect: 'chime', volume: -5, layered: ['vibrate'] },
@@ -38,6 +40,6 @@ export const KEYWORD_EFFECTS = {
 
 export function matchKeyword(word) {
   if (typeof word !== 'string') return null;
-  const normalized = word.toLowerCase().replace(/[^a-z]/g, '');
+  const normalized = lettersOnly(word);
   return KEYWORD_EFFECTS[normalized] || null;
 }

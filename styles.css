@@ -24,6 +24,9 @@
      construction — change these tokens and both bars move
      together. --chrome-control-h is the tallest chrome control
      (the loading CTA); the bar is sized from it. */
+  /* Hairline under/over every chrome bar and sheet section. */
+  --color-rule: rgba(184, 255, 0, 0.15);
+
   --chrome-pad-x: 1.5rem;
   --chrome-pad-y: 0.875rem;
   --chrome-control-h: 2.25rem;
@@ -574,12 +577,11 @@ main {
   background: rgba(197, 191, 174, 0.16);
 }
 
-.redacted-photo-stamp {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%) rotate(-3deg);
-  white-space: nowrap;
+/* The condemnation-notice stamp, shared by the redacted photo and
+   Rash's closure label: red on an opaque page-black backing, so it
+   stays readable over any image. Each sets its own placement. */
+.redacted-photo-stamp,
+.tombstone-closed-stamp {
   font-family: var(--font-ui);
   letter-spacing: 0.08em;
   font-size: 0.8125rem;
@@ -587,6 +589,14 @@ main {
   border: 2px solid var(--color-stars);
   padding: 0.35rem 0.65rem;
   background: var(--color-bg);
+}
+
+.redacted-photo-stamp {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) rotate(-3deg);
+  white-space: nowrap;
 }
 
 .redacted-photo-note {
@@ -897,7 +907,7 @@ main {
        same divider system, not a one-off rule. Border lives on
        the scroll container's box so it stays anchored at the
        boundary as the list scrolls. */
-    border-top: 1px solid rgba(184, 255, 0, 0.15);
+    border-top: 1px solid var(--color-rule);
   }
 }
 
@@ -932,7 +942,7 @@ main {
   padding: 1rem var(--space-lg);
   background: transparent;
   border: none;
-  border-bottom: 1px solid rgba(184, 255, 0, 0.15);
+  border-bottom: 1px solid var(--color-rule);
   text-align: left;
   cursor: pointer;
   color: var(--color-text);
@@ -1107,7 +1117,7 @@ main {
   margin: var(--space-md) calc(-1 * var(--space-lg)) 0;
   padding: 0.5rem var(--space-lg);
   background: var(--color-bg);
-  border-top: 1px solid rgba(184, 255, 0, 0.15);
+  border-top: 1px solid var(--color-rule);
 }
 
 /* When the card ends in the pinned pagination bar, the bar IS the
@@ -1452,21 +1462,13 @@ main {
   filter: grayscale(0.85) contrast(1.12);
 }
 
-/* The closure label stamped across the photo's lower corner —
-   condemnation-notice red, tilted like the peeks. Opaque page-black
-   backing: the label must stay readable over any photo. */
+/* The closure label stamped across the photo's lower corner,
+   tilted like the peeks (look shared with .redacted-photo-stamp). */
 .tombstone-closed-stamp {
   position: absolute;
   left: 1rem;
   bottom: 1rem;
-  font-family: var(--font-ui);
-  letter-spacing: 0.08em;
-  font-size: 0.8125rem;
-  color: var(--color-stars);
-  border: 2px solid var(--color-stars);
-  padding: 0.35rem 0.65rem;
   transform: rotate(-3deg);
-  background: var(--color-bg);
 }
 
 .tombstone-respects {
@@ -1557,7 +1559,7 @@ main {
      header area on momentum-scroll overshoot. */
   z-index: 100;
   background: var(--color-bg);
-  border-bottom: 1px solid rgba(184, 255, 0, 0.15);
+  border-bottom: 1px solid var(--color-rule);
   /* env(safe-area-inset-top) resolves to 0 on devices without a
      notch; on iPhone X+ it pads the header past the status bar
      so the title doesn't overlap. Requires viewport-fit=cover
@@ -1684,7 +1686,7 @@ main {
 .page-footer {
   z-index: 100;
   background: var(--color-bg);
-  border-top: 1px solid rgba(184, 255, 0, 0.15);
+  border-top: 1px solid var(--color-rule);
   /* V33: shared chrome tokens — same bar geometry as the loading
      screen's footer-as-button, so the two footers hold position
      through the loading→map fade. */
@@ -2221,25 +2223,9 @@ main {
   }
 
   /* Tighten body typography for the sheet. */
-  .reviewer-handle,
-  .reviewer-location,
-  .modal-rat-handle,
-  .modal-rat-location {
+  .reviewer-handle {
     font-size: 0.8125rem;
     line-height: 1.35;
-  }
-
-  .review-text,
-  .modal-review {
-    font-size: 0.875rem;
-    line-height: 1.55;
-  }
-
-  /* V36 made natural-height review text the base behavior; this
-     block now only clears the desktop tail-rhythm margins. */
-  .review-body {
-    height: auto;
-    -webkit-mask-image: none;
   }
 
   /* Rat metadata centers under the centered rat photo. Body text
@@ -2267,14 +2253,8 @@ main {
     left: 10px;
   }
 
-  .modal-card .oscilloscope,
-  .modal-oscilloscope {
+  .modal-card .oscilloscope {
     height: 72px;
-  }
-
-  .squeak-count,
-  .reaction-buttons {
-    font-size: 0.6875rem;
   }
 
   /* Pin labels (mobile only); alley pin stays unlabeled. Label
@@ -2581,9 +2561,7 @@ main {
      rotated photo didn't fill its AABB. The alley photo wants
      a clean rectangular display, not the polaroid treatment
      used on review-card venue photos. */
-  .alley-modal .modal-venue-photo,
-  .alley-photo,
-  .alley-hero-image {
+  .alley-modal .modal-venue-photo {
     aspect-ratio: auto;
     overflow: visible;
     transform: none;
@@ -2615,86 +2593,6 @@ main {
     font-size: 0.875rem;
     line-height: 1.55;
   }
-}
-
-.headphones-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-md);
-  background: rgba(10, 10, 10, 0.85);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
-}
-
-.headphones-overlay-card {
-  width: 100%;
-  max-width: 480px;
-  background: var(--color-bg);
-  border: 1px solid var(--color-text);
-  padding: var(--space-lg);
-  text-align: center;
-}
-
-.headphones-overlay-title {
-  font-family: var(--font-editorial);
-  font-style: italic;
-  font-weight: normal;
-  font-size: 1.5rem;
-  margin: 0 0 var(--space-md);
-  color: var(--color-text);
-}
-
-.headphones-overlay-text {
-  font-family: var(--font-data);
-  font-size: 0.9375rem;
-  line-height: 1.5;
-  margin: 0 0 var(--space-lg);
-  color: var(--color-text);
-  opacity: 0.9;
-}
-
-.headphones-overlay-button {
-  font-family: var(--font-ui);
-  letter-spacing: 0.02em;
-  font-size: 0.875rem;
-  background: transparent;
-  color: var(--color-text);
-  border: 1px solid var(--color-accent);
-  padding: var(--space-sm) var(--space-lg);
-  cursor: pointer;
-}
-
-.headphones-overlay-button:hover,
-.headphones-overlay-button:focus-visible {
-  background: var(--color-accent);
-  color: var(--color-bg);
-  outline: none;
-}
-
-.headphones-badge {
-  position: fixed;
-  bottom: var(--space-md);
-  right: var(--space-md);
-  z-index: 100;
-  font-family: var(--font-ui);
-  font-size: 0.6875rem;
-  letter-spacing: 0.12em;
-  color: var(--color-text);
-  padding: 0.4rem 0.75rem;
-  background: rgba(10, 10, 10, 0.7);
-  border: 1px solid var(--color-text);
-  cursor: pointer;
-}
-
-.headphones-badge:hover,
-.headphones-badge:focus-visible {
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-  outline: none;
 }
 
 .about-page {
@@ -2774,27 +2672,6 @@ main {
   font-weight: normal;
   font-size: 2rem;
   margin: 0 0 var(--space-lg);
-}
-
-.about-epigraph {
-  margin: 0 0 var(--space-lg);
-  padding: var(--space-md) var(--space-lg);
-  border-left: 2px solid var(--color-accent);
-  font-style: italic;
-}
-
-.about-epigraph p {
-  margin: 0 0 var(--space-sm);
-  font-size: 1.125rem;
-}
-
-.about-epigraph cite {
-  display: block;
-  font-family: var(--font-data);
-  font-style: normal;
-  font-size: 0.8125rem;
-  letter-spacing: 0.05em;
-  opacity: 0.8;
 }
 
 .about-section {
@@ -2996,33 +2873,6 @@ main {
   .about-title {
     font-size: 1.625rem;
   }
-
-  .about-credits dl {
-    grid-template-columns: 1fr;
-    gap: 0;
-  }
-
-  .about-credits dt {
-    margin-top: var(--space-sm);
-  }
-
-  .about-credits dd {
-    margin-bottom: var(--space-sm);
-  }
-
-  .headphones-overlay-card {
-    padding: var(--space-md);
-  }
-
-  .headphones-overlay-title {
-    font-size: 1.25rem;
-  }
-
-  .headphones-badge {
-    font-size: 0.625rem;
-    bottom: var(--space-sm);
-    right: var(--space-sm);
-  }
 }
 
 /* ===== Loading screen (paste-up field-notes overlay) ===== */
@@ -3089,7 +2939,7 @@ main {
   gap: 1rem;
   padding: calc(var(--chrome-pad-y) + env(safe-area-inset-top)) var(--chrome-pad-x) var(--chrome-pad-y);
   min-height: var(--chrome-bar-h);
-  border-bottom: 1px solid rgba(184, 255, 0, 0.15);
+  border-bottom: 1px solid var(--color-rule);
 }
 
 .loading-title {
@@ -3345,7 +3195,7 @@ main {
   gap: 1rem;
   background: transparent;
   border: none;
-  border-top: 1px solid rgba(184, 255, 0, 0.15);
+  border-top: 1px solid var(--color-rule);
   color: var(--color-text);
   text-align: left;
   padding: var(--chrome-pad-y) var(--chrome-pad-x) calc(var(--chrome-pad-y) + env(safe-area-inset-bottom));
@@ -3442,9 +3292,7 @@ main {
   }
 
   /* Cards area scrolls independently; status + CTA stay fixed at
-     bottom. V9: removed the mask-image fade — V8 sizing made
-     all three cards fit without scrolling, so the fade is now
-     misleading (suggests scrollable content where none exists). */
+     bottom. No fade mask: all three cards fit without scrolling. */
   .loading-cards {
     flex: 1 1 auto;
     flex-direction: column;
@@ -3454,8 +3302,6 @@ main {
     padding: 1rem 0 1rem;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    mask-image: none;
-    -webkit-mask-image: none;
   }
 
   /* V7 tightened the three loading cards but V8 listen-test
@@ -3641,6 +3487,6 @@ main {
      z-index/compositor are inherited from the module-scope rule. */
   .about-header {
     background: var(--color-bg);
-    border-bottom: 1px solid rgba(184, 255, 0, 0.15);
+    border-bottom: 1px solid var(--color-rule);
   }
 }

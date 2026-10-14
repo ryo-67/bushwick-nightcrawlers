@@ -8,7 +8,7 @@
  * path (render with fill-rule="evenodd") so the background shows
  * through. Attribution lives in the About page credits.
  *
- * Consumers: the loading screen's scuttle crew, the reviewer
+ * Consumers: the scuttle crew (rat-crew.js), the reviewer
  * Elite badge.
  */
 export const RAT_VIEWBOX = '39 142 438 224';

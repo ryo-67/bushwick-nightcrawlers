@@ -5,6 +5,8 @@
  * -le endings, floor at 1.
  */
 
+import { lettersOnly } from './normalize.js';
+
 const VOWEL_GROUP = /[aeiouy]+/g;
 
 /**
@@ -17,7 +19,7 @@ const VOWEL_GROUP = /[aeiouy]+/g;
  * carry the identity. Length always equals syllableCount(word).
  */
 export function syllableChunks(word) {
-  const w = word.toLowerCase().replace(/[^a-z]/g, '');
+  const w = lettersOnly(word);
   const n = syllableCount(word);
   if (w.length === 0) return ['x'];
   const cores = [];
@@ -36,7 +38,7 @@ export function syllableChunks(word) {
 }
 
 export function syllableCount(word) {
-  const w = word.toLowerCase().replace(/[^a-z]/g, '');
+  const w = lettersOnly(word);
   if (w.length === 0) return 1;
   if (w.length <= 3) return 1;
 

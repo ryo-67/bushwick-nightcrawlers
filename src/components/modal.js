@@ -1,8 +1,9 @@
 import { Oscilloscope } from './oscilloscope.js';
 import { RAT_PATH_D, RAT_VIEWBOX } from './rat-silhouette.js';
 import { buildRedactedPhoto } from './redacted-photo.js';
+import { KEYS, readFlag, writeFlag, readLocal, writeLocal } from '../storage.js';
+import { getReactionCounts, postReaction } from './reactions-client.js';
 
-const ALLEY_FRAMING = 'the alley between Mr Kiwi and the JMZ';
 // Alley modal framing line — describes the alley's social function,
 // not its location. Edit this single line to change the framing copy.
 const ALLEY_MEET_FRAMING = 'where the rats meet';
@@ -47,6 +48,13 @@ const PRAY_ICON_PATH =
   '<path d="M11.6 3.6 C11.6 7.2 10 9.2 8.4 11.2 C7 13 6.6 15.4 7.4 17.6 L8.6 20.4 ' +
   'M12.4 3.6 C12.4 7.2 14 9.2 15.6 11.2 C17 13 17.4 15.4 16.6 17.6 L15.4 20.4 ' +
   'M6 6.6 L7.2 7.6 M18 6.6 L16.8 7.6"/>';
+
+const RESPECTS = {
+  type: 'respects',
+  label: 'pay respects',
+  labelActive: 'respects paid',
+  icon: PRAY_ICON_PATH,
+};
 
 // Yelp-style boxed stars: a row of filled squares with the star
 // knocked out (see .star CSS — the wobble lives there). Used by
@@ -106,73 +114,126 @@ function reactionIconSvg(pathMarkup) {
 // First-visit hint above the alley mini-cards. Auto-dismisses on
 // first card click OR after the timeout, whichever first. Persisted
 // so subsequent alley-modal opens skip the hint entirely.
-const ALLEY_HINT_KEY = 'bushwick.alleyHintSeen';
 const ALLEY_HINT_TIMEOUT_MS = 8000;
 const ALLEY_HINT_FADE_MS = 800;
 const ALLEY_HINT_TEXT = 'tap any card to add the rat to the alley.';
 
 function hasSeenAlleyHint() {
-  try {
-    return localStorage.getItem(ALLEY_HINT_KEY) === 'true';
-  } catch {
-    return false;
-  }
+  return readFlag(KEYS.alleyHintSeen);
 }
 
 function markAlleyHintSeen() {
-  try {
-    localStorage.setItem(ALLEY_HINT_KEY, 'true');
-  } catch {
-    // localStorage unavailable — hint may show again next session
-  }
-}
-
-function reactedKey(reviewId, type) {
-  return `bushwick.reaction.${reviewId}.${type}`;
-}
-
-function countKey(reviewId, type) {
-  return `bushwick.reactionCount.${reviewId}.${type}`;
+  writeFlag(KEYS.alleyHintSeen, true);
 }
 
 function readHasReacted(reviewId, type) {
-  try {
-    return localStorage.getItem(reactedKey(reviewId, type)) === 'true';
-  } catch {
-    return false;
-  }
+  return readFlag(KEYS.reacted(reviewId, type));
 }
 
 function writeHasReacted(reviewId, type, value) {
-  try {
-    localStorage.setItem(reactedKey(reviewId, type), value ? 'true' : 'false');
-  } catch {
-    // localStorage unavailable — state lost on next open
-  }
+  writeFlag(KEYS.reacted(reviewId, type), value);
 }
 
 function readCount(reviewId, type) {
-  try {
-    const raw = localStorage.getItem(countKey(reviewId, type));
-    if (!raw) return 0;
-    const n = parseInt(raw, 10);
-    return Number.isFinite(n) && n >= 0 ? n : 0;
-  } catch {
-    return 0;
-  }
+  const n = parseInt(readLocal(KEYS.reactionCount(reviewId, type)), 10);
+  return Number.isFinite(n) && n >= 0 ? n : 0;
 }
 
 function writeCount(reviewId, type, count) {
-  try {
-    localStorage.setItem(countKey(reviewId, type), String(count));
-  } catch {
-    // localStorage unavailable
-  }
+  writeLocal(KEYS.reactionCount(reviewId, type), count);
+}
+
+// V50/V65: shared social counts. The server (api/reactions.js) is
+// the source of truth when it answers — every visitor sees the
+// accumulated tallies. localStorage keeps exactly two jobs:
+// remembering whether YOU reacted (the no-account dedup), and
+// serving as the count store when the API is absent (local dev on
+// the static server, or a store outage).
+//
+// One row per review (or memorial): its chips share the count state
+// and switch from local to shared counts together when the server
+// first answers.
+function createReactionRow(targetId) {
+  const row = { shared: false, counts: {}, countEls: new Map() };
+  row.count = (type) => (row.shared ? row.counts[type] ?? 0 : readCount(targetId, type));
+  row.render = () => {
+    for (const [type, el] of row.countEls) setCountText(el, row.count(type));
+  };
+  row.adopt = (counts) => {
+    row.shared = true;
+    Object.assign(row.counts, counts);
+    row.render();
+  };
+  return row;
+}
+
+function setCountText(el, n) {
+  const text = formatCount(n);
+  el.textContent = text;
+  // Reserve whole-character width so 0↔1 (or 9↔10 within the same
+  // length) can't resize the chip.
+  el.style.minWidth = `${text.length}ch`;
+}
+
+// One reaction chip: icon, state-swapped label, count. Toggles your
+// own reaction; with the server reachable it bumps the shared count
+// optimistically, then reconciles with the server's tally.
+function buildReactionChip(row, targetId, { type, label, labelActive, icon }) {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'review-reaction';
+
+  const iconEl = document.createElement('span');
+  iconEl.className = 'reaction-icon';
+  iconEl.setAttribute('aria-hidden', 'true');
+  iconEl.innerHTML = reactionIconSvg(icon);
+  btn.appendChild(iconEl);
+
+  const labelEl = document.createElement('span');
+  labelEl.className = 'reaction-label';
+  btn.appendChild(labelEl);
+
+  const countEl = document.createElement('span');
+  countEl.className = 'reaction-count';
+  btn.appendChild(countEl);
+  row.countEls.set(type, countEl);
+  setCountText(countEl, row.count(type));
+
+  // State-swapped copy (e.g. "leave crumb" → "left a crumb"). The
+  // hidden ::after (reading data-alt) always carries the OPPOSITE
+  // state's copy, so the box width is max(both labels) in real
+  // pixels and toggling can't reflow the row.
+  const renderState = (active) => {
+    btn.classList.toggle('is-active', active);
+    btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+    labelEl.textContent = active && labelActive ? labelActive : label;
+    labelEl.dataset.alt = active ? label : labelActive || label;
+  };
+  renderState(readHasReacted(targetId, type));
+
+  btn.addEventListener('click', () => {
+    const nextActive = !readHasReacted(targetId, type);
+    const step = nextActive ? 1 : -1;
+    writeHasReacted(targetId, type, nextActive);
+    renderState(nextActive);
+
+    if (row.shared) {
+      row.counts[type] = Math.max(0, (row.counts[type] ?? 0) + step);
+      row.render();
+      // A refusal (rate limit / outage) leaves the optimistic value
+      // for this session; the next fetch reconciles.
+      postReaction(targetId, type, step).then(row.adopt).catch(() => {});
+    } else {
+      writeCount(targetId, type, Math.max(0, readCount(targetId, type) + step));
+      row.render();
+    }
+  });
+  return btn;
 }
 
 // Returns all reviews for a venue in reviews.js insertion order
 // (primary first by convention — reviews.js was authored that way).
-function findReviewsForVenue(venueId, reviews) {
+export function findReviewsForVenue(venueId, reviews) {
   return Object.values(reviews).filter((r) => r.venueId === venueId);
 }
 
@@ -193,23 +254,25 @@ function buildVenuePhoto(venue) {
   return wrap;
 }
 
+// Splits the review the same way RatGenerator's tokenize() does
+// (whitespace-separated words, in order), so word i here is the word
+// the voice schedules as i. Returns the word spans in order.
 function appendReviewBodyWithWordSpans(parent, text) {
-  const tokens = text.split(/(\s+)/);
-  let wordIndex = 0;
-  tokens.forEach((token) => {
-    if (token === '') return;
+  const words = [];
+  for (const token of text.split(/(\s+)/)) {
+    if (token === '') continue;
     if (/^\s+$/.test(token)) {
       parent.appendChild(document.createTextNode(token));
-      return;
+      continue;
     }
     const span = document.createElement('span');
     span.className = 'word';
-    span.dataset.index = String(wordIndex);
+    span.dataset.index = String(words.length);
     span.textContent = token;
     parent.appendChild(span);
-    wordIndex += 1;
-  });
-  return wordIndex;
+    words.push(span);
+  }
+  return words;
 }
 
 export class Modal {
@@ -225,6 +288,9 @@ export class Modal {
     this.currentReviewIndex = 0;
     this.previousFocus = null;
     this.oscilloscope = null;
+    // The current review's word spans, and the one lit by the voice.
+    this.wordEls = null;
+    this.activeWordEl = null;
     this.bind();
   }
 
@@ -278,11 +344,12 @@ export class Modal {
 
     this.root.replaceChildren();
 
+    // The alley gets its gathering card; a venue with a review gets
+    // the review card; anything else (Rash) is a closed venue's
+    // tombstone.
     let card;
     if (venue.id === 'alley') {
       card = this.buildAlleyCard(venue);
-    } else if (venue.reviewerId === null) {
-      card = this.buildTombstoneCard(venue);
     } else if (reviewer && review) {
       card = this.buildReviewCard(venue, reviewer, review, allReviews);
     } else {
@@ -317,6 +384,8 @@ export class Modal {
     });
 
     this.oscilloscope = null;
+    this.wordEls = null;
+    this.activeWordEl = null;
     this.currentVenueId = null;
     this.currentReviewerId = null;
     this.currentVenueReviews = null;
@@ -353,19 +422,19 @@ export class Modal {
   // hit the currently-displayed review's word spans. Stale callbacks
   // from a closed-modal rat (or a rat from a previous modal instance)
   // pass a reviewerId that no longer matches and no-op out.
+  // The word spans are kept from populateReviewContent, so each
+  // Tone.Draw callback swaps one class instead of querying the DOM.
   highlightWord(index, fromReviewerId) {
     if (fromReviewerId !== this.currentReviewerId) return;
-    const active = this.root.querySelectorAll('.word.is-active');
-    active.forEach((el) => el.classList.remove('is-active'));
-    const target = this.root.querySelector(`.word[data-index="${index}"]`);
-    if (target) target.classList.add('is-active');
+    this.activeWordEl?.classList.remove('is-active');
+    this.activeWordEl = this.wordEls?.[index] ?? null;
+    this.activeWordEl?.classList.add('is-active');
   }
 
   clearHighlights(fromReviewerId) {
     if (fromReviewerId !== this.currentReviewerId) return;
-    this.root
-      .querySelectorAll('.word.is-active')
-      .forEach((el) => el.classList.remove('is-active'));
+    this.activeWordEl?.classList.remove('is-active');
+    this.activeWordEl = null;
   }
 
   // Page-switch: UI only. Does NOT touch audio state — any playing rat
@@ -606,7 +675,9 @@ export class Modal {
 
     const body = document.createElement('p');
     body.className = 'review-body';
-    const wordCount = appendReviewBodyWithWordSpans(body, review.text);
+    this.wordEls = appendReviewBodyWithWordSpans(body, review.text);
+    this.activeWordEl = null;
+    const wordCount = this.wordEls.length;
     container.appendChild(body);
 
     // V43: one combined meta line, bottom-right under the review.
@@ -628,108 +699,10 @@ export class Modal {
     const reactions = document.createElement('div');
     reactions.className = 'review-reactions';
 
-    // V50: shared social counts. The server (api/reactions.js) is
-    // the source of truth when reachable — every visitor sees the
-    // accumulated tallies. localStorage keeps exactly two jobs:
-    // remembering whether YOU reacted (the no-account dedup), and
-    // serving as the count store when the API is absent (local dev
-    // on the static server, or store outage).
-    const countEls = new Map();
-    let shared = false;
-    const sharedCounts = { helpful: 0, thanks: 0, love: 0, ohno: 0 };
-
-    const displayCount = (type) =>
-      shared ? sharedCounts[type] : readCount(reviewId, type);
-
-    const setCount = (el, n) => {
-      const text = formatCount(n);
-      el.textContent = text;
-      // Reserve whole-character width so 0↔1 (or 9↔10 within the
-      // same length) can't resize the chip.
-      el.style.minWidth = `${text.length}ch`;
-    };
-    const renderCounts = () => {
-      for (const [type, el] of countEls) {
-        setCount(el, displayCount(type));
-      }
-    };
-
-    REACTIONS.forEach(({ type, label, labelActive, icon }) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'review-reaction';
-      const initialActive = readHasReacted(reviewId, type);
-      // State-swapped copy (e.g. "leave a crumb" → "left crumb").
-      const labelFor = (active) => (active && labelActive ? labelActive : label);
-
-      const iconEl = document.createElement('span');
-      iconEl.className = 'reaction-icon';
-      iconEl.setAttribute('aria-hidden', 'true');
-      iconEl.innerHTML = reactionIconSvg(icon);
-      btn.appendChild(iconEl);
-
-      const labelEl = document.createElement('span');
-      labelEl.className = 'reaction-label';
-      // The hidden ::after (reading data-alt) always carries the
-      // OPPOSITE state's copy, so the box width is max(both
-      // labels) in real pixels and toggling can't reflow the row.
-      const applyLabel = (active) => {
-        labelEl.textContent = labelFor(active);
-        labelEl.dataset.alt = active ? label : labelActive || label;
-      };
-      applyLabel(initialActive);
-      btn.appendChild(labelEl);
-      const countEl = document.createElement('span');
-      countEl.className = 'reaction-count';
-      btn.appendChild(countEl);
-      countEls.set(type, countEl);
-      setCount(countEl, readCount(reviewId, type));
-
-      if (initialActive) {
-        btn.classList.add('is-active');
-        btn.setAttribute('aria-pressed', 'true');
-      } else {
-        btn.setAttribute('aria-pressed', 'false');
-      }
-      btn.addEventListener('click', () => {
-        const wasActive = readHasReacted(reviewId, type);
-        const nextActive = !wasActive;
-        const step = nextActive ? 1 : -1;
-        writeHasReacted(reviewId, type, nextActive);
-        btn.classList.toggle('is-active', nextActive);
-        btn.setAttribute('aria-pressed', nextActive ? 'true' : 'false');
-        applyLabel(nextActive);
-
-        if (shared) {
-          // Optimistic bump, then reconcile with the server tally.
-          sharedCounts[type] = Math.max(0, sharedCounts[type] + step);
-          renderCounts();
-          fetch('/api/reactions', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ review: reviewId, type, delta: step }),
-          })
-            .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-            .then((counts) => {
-              Object.assign(sharedCounts, counts);
-              renderCounts();
-            })
-            .catch(() => {
-              // Server refused (rate limit / outage): the optimistic
-              // value stands locally for this session; next fetch
-              // reconciles.
-            });
-        } else {
-          writeCount(
-            reviewId,
-            type,
-            Math.max(0, readCount(reviewId, type) + step)
-          );
-          renderCounts();
-        }
-      });
-      reactions.appendChild(btn);
-    });
+    const row = createReactionRow(reviewId);
+    for (const spec of REACTIONS) {
+      reactions.appendChild(buildReactionChip(row, reviewId, spec));
+    }
 
     // V52: the report analogue — Yelp's "Report review", in city
     // terms. One-way (no un-reporting a rat to the city), no
@@ -748,25 +721,12 @@ export class Modal {
       const next = !readHasReacted(reviewId, 'report');
       writeHasReacted(reviewId, 'report', next);
       renderReport(next);
-      if (shared) {
-        fetch('/api/reactions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ review: reviewId, type: 'report', delta: next ? 1 : -1 }),
-        }).catch(() => {});
-      }
+      if (row.shared) postReaction(reviewId, 'report', next ? 1 : -1).catch(() => {});
     });
 
     // Adopt the shared tallies when the API answers; stay on local
-    // counts (current behavior) when it doesn't.
-    fetch(`/api/reactions?review=${encodeURIComponent(reviewId)}`)
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-      .then((counts) => {
-        shared = true;
-        Object.assign(sharedCounts, counts);
-        renderCounts();
-      })
-      .catch(() => {});
+    // counts when it doesn't.
+    getReactionCounts(reviewId).then(row.adopt).catch(() => {});
 
     // V56: report rides the chip row itself — far right, vertically
     // centered against the chips. (No tally line — the counts live
@@ -774,25 +734,6 @@ export class Modal {
     reactions.appendChild(report);
     wrap.appendChild(reactions);
     return wrap;
-  }
-
-  buildAmbientCard(venue) {
-    // Retained for any future ambient-only venue. Currently unreached
-    // because alley routes to buildAlleyCard.
-    const card = this.buildCardShell(`${venue.displayName} (ambient)`);
-
-    const name = this.buildModalHeadline(card, venue.displayName);
-    card.appendChild(name);
-
-    const photo = buildVenuePhoto(venue);
-    if (photo) card.appendChild(photo);
-
-    const framing = document.createElement('p');
-    framing.className = 'venue-framing';
-    framing.textContent = ALLEY_FRAMING;
-    card.appendChild(framing);
-
-    return card;
   }
 
   buildAlleyCard(venue) {
@@ -1078,92 +1019,13 @@ export class Modal {
   }
 
   // V65: the tombstone's single reaction — a literal pay-respects
-  // button. Same chip anatomy and server flow as the review
-  // reactions, keyed by venue id ('rash') since there's no
-  // reviewer. localStorage keeps the same two jobs: your own
-  // dedup, and the count store when the API is absent.
+  // button, keyed by venue id ('rash') since there's no reviewer.
   buildRespects(memorialId) {
     const wrap = document.createElement('div');
     wrap.className = 'review-reactions tombstone-respects';
-
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'review-reaction';
-    const type = 'respects';
-    const label = 'pay respects';
-    const labelActive = 'respects paid';
-
-    const iconEl = document.createElement('span');
-    iconEl.className = 'reaction-icon';
-    iconEl.setAttribute('aria-hidden', 'true');
-    iconEl.innerHTML = reactionIconSvg(PRAY_ICON_PATH);
-    btn.appendChild(iconEl);
-
-    const labelEl = document.createElement('span');
-    labelEl.className = 'reaction-label';
-    const applyLabel = (active) => {
-      labelEl.textContent = active ? labelActive : label;
-      labelEl.dataset.alt = active ? label : labelActive;
-    };
-    btn.appendChild(labelEl);
-
-    const countEl = document.createElement('span');
-    countEl.className = 'reaction-count';
-    btn.appendChild(countEl);
-
-    let shared = false;
-    let sharedCount = 0;
-    const displayCount = () =>
-      shared ? sharedCount : readCount(memorialId, type);
-    const renderCount = () => {
-      const text = formatCount(displayCount());
-      countEl.textContent = text;
-      countEl.style.minWidth = `${text.length}ch`;
-    };
-
-    const renderState = (active) => {
-      btn.classList.toggle('is-active', active);
-      btn.setAttribute('aria-pressed', active ? 'true' : 'false');
-      applyLabel(active);
-    };
-    renderState(readHasReacted(memorialId, type));
-    renderCount();
-
-    btn.addEventListener('click', () => {
-      const nextActive = !readHasReacted(memorialId, type);
-      const step = nextActive ? 1 : -1;
-      writeHasReacted(memorialId, type, nextActive);
-      renderState(nextActive);
-      if (shared) {
-        sharedCount = Math.max(0, sharedCount + step);
-        renderCount();
-        fetch('/api/reactions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ review: memorialId, type, delta: step }),
-        })
-          .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-          .then((counts) => {
-            sharedCount = Math.max(0, counts[type] ?? sharedCount);
-            renderCount();
-          })
-          .catch(() => {});
-      } else {
-        writeCount(memorialId, type, Math.max(0, readCount(memorialId, type) + step));
-        renderCount();
-      }
-    });
-
-    fetch(`/api/reactions?review=${encodeURIComponent(memorialId)}`)
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-      .then((counts) => {
-        shared = true;
-        sharedCount = Math.max(0, counts[type] ?? 0);
-        renderCount();
-      })
-      .catch(() => {});
-
-    wrap.appendChild(btn);
+    const row = createReactionRow(memorialId);
+    wrap.appendChild(buildReactionChip(row, memorialId, RESPECTS));
+    getReactionCounts(memorialId).then(row.adopt).catch(() => {});
     return wrap;
   }
 }

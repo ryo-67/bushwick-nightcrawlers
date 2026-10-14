@@ -11,27 +11,23 @@
  *              time — determinism emerges from the language itself
  *              rather than from a recording.
  *
- * Persisted in localStorage under bushwick.playback.mode.
+ * Persisted in localStorage (KEYS.playbackMode in src/storage.js).
  * The footer toggle calls setMode(); RatGenerator calls getMode()
  * at start() time. Mid-playback mode flips do not affect the
  * currently-playing generator.
  */
 
-const STORAGE_KEY = 'bushwick.playback.mode';
+import { KEYS, readLocal, writeLocal } from '../storage.js';
+
 const VALID_MODES = new Set(['moment', 'tongue']);
 const DEFAULT_MODE = 'moment';
 
 let currentMode = DEFAULT_MODE;
-const listeners = new Set();
 
-try {
-  let stored = localStorage.getItem(STORAGE_KEY);
-  // V72: 'record' folded into 'tongue' — migrate saved prefs.
-  if (stored === 'record') stored = 'tongue';
-  if (VALID_MODES.has(stored)) currentMode = stored;
-} catch {
-  // localStorage unavailable — stay on default
-}
+let storedMode = readLocal(KEYS.playbackMode);
+// V72: 'record' folded into 'tongue' — migrate saved prefs.
+if (storedMode === 'record') storedMode = 'tongue';
+if (VALID_MODES.has(storedMode)) currentMode = storedMode;
 
 export function getMode() {
   return currentMode;
@@ -41,21 +37,5 @@ export function setMode(mode) {
   if (!VALID_MODES.has(mode)) return;
   if (mode === currentMode) return;
   currentMode = mode;
-  try {
-    localStorage.setItem(STORAGE_KEY, mode);
-  } catch {
-    // localStorage unavailable — in-memory only
-  }
-  for (const fn of listeners) {
-    try {
-      fn(mode);
-    } catch {
-      // Don't let one listener tank the rest.
-    }
-  }
-}
-
-export function onChange(fn) {
-  listeners.add(fn);
-  return () => listeners.delete(fn);
+  writeLocal(KEYS.playbackMode, mode);
 }

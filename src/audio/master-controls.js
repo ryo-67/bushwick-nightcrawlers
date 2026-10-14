@@ -14,8 +14,7 @@
  * Defaults: volume 0 dB, mute false.
  */
 
-const VOL_KEY = 'bushwick.audio.volume';
-const MUTE_KEY = 'bushwick.audio.muted';
+import { KEYS, readLocal, writeLocal, readFlag, writeFlag } from '../storage.js';
 
 export const VOLUME_MIN_DB = -40;
 export const VOLUME_MAX_DB = 0;
@@ -26,23 +25,11 @@ const DEFAULT_MUTED = false;
 let cachedVolume = DEFAULT_VOLUME;
 let cachedMuted = DEFAULT_MUTED;
 
-try {
-  const raw = localStorage.getItem(VOL_KEY);
-  if (raw !== null) {
-    const parsed = parseFloat(raw);
-    if (Number.isFinite(parsed)) {
-      cachedVolume = Math.max(VOLUME_MIN_DB, Math.min(VOLUME_MAX_DB, parsed));
-    }
-  }
-} catch {
-  // localStorage unavailable
+const storedVolume = parseFloat(readLocal(KEYS.volume));
+if (Number.isFinite(storedVolume)) {
+  cachedVolume = Math.max(VOLUME_MIN_DB, Math.min(VOLUME_MAX_DB, storedVolume));
 }
-
-try {
-  cachedMuted = localStorage.getItem(MUTE_KEY) === 'true';
-} catch {
-  // localStorage unavailable
-}
+cachedMuted = readFlag(KEYS.muted);
 
 function applyToTone() {
   const Tone = typeof window !== 'undefined' ? window.Tone : null;
@@ -68,21 +55,13 @@ export function getMuted() {
 export function setVolume(db) {
   const clamped = Math.max(VOLUME_MIN_DB, Math.min(VOLUME_MAX_DB, db));
   cachedVolume = clamped;
-  try {
-    localStorage.setItem(VOL_KEY, String(clamped));
-  } catch {
-    // localStorage unavailable — in-memory only
-  }
+  writeLocal(KEYS.volume, clamped);
   applyToTone();
 }
 
 export function setMuted(muted) {
   cachedMuted = !!muted;
-  try {
-    localStorage.setItem(MUTE_KEY, cachedMuted ? 'true' : 'false');
-  } catch {
-    // localStorage unavailable
-  }
+  writeFlag(KEYS.muted, cachedMuted);
   applyToTone();
 }
 

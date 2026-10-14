@@ -14,14 +14,16 @@
  * by walking the registry on every register/unregister and ramping
  * each rat's perRatGain to its recency-rank multiplier.
  *
- * Visit tracking is small enough to live alongside the audio
- * machinery, since the alley reveal in §12.5c will hook into the
- * same engine module.
+ * Visit tracking (which review venues have been opened, used to
+ * unlock the alley) is small enough to live alongside the audio
+ * machinery.
  */
 
 import { USVS, USVS_COCAINE } from './manifest.js';
 import { preloadBeds, startBedsPlayback } from './beds.js';
 import { loadBufferWithRetry } from './load-buffer.js';
+import { rampParam } from './ramp.js';
+import { KEYS, readFlag, writeFlag } from '../storage.js';
 import { reviews } from '../content/reviews.js';
 import { rats } from '../content/rats.js';
 import { venues } from '../content/venues.js';
@@ -53,7 +55,7 @@ export const RAT_LADDER_RAMP_SEC = 0.4;
 
 // Review-bearing venue ids, derived from reviews data so this list
 // stays in sync with the content layer.
-export const REVIEW_VENUE_IDS = Array.from(
+const REVIEW_VENUE_IDS = Array.from(
   new Set(Object.values(reviews).map((r) => r.venueId))
 );
 
@@ -80,6 +82,9 @@ let preloadPromise = null;
 let startPromise = null;
 let ratGain = null;
 let sharedRatReverb = null;
+// The reverb's impulse response renders once; a failed render is
+// forgotten so a preload retry can try again.
+let reverbPromise = null;
 const readyListeners = [];
 
 // Map<reviewerId, RatGenerator> — insertion order is recency.
@@ -129,12 +134,12 @@ async function loadBanks() {
   banks['usvs-cocaine'] = c;
 }
 
-// Warms the browser cache for every selfie + venue photo during the
-// loading-screen wait. By the time any modal opens or pin gets
-// hovered, the corresponding <img src=...> resolves out of cache
-// instead of triggering a fresh network fetch. Errors resolve
-// (don't reject) so a single missing file doesn't block the chain;
-// the modal/tooltip's own onerror handlers hide broken images.
+// Warms the browser cache for every selfie + venue photo, so a modal
+// or pin hover resolves its <img> from cache. Started once the audio
+// has loaded rather than awaited with it: the images aren't needed
+// to play anything, and ~4 MB of them used to hold up "the rats are
+// ready". Errors resolve (don't reject); the modal/tooltip's own
+// onerror handlers hide broken images.
 function preloadImages() {
   const selfiePaths = Object.values(rats)
     .map((r) => r.selfiePath)
@@ -193,13 +198,17 @@ export function preload() {
         wet: 1.0,
       }).connect(ratGain);
     }
-    await sharedRatReverb.generate();
+    reverbPromise ??= sharedRatReverb.generate().catch((e) => {
+      reverbPromise = null;
+      throw e;
+    });
     await Promise.all([
+      reverbPromise,
       loadBanks(),
       preloadBeds(),
       loadEffectBuffers(),
-      preloadImages(),
     ]);
+    preloadImages();
   })();
   preloadPromise = attempt;
   attempt.catch(() => {
@@ -281,14 +290,6 @@ export function getEffectBuffer(name) {
 
 // ---- cumulative voicing registry ----
 
-function rampParam(param, target, rampSec) {
-  const Tone = window.Tone;
-  const now = Tone.now();
-  param.cancelScheduledValues(now);
-  param.setValueAtTime(param.value, now);
-  param.linearRampToValueAtTime(target, now + rampSec);
-}
-
 function applyRankToRat(ratGen, rank) {
   if (!ratGen.perRatGain || !ratGen.perRatLPF || !ratGen.perRatReverbSend) return;
   const gainTarget = RAT_GAIN_LADDER[rank] ?? 0;
@@ -367,52 +368,16 @@ export function unregisterRat(reviewerId) {
   notifyActiveRatsListeners();
 }
 
-export function activeRats() {
-  return Array.from(ratRegistry.keys());
-}
-
-export function activeRatCount() {
-  return ratRegistry.size;
-}
-
 // ---- visit tracking ----
 
-function visitedKey(venueId) {
-  return `bushwick.visited.${venueId}`;
-}
-
 export function markVisited(venueId) {
-  // Detect threshold-cross: was incomplete before this call, complete after.
-  // Fire a one-shot custom event the UI listens for to reveal the alley pin.
-  // Idempotent visits (already-visited venue) don't re-fire because the
-  // before/after states are both already complete.
-  const wasComplete = hasVisitedAllReviewVenues();
-  try {
-    localStorage.setItem(visitedKey(venueId), 'true');
-  } catch {
-    // localStorage unavailable — visit not persisted
-  }
-  if (!wasComplete && hasVisitedAllReviewVenues()) {
-    try {
-      window.dispatchEvent(new CustomEvent('bushwick:all-venues-visited'));
-    } catch {
-      // dispatchEvent unavailable (non-browser environment)
-    }
-  }
+  writeFlag(KEYS.visited(venueId), true);
 }
 
-export function hasVisited(venueId) {
-  try {
-    return localStorage.getItem(visitedKey(venueId)) === 'true';
-  } catch {
-    return false;
-  }
+function hasVisited(venueId) {
+  return readFlag(KEYS.visited(venueId));
 }
 
-export function visitedReviewVenues() {
-  return REVIEW_VENUE_IDS.filter((id) => hasVisited(id));
-}
-
-export function hasVisitedAllReviewVenues() {
-  return REVIEW_VENUE_IDS.every((id) => hasVisited(id));
+export function visitedReviewVenueCount() {
+  return REVIEW_VENUE_IDS.filter((id) => hasVisited(id)).length;
 }

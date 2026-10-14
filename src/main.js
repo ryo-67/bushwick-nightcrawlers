@@ -1,6 +1,7 @@
 import { LoadingScreen } from './components/loading-screen.js';
-import { Modal, buildStarRow, formatCount } from './components/modal.js';
+import { Modal, buildStarRow, formatCount, findReviewsForVenue } from './components/modal.js';
 import { buildRedactedPhoto } from './components/redacted-photo.js';
+import { getReactionCounts } from './components/reactions-client.js';
 import { rats } from './content/rats.js';
 import { venues } from './content/venues.js';
 import { reviews } from './content/reviews.js';
@@ -19,6 +20,7 @@ import {
   VOLUME_MAX_DB,
 } from './audio/master-controls.js';
 import { install as installViewportReadout } from './debug/viewport-readout.js';
+import { forgetVisitor, readSession, writeSession, SESSION_ENTERED } from './storage.js';
 
 // No-op unless `?debug=viewport` is on the URL. See module header
 // in src/debug/viewport-readout.js for details.
@@ -90,9 +92,7 @@ function setupPinTooltip() {
     name.textContent = venue.displayName;
     titleStack.appendChild(name);
 
-    const venueReviews = Object.values(reviews).filter(
-      (r) => r.venueId === venue.id
-    );
+    const venueReviews = findReviewsForVenue(venue.id, reviews);
     if (venueReviews.length) {
       const avg =
         venueReviews.reduce((sum, r) => sum + r.rating, 0) /
@@ -139,8 +139,7 @@ function setupPinTooltip() {
   const peekTallies = new Map();
   function fetchPeekTally(reviewerId) {
     if (peekTallies.has(reviewerId)) return peekTallies.get(reviewerId);
-    const p = fetch(`/api/reactions?review=${encodeURIComponent(reviewerId)}`)
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+    const p = getReactionCounts(reviewerId)
       .then((counts) => counts.helpful || 0)
       .catch(() => 0);
     peekTallies.set(reviewerId, p);
@@ -226,8 +225,6 @@ function setupPinTooltip() {
 
 let modalRef = null;
 let currentRatGen = null;
-let currentRatGenVenueId = null;
-let playClickHandler = null;
 
 // Alley pin is always rendered. Locked (greyed) until the user has
 // visited 5 other venues; then unlocks with a subtle pulsing glow.
@@ -238,25 +235,8 @@ const ALLEY_UNLOCK_THRESHOLD = 5;
 const ALLEY_LOCKED_MESSAGE =
   "the rats don't know you yet. come back when you've met more of us.";
 
-function getVisitedVenuesCount() {
-  try {
-    let count = 0;
-    for (const key of Object.keys(localStorage)) {
-      if (
-        key.startsWith('bushwick.visited.') &&
-        key !== 'bushwick.visited.alley'
-      ) {
-        count++;
-      }
-    }
-    return count;
-  } catch {
-    return 0;
-  }
-}
-
 function isAlleyUnlocked() {
-  return getVisitedVenuesCount() >= ALLEY_UNLOCK_THRESHOLD;
+  return engine.visitedReviewVenueCount() >= ALLEY_UNLOCK_THRESHOLD;
 }
 
 function updateAlleyPinState() {
@@ -475,11 +455,22 @@ function syncPlayState() {
   modalRef.setPlayState(currentRatGen.isPlaying() ? 'playing' : 'idle');
 }
 
+// Runs fn now if the audio engine is up; otherwise once it is, but
+// only if this venue's modal is still the one open by then.
+function whenReadyWhileOpen(venueId, fn) {
+  if (engine.isReady()) {
+    fn();
+    return;
+  }
+  engine.onReady(() => {
+    if (modalRef?.isOpen() && modalRef.currentVenueId === venueId) fn();
+  });
+}
+
 function handleModalOpen(venueId, ctx) {
   // Modal-side rat reference is reset; the previous rat (if any)
   // continues playing in the engine's registry as a background voice.
   currentRatGen = null;
-  currentRatGenVenueId = null;
 
   // If the user tapped the locked alley and saw the toast, then
   // immediately tapped a different (unlocked) pin, the toast is
@@ -488,33 +479,13 @@ function handleModalOpen(venueId, ctx) {
   hideAlleyLockedToast();
 
   // Kick off venue bed (no-op for unmapped venues).
-  if (engine.isReady()) {
-    beds.startVenueBed(venueId).catch(() => {});
-  } else {
-    engine.onReady(() => {
-      if (modalRef?.isOpen() && modalRef.currentVenueId === venueId) {
-        beds.startVenueBed(venueId).catch(() => {});
-      }
-    });
-  }
+  whenReadyWhileOpen(venueId, () => beds.startVenueBed(venueId).catch(() => {}));
 
   // jmz-platform: fire an immediate train pass so visiting the
   // platform reliably triggers a "train arriving" event. The
   // site-wide intermittent train schedule keeps running in parallel
-  // for ambient feel under any pin. Recheck modal state after
-  // engine ready so we don't fire a pass after the user navigated
-  // away.
-  if (venueId === 'jmz-platform') {
-    if (engine.isReady()) {
-      beds.triggerTrainPass();
-    } else {
-      engine.onReady(() => {
-        if (modalRef?.isOpen() && modalRef.currentVenueId === 'jmz-platform') {
-          beds.triggerTrainPass();
-        }
-      });
-    }
-  }
+  // for ambient feel under any pin.
+  if (venueId === 'jmz-platform') whenReadyWhileOpen(venueId, beds.triggerTrainPass);
 
   // Alley: no review-card path. Sync the mini-card visuals to
   // whatever's currently in the registry (returning visitors might
@@ -555,7 +526,6 @@ function handleModalOpen(venueId, ctx) {
   }
 
   currentRatGen = makeRatGen();
-  currentRatGenVenueId = venueId;
 
   syncPlayState();
   // V60: the scope is never dead air — idle, it taps the master
@@ -563,17 +533,12 @@ function handleModalOpen(venueId, ctx) {
   // any still-talking rats). Play refocuses it on this rat's voice.
   startAmbientScope();
 
-  if (!engine.isReady()) {
-    engine.onReady(() => {
-      if (modalRef?.isOpen() && modalRef.currentVenueId === venueId) {
-        modalRef.setPlayState('idle');
-      }
-    });
-  }
+  // syncPlayState showed 'loading' if the engine isn't up yet.
+  if (!engine.isReady()) whenReadyWhileOpen(venueId, () => modalRef.setPlayState('idle'));
 
   const playBtn = modalRef.root.querySelector('.play-button');
   if (!playBtn) return;
-  playClickHandler = () => {
+  playBtn.addEventListener('click', () => {
     if (!engine.isReady()) return;
     if (currentRatGen?.isPlaying()) {
       // Pause: unregister + fade out. Modal flips back to idle;
@@ -591,8 +556,7 @@ function handleModalOpen(venueId, ctx) {
       currentRatGen.start();
       modalRef.setPlayState('playing');
     }
-  };
-  playBtn.addEventListener('click', playClickHandler);
+  });
 }
 
 // Idle scope = the corner's live signal at murmur scale. Safe to
@@ -641,8 +605,6 @@ function handleModalClose() {
   // It continues in the engine's registry as a background voice
   // until natural completion or cap eviction.
   currentRatGen = null;
-  currentRatGenVenueId = null;
-  playClickHandler = null;
   modalRef?.oscilloscope?.dispose();
   beds.stopActiveBed();
 
@@ -692,29 +654,9 @@ function setupFooterReset() {
   const btn = document.querySelector('.footer-reset');
   if (!btn) return;
   btn.addEventListener('click', () => {
-    try {
-      const keys = Object.keys(localStorage).filter(
-        (k) =>
-          k.startsWith('bushwick.visited.') ||
-          k === 'bushwick.hasEntered' ||
-          k === 'bushwick.alleyHintSeen' ||
-          k.startsWith('bushwick.reaction.') ||
-          k.startsWith('bushwick.reactionCount.')
-      );
-      for (const k of keys) localStorage.removeItem(k);
-    } catch {
-      // localStorage unavailable — reload anyway
-    }
-    // V12 P1: forget must also clear the session flag so the next
-    // page load shows the cold-start loading screen again. V10
-    // introduced sessionStorage gating but didn't wire it into
-    // the forget action, so forget no longer triggered a fresh
-    // first-time experience.
-    try {
-      sessionStorage.removeItem('intersection-entered');
-    } catch {
-      // sessionStorage unavailable — reload anyway
-    }
+    // Clears progress (and the session flag, so the reload shows the
+    // first-visit loading screen) but keeps volume, mute and mode.
+    forgetVisitor();
     window.location.reload();
   });
 }
@@ -818,14 +760,9 @@ document.addEventListener('DOMContentLoaded', () => {
   //   - Back/forward between map and about: 'back_forward' → skip
   //   - Forget: clears both flags, reload, cards variant returns
 
-  let sessionEntered = false;
-  try {
-    sessionEntered = sessionStorage.getItem('intersection-entered') === '1';
-  } catch {
-    // Private mode / storage disabled — falls back to showing the
-    // loading screen on every navigation, which is the prior
-    // behavior. Acceptable.
-  }
+  // Storage disabled (private mode) reads as "not entered", so the
+  // loading screen shows on every navigation. Acceptable.
+  const sessionEntered = readSession(SESSION_ENTERED) === '1';
 
   let navType = 'navigate';
   try {
@@ -845,14 +782,12 @@ document.addEventListener('DOMContentLoaded', () => {
     (navType === 'navigate' && !sessionEntered);
 
   if (shouldShowLoadingScreen) {
+    // The opaque loading screen hides the map, so don't decode the
+    // video behind it; Enter's bootAudioAndVideo() starts it.
+    document.querySelector('.map-bg')?.pause();
     const loading = new LoadingScreen(document.body, {
       onEnter: () => {
-        try {
-          sessionStorage.setItem('intersection-entered', '1');
-        } catch {
-          // private mode — no flag persists; next navigation will
-          // re-show the loading screen.
-        }
+        writeSession(SESSION_ENTERED, '1');
         bootAudioAndVideo();
       },
     });
@@ -924,10 +859,9 @@ document.addEventListener('DOMContentLoaded', () => {
     modalRef.open(pinId);
   });
 
-  // Audio engine bootstrap is owned by the loading screen — it calls
-  // engine.start() inside the Enter button click handler. No global
-  // gesture listeners; the loading screen overlay intercepts the
-  // first user gesture by construction.
+  // Audio boots inside a user gesture: the loading screen's Enter
+  // when it shows, otherwise the next click/key/touch anywhere
+  // (armGestureBoot), except links marked data-no-audio-boot.
 });
 
 document.addEventListener('keydown', (event) => {

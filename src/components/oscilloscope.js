@@ -59,6 +59,8 @@ export class Oscilloscope {
     this.attachedNode = null;
     // Eased display levels, one per envelope bucket (see draw()).
     this.levels = new Float32Array(BUCKETS);
+    // Per-frame scratch: raw peak per bucket, reused every frame.
+    this.bucketPeaks = new Float32Array(BUCKETS);
     // Running raw peak for the adaptive normalizer.
     this.runningPeak = PEAK_FLOOR;
     // 'voice' (full drama) or 'ambient' (idle murmur of the master
@@ -136,7 +138,7 @@ export class Oscilloscope {
     // normalizer, and ease the displayed level toward each target
     // (fast rise, slow fall).
     const per = Math.max(1, Math.floor(len / BUCKETS));
-    const bucketPeaks = new Float32Array(BUCKETS);
+    const { bucketPeaks } = this;
     let framePeak = 0;
     for (let b = 0; b < BUCKETS; b += 1) {
       let peak = 0;

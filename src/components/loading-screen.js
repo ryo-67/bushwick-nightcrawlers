@@ -1,8 +1,7 @@
 import { LOADING_NARRATIVE } from '../content/loading-narrative.js';
 import * as engine from '../audio/engine.js';
-import { RAT_PATH_D, RAT_VIEWBOX } from './rat-silhouette.js';
-
-const HAS_ENTERED_KEY = 'bushwick.hasEntered';
+import { buildRatCrew, runRatCrew } from './rat-crew.js';
+import { KEYS, readFlag, writeFlag } from '../storage.js';
 
 const CARD_ADVANCE_MS = 3500;
 const STATUS_CYCLE_MS = 2500;
@@ -10,10 +9,6 @@ const TYPEWRITER_TOTAL_MS = 400;
 const FADE_OUT_MS = 700;
 const RAT_MIN_INTERVAL_MS = 8000;
 const RAT_MAX_INTERVAL_MS = 12000;
-const RAT_DURATION_MS = 6000;
-// Widths (px) of the scuttle crew; heights follow the viewBox
-// aspect. A run picks 1..3 of these, leader first.
-const RAT_WIDTHS = [28, 22, 25];
 // V74: escape hatch for a hung or very slow preload. At this mark the
 // footer becomes enterable (late state) so nobody is stuck forever,
 // but it does NOT claim readiness — only a resolved engine.preload()
@@ -81,19 +76,11 @@ export class LoadingScreen {
   }
 
   checkReturning() {
-    try {
-      return localStorage.getItem(HAS_ENTERED_KEY) === 'true';
-    } catch {
-      return false;
-    }
+    return readFlag(KEYS.hasEntered);
   }
 
   markEntered() {
-    try {
-      localStorage.setItem(HAS_ENTERED_KEY, 'true');
-    } catch {
-      // localStorage unavailable (private mode) — non-fatal
-    }
+    writeFlag(KEYS.hasEntered, true);
   }
 
   // ---- DOM construction ----
@@ -118,7 +105,7 @@ export class LoadingScreen {
     });
     el.appendChild(cards);
 
-    el.appendChild(this.buildRat());
+    el.appendChild(buildRatCrew());
     // Footer builds after the cards so its initial refreshCta sees
     // the real card list and opens in the skip state.
     el.appendChild(this.buildFooter({ ctaLabel: LOADING_NARRATIVE.cta }));
@@ -178,7 +165,7 @@ export class LoadingScreen {
 
     el.appendChild(center);
 
-    el.appendChild(this.buildRat());
+    el.appendChild(buildRatCrew());
     el.appendChild(
       this.buildFooter({ ctaLabel: LOADING_NARRATIVE.returningCta })
     );
@@ -389,27 +376,6 @@ export class LoadingScreen {
     return this._cardZCounter;
   }
 
-  buildRat() {
-    // A small crew of rats (path + license: see RAT_PATH_D). Each
-    // svg is one rat; runRat() picks how many join a pass and
-    // staggers/varies them so the crossing reads as scuttling, not
-    // a marquee. The inner <g class="rat-body"> carries the bob
-    // animation separately from the svg's translate keyframes.
-    const wrap = document.createElement('div');
-    wrap.className = 'loading-rat';
-    wrap.setAttribute('aria-hidden', 'true');
-    wrap.dataset.direction = 'ltr';
-    wrap.innerHTML = RAT_WIDTHS.map(
-      (w) => `
-      <svg viewBox="${RAT_VIEWBOX}" width="${w}" preserveAspectRatio="xMidYMax meet">
-        <g class="rat-body">
-          <path fill="currentColor" fill-rule="evenodd" d="${RAT_PATH_D}"/>
-        </g>
-      </svg>`
-    ).join('');
-    return wrap;
-  }
-
   // ---- card sequence ----
 
   advanceCard() {
@@ -595,39 +561,7 @@ export class LoadingScreen {
     const ratEl = this.el?.querySelector('.loading-rat');
     if (!ratEl) return;
     this.ratDirection = -this.ratDirection;
-    ratEl.dataset.direction = this.ratDirection > 0 ? 'ltr' : 'rtl';
-
-    // Scuttle crew: 1..3 rats per pass. Followers start on a
-    // stagger and each rat gets its own crossing tempo and bob
-    // rhythm, so a group reads as animals following each other
-    // rather than a sprite strip. Inline longhands override the
-    // stylesheet's animation shorthand.
-    const svgs = Array.from(ratEl.querySelectorAll('svg'));
-    const count = 1 + Math.floor(Math.random() * svgs.length);
-    let longest = 0;
-    svgs.forEach((svg, i) => {
-      const included = i < count;
-      svg.style.display = included ? '' : 'none';
-      if (!included) return;
-      const delay = i === 0 ? 0 : Math.round(i * 320 + Math.random() * 600);
-      // Reduced motion: fixed slow crossing (matches the old 9s
-      // stylesheet accommodation, which inline durations would
-      // otherwise override); the bob is disabled in CSS.
-      const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-        ? 9000
-        : Math.round(RAT_DURATION_MS * (0.85 + Math.random() * 0.35));
-      svg.style.animationDelay = `${delay}ms`;
-      svg.style.animationDuration = `${duration}ms`;
-      svg.style.setProperty('--bob-duration', `${200 + Math.round(Math.random() * 120)}ms`);
-      svg.style.setProperty('--bob-delay', `-${Math.round(Math.random() * 200)}ms`);
-      longest = Math.max(longest, delay + duration);
-    });
-
-    // Force a reflow so the next class addition restarts the animation.
-    ratEl.classList.remove('is-running');
-    void ratEl.offsetWidth;
-    ratEl.classList.add('is-running');
-
+    const longest = runRatCrew(ratEl, this.ratDirection);
     this.ratClearTimer = setTimeout(() => {
       ratEl.classList.remove('is-running');
       this.scheduleRat();

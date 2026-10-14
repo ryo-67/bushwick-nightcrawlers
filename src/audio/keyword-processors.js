@@ -21,6 +21,8 @@
  * a property check.
  */
 
+import { lettersOnly } from './normalize.js';
+
 // K-hole: phaser sweep + ping-pong delay trails + LPF dip, all
 // activate together over a 2.5s envelope. The voice keeps talking
 // through the dip; what changes is its spatial presence (wide stereo
@@ -120,6 +122,6 @@ for (const word of TIME_WORDS) {
 
 export function matchProcessor(word) {
   if (typeof word !== 'string') return null;
-  const normalized = word.toLowerCase().replace(/[^a-z]/g, '');
+  const normalized = lettersOnly(word);
   return KEYWORD_PROCESSORS[normalized] || null;
 }
