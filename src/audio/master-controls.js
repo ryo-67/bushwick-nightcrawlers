@@ -10,16 +10,16 @@
  * re-applied to Tone whenever Tone is available. Setting volume or
  * mute updates both the cache, localStorage, and Tone.
  *
- * Slider range: -40 dB (effectively silent) to 0 dB (full mix).
+ * The footer slider runs 0–100 (the browser's default range for a
+ * range input), mapped linearly onto -40 dB (effectively silent) to
+ * 0 dB (full mix). Volume is stored in dB.
  * Defaults: volume 0 dB, mute false.
  */
 
 import { KEYS, readLocal, writeLocal, readFlag, writeFlag } from '../storage.js';
 
-// index.html repeats these as the slider's min/max so its first paint
-// is right; change both together.
-export const VOLUME_MIN_DB = -40;
-export const VOLUME_MAX_DB = 0;
+const VOLUME_MIN_DB = -40;
+const VOLUME_MAX_DB = 0;
 
 const DEFAULT_VOLUME = 0;
 const DEFAULT_MUTED = false;
@@ -29,6 +29,14 @@ let cachedMuted = DEFAULT_MUTED;
 
 function clampDb(db) {
   return Math.max(VOLUME_MIN_DB, Math.min(VOLUME_MAX_DB, db));
+}
+
+function percentToDb(percent) {
+  return VOLUME_MIN_DB + (percent / 100) * (VOLUME_MAX_DB - VOLUME_MIN_DB);
+}
+
+function dbToPercent(db) {
+  return ((db - VOLUME_MIN_DB) / (VOLUME_MAX_DB - VOLUME_MIN_DB)) * 100;
 }
 
 const storedVolume = parseFloat(readLocal(KEYS.volume));
@@ -48,16 +56,16 @@ export function applyToTone() {
   }
 }
 
-export function getVolume() {
-  return cachedVolume;
+export function getVolumePercent() {
+  return dbToPercent(cachedVolume);
 }
 
 export function getMuted() {
   return cachedMuted;
 }
 
-export function setVolume(db) {
-  cachedVolume = clampDb(db);
+export function setVolumePercent(percent) {
+  cachedVolume = clampDb(percentToDb(percent));
   writeLocal(KEYS.volume, cachedVolume);
   applyToTone();
 }

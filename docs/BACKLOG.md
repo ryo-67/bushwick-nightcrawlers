@@ -70,10 +70,6 @@ Last reviewed: 2026-10-14.
 
 Reviews are identified by `reviewerId` (reactions, the active-rat registry). That holds while each rat reviews one venue. If a rat ever reviews a second venue, reviews need their own `id` and the reactions keys need migrating. Parked: no new venues or reviews are planned. Revisit before writing a second review for any rat.
 
-### About page back link underline
-
-`.about-page a` (specificity 0,1,1) sets `text-decoration: underline`, which beats `.about-back`'s `text-decoration: none` (0,1,0), so the back link shows an underline and its own `border-bottom`. Fixing it changes how the link looks; pick one line (probably the border, which matches the header links) and compare on a preview.
-
 ---
 
 ## Performance and cost (only if traffic grows)
@@ -123,7 +119,7 @@ KEYS = `rl:<ip>:<minute>`, `reactions:<target>`; ARGV = rate limit (30), type, d
 - **Pause the map video under a full-height mobile sheet.** The sheet covers the map completely, but the MP4 keeps decoding behind it.
 - **Precompute per-play work.** `RatGenerator.start()` tokenizes, syllabifies and looks up keywords on every play; the result per review is fixed, so it could be computed once and cached by review. Only worth it if start-up latency on slow phones becomes noticeable.
 - **`modulepreload`.** `index.html` could list the module graph with `<link rel="modulepreload">` so the browser fetches it in parallel instead of discovering imports one level at a time.
-- **Volume slider.** `setVolume()` writes localStorage on every `input` event while dragging; persisting on `change` is enough.
+- **Volume slider.** `setVolumePercent()` writes localStorage on every `input` event while dragging; persisting on `change` is enough.
 
 ---
 
@@ -134,7 +130,6 @@ KEYS = `rl:<ip>:<minute>`, `reactions:<target>`; ARGV = rate limit (30), type, d
 - **Voice tables.** Every profile in `rat-profiles.js` sets `keywordTriggers: SHARED_TRIGGERS`, and `RatGenerator` re-lowercases the list per rat; one exported, pre-lowercased `COCAINE_TRIGGERS` set would replace eleven identical fields. `tierSkew` is a free-text string interpreted in two places in `rat-generator.js` (`applyTierSkew` and `SYLLABLE_RATES`); a `TIER_SKEWS` table holding each skew's weights and syllable rate would put them together. Must keep the rng call order identical (run the audio proof below).
 - **JS timers that copy CSS durations.** Three durations are written in both JS and CSS: the pin unlock burst (1300 ms, `main.js` → `[data-just-unlocked]`), the loading-screen fade (`FADE_OUT_MS`, 700 ms) and the alley hint fade (`ALLEY_HINT_FADE_MS`, 800 ms). Listen for `animationend`/`transitionend` instead, with a fallback timeout in case the animation never runs (reduced motion, hidden tab).
 - **Peek tooltip.** The tooltip rebuilds its content on every hover; cache it per venue and only refresh the reaction tally. Its photo could use `buildVenuePhoto` from `modal.js` instead of its own `<img>` code.
-- **Volume range in two places.** The slider's `min`/`max` in `index.html` repeat `VOLUME_MIN_DB`/`VOLUME_MAX_DB` in `master-controls.js`. Setting them from JS changes the first paint (the thumb jumps), so they stay duplicated; a comment beside the constants points at the HTML.
 - **Loading screen shells.** `renderInitial()` and `renderReturning()` in `loading-screen.js` repeat the same shell (dialog attributes, header, rat crew, footer, status cycle). Extract `mountShell({ state, body, ctaLabel })`.
 - **Chrome bar tokens.** Header padding (`calc(var(--chrome-pad-y) + env(safe-area-inset-top)) var(--chrome-pad-x) var(--chrome-pad-y)`) is written for three bars and the footer padding for two; `.page-title` and `.loading-title` share eight declarations kept "in sync" by comment. Add `--chrome-header-pad` / `--chrome-footer-pad` tokens and group the two titles.
 - **Colour literals.** `rgba(197, 191, 174, …)` (the text colour at various alphas) and other `rgba(184, 255, 0, …)` accent alphas are still literals; use `color-mix(in srgb, var(--color-text) N%, transparent)` (already used elsewhere in the file). Give the alley glow's off-palette `rgba(180, 255, 100, …)` its own token rather than silently switching it to the accent. `oscilloscope.js` hard-codes the same RGB values.
@@ -167,6 +162,7 @@ CLAUDE.md asks for proof when a refactor touches rendering or the voice. What wo
 
 ## Done
 
+- 2026-10-14 — About back link draws one line (the header-link border, shared with the map's header links, plus their tap target and focus ring); the text-link rule is scoped to `.about-main`. Volume slider runs 0–100, with the dB range only in `master-controls.js`. Branch `simplify-2`.
 - 2026-10-14 — Reopening a review card while its rat is still speaking picks that rat back up (playing state, highlighting continues, back to the front of the mix); the alley hint's timer is cleared on close, so a hint closed early isn't marked seen. Branch `simplify-2`.
 - 2026-10-14 — Second cleanup pass: `dc0e188` (branch `simplify-2`).
 - 2026-10-14 — Cleanup and venue `kind` shipped: `5ffcf5c`, `3d4fe8e`, `250d058`, `16e1f85`, `1bb6b13`.

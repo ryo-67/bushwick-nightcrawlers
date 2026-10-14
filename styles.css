@@ -1493,14 +1493,19 @@ main {
   font-size: 0.75rem;
 }
 
-.page-controls a {
+/* Header links on both pages: the map's controls and About's back
+   link. */
+.page-controls a,
+.about-back {
   color: var(--color-text);
   text-decoration: none;
   border-bottom: 1px solid currentColor;
 }
 
 .page-controls a:hover,
-.page-controls a:focus-visible {
+.page-controls a:focus-visible,
+.about-back:hover,
+.about-back:focus-visible {
   color: var(--color-accent);
   border-bottom-color: var(--color-accent);
 }
@@ -1510,11 +1515,13 @@ main {
    moving the text or underline. 4px sideways keeps a gap between
    neighbours at the 0.875rem nav gap; 6px vertically stays inside
    the header's padding at both chrome sizes. */
-.page-controls a {
+.page-controls a,
+.about-back {
   position: relative;
 }
 
-.page-controls a::before {
+.page-controls a::before,
+.about-back::before {
   content: '';
   position: absolute;
   inset: -6px -4px;
@@ -1522,7 +1529,8 @@ main {
 
 /* Keyboard focus gets a ring as well as the colour shift, so it
    reads without relying on the green alone. */
-.page-controls a:focus-visible {
+.page-controls a:focus-visible,
+.about-back:focus-visible {
   outline: 1px solid var(--color-accent);
   outline-offset: 3px;
 }
@@ -2433,16 +2441,6 @@ main {
   font-family: var(--font-ui);
   letter-spacing: 0.02em;
   font-size: 0.75rem;
-  color: var(--color-text);
-  text-decoration: none;
-  border-bottom: 1px solid currentColor;
-}
-
-.about-back:hover,
-.about-back:focus-visible {
-  color: var(--color-accent);
-  border-bottom-color: var(--color-accent);
-  outline: none;
 }
 
 
@@ -2527,42 +2525,22 @@ main {
   line-height: 1.5;
 }
 
-.credit-list a {
-  color: var(--color-text);
-  text-decoration: underline;
-  text-decoration-color: var(--color-accent);
-}
-
-/* About page links: body-text colored by default (all-green was
+/* About page text links: body-text colored by default (all-green was
    visually overwhelming). Underline is the affordance; accent
    green only on hover/focus. */
-.about-page a,
-.about-page a:visited {
+.about-main a,
+.about-main a:visited {
   color: var(--color-text);
   text-decoration: underline;
   text-decoration-thickness: 1px;
   text-underline-offset: 2px;
 }
 
-.about-page a:hover,
-.about-page a:focus-visible {
+.about-main a:hover,
+.about-main a:focus-visible {
   color: var(--color-accent);
   text-decoration-thickness: 2px;
   outline: none;
-}
-
-/* Override .credit-list and .about-back which set their own color
-   so the about-page rule above is the single source of truth. */
-.about-page .credit-list a,
-.about-page .credit-list a:visited,
-.about-page .about-back,
-.about-page .about-back:visited {
-  color: var(--color-text);
-}
-
-.about-page .credit-list a:hover,
-.about-page .about-back:hover {
-  color: var(--color-accent);
 }
 
 /* Subheader spacing: ~2rem top margin on h2/h3 inside about

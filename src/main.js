@@ -12,12 +12,10 @@ import { RatGenerator } from './audio/rat-generator.js';
 import { getMode, setMode } from './audio/playback-mode.js';
 import * as beds from './audio/beds.js';
 import {
-  getVolume,
+  getVolumePercent,
   getMuted,
-  setVolume,
+  setVolumePercent,
   setMuted,
-  VOLUME_MIN_DB,
-  VOLUME_MAX_DB,
 } from './audio/master-controls.js';
 import { install as installViewportReadout } from './debug/viewport-readout.js';
 import { forgetVisitor, readSession, writeSession, SESSION_ENTERED } from './storage.js';
@@ -616,16 +614,15 @@ function setupFooterAudioControls() {
   const muteBtn = document.querySelector('.footer-mute');
   if (!slider || !muteBtn) return;
 
+  // The slider runs 0–100, so its value is the fill percentage.
   function updateSliderFill() {
-    const v = parseFloat(slider.value);
-    const pct = ((v - VOLUME_MIN_DB) / (VOLUME_MAX_DB - VOLUME_MIN_DB)) * 100;
-    slider.style.setProperty('--fill', `${pct}%`);
+    slider.style.setProperty('--fill', `${slider.value}%`);
   }
 
-  slider.value = String(getVolume());
+  slider.value = String(getVolumePercent());
   updateSliderFill();
   slider.addEventListener('input', () => {
-    setVolume(parseFloat(slider.value));
+    setVolumePercent(slider.valueAsNumber);
     updateSliderFill();
   });
 
