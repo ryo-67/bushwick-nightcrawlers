@@ -138,6 +138,16 @@ main {
      visually escape past the wrapper edge during momentum scroll. */
   z-index: 1;
   isolation: isolate;
+  /* Transparent until main.js has placed the pins and centred the
+     view (it adds .is-placed), so a visit that skips the loading
+     screen fades the map in already in place instead of painting
+     the pins piled in its corner first. */
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+.map-wrapper.is-placed {
+  opacity: 1;
 }
 
 .map-wrapper::-webkit-scrollbar {

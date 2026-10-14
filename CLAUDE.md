@@ -81,7 +81,7 @@ For the asset checklist and citations: `docs/ASSETS.md`. Some of its planning no
 │   │   ├── reviews.js, rats.js, alley-oneliners.js, loading-narrative.js
 │   └── debug/
 │       └── viewport-readout.js # ?debug=viewport overlay
-├── scripts/                # Asset pipeline (ffmpeg/Pillow/sox) + dev-server.py
+├── scripts/                # Asset pipeline (ffmpeg/Pillow/sox), generators, dev-server.py
 ├── assets/
 │   ├── map.mp4             # Animated map background (silent, looping)
 │   ├── pins/               # Animated WebP pins (alpha); alley has a grey variant
@@ -112,6 +112,8 @@ Per-venue ambient beds (files, gains, and whether a bed persists after close) li
 ## Map and pin layering
 
 The map is a silent looping MP4. Pins are separate animated WebP images layered on top and positioned from `mapCoordinates` at startup. MP4 has no transparency, so pin overlays must use a format that does (animated WebP). Don't overlay video on video.
+
+The map wrapper stays transparent until `main.js` has positioned the pins and centred the view, then fades in (`.is-placed`). Without it, a visit that skips the loading screen paints the pins piled in the map's corner for a moment.
 
 `<video autoplay loop muted playsinline>`: `muted` is required for autoplay; `playsinline` stops iOS Safari from going fullscreen. While the loading screen is up the video is paused; Enter starts it.
 
@@ -182,6 +184,7 @@ Write maintainable, human-readable, clean code, and leave the code you touch cle
 - Don't dispose Tone audio nodes on modal close — it breaks the cumulative mix.
 - Don't print a portfolio record number anywhere (link text, labels, aria-labels, titles). shoro.space numbers records by date and renumbers them; link to the record's URL (its slug) only.
 - Don't edit `manifest.js` or `usv-features.js` by hand; regenerate them with their scripts.
+- Don't edit the modulepreload block in `index.html` by hand. After adding or removing an import anywhere under `src/`, run `node scripts/generate-modulepreload.js`.
 
 ## Deploying
 

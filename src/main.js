@@ -799,6 +799,12 @@ document.addEventListener('DOMContentLoaded', () => {
   setupPinPositions();
   updateLockedPins();
   centerMapOnVenueCluster();
+  // Reveal the map (styles.css fades it in). Scheduled after
+  // centerMapOnVenueCluster's own frame callback, so the first
+  // visible frame is already scrolled to the intersection.
+  requestAnimationFrame(() => {
+    document.querySelector('.map-wrapper')?.classList.add('is-placed');
+  });
   // Debounced: mid-relayout resize ticks can transiently report the
   // wrapper as non-overflowing, which would register as an axis flip
   // and yank a user-chosen pan position on the next tick. Waiting
