@@ -16,6 +16,8 @@
 
 import { KEYS, readLocal, writeLocal, readFlag, writeFlag } from '../storage.js';
 
+// index.html repeats these as the slider's min/max so its first paint
+// is right; change both together.
 export const VOLUME_MIN_DB = -40;
 export const VOLUME_MAX_DB = 0;
 
@@ -25,22 +27,24 @@ const DEFAULT_MUTED = false;
 let cachedVolume = DEFAULT_VOLUME;
 let cachedMuted = DEFAULT_MUTED;
 
-const storedVolume = parseFloat(readLocal(KEYS.volume));
-if (Number.isFinite(storedVolume)) {
-  cachedVolume = Math.max(VOLUME_MIN_DB, Math.min(VOLUME_MAX_DB, storedVolume));
+function clampDb(db) {
+  return Math.max(VOLUME_MIN_DB, Math.min(VOLUME_MAX_DB, db));
 }
+
+const storedVolume = parseFloat(readLocal(KEYS.volume));
+if (Number.isFinite(storedVolume)) cachedVolume = clampDb(storedVolume);
 cachedMuted = readFlag(KEYS.muted);
 
-function applyToTone() {
-  const Tone = typeof window !== 'undefined' ? window.Tone : null;
-  if (!Tone || !Tone.getDestination) return;
-  const dest = Tone.getDestination();
+// Called on every change and once more when the engine starts.
+export function applyToTone() {
+  const dest = window.Tone?.getDestination();
+  if (!dest) return;
   try {
     dest.volume.value = cachedVolume;
     dest.mute = cachedMuted;
   } catch {
-    // Destination may not be ready yet; engine.start() will call
-    // applyOnEngineStart() once Tone is fully initialized.
+    // Destination may not be ready yet; engine.start() applies the
+    // saved state again once Tone is fully initialized.
   }
 }
 
@@ -53,9 +57,8 @@ export function getMuted() {
 }
 
 export function setVolume(db) {
-  const clamped = Math.max(VOLUME_MIN_DB, Math.min(VOLUME_MAX_DB, db));
-  cachedVolume = clamped;
-  writeLocal(KEYS.volume, clamped);
+  cachedVolume = clampDb(db);
+  writeLocal(KEYS.volume, cachedVolume);
   applyToTone();
 }
 
@@ -65,6 +68,3 @@ export function setMuted(muted) {
   applyToTone();
 }
 
-export function applyOnEngineStart() {
-  applyToTone();
-}

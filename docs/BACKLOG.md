@@ -54,6 +54,32 @@ Last reviewed: 2026-10-14.
 
 ---
 
+## Needs Shoro's decision
+
+### Render pins from `venues.js`
+
+**Problem.** `index.html` hard-codes the ten pin buttons (image, label text, aria-label) while `venues.js` holds everything else about each venue; `main.js` then positions them from `mapCoordinates`. Adding or renaming a venue means editing both.
+
+**Proposed change.** Build the pins in `main.js` from `venues`. Needs a `pinLabel` field (labels are shorter than `name` for some venues, and the alley has none), which is a content-file change.
+
+**Risk.** Low to medium. The first paint would wait for the module instead of the HTML, so pins appear a frame later; compare the loading-screen-to-map transition.
+
+### Reopening a card while its rat is still talking
+
+**State today.** Closing a review card leaves the rat speaking (cumulative mix). Reopening the same card starts a fresh play button; word highlighting only resumes because the modal checks the reviewer id.
+
+**Option.** Let the reopened card adopt the running rat: show it as playing, resume highlighting from the current word, and let the stop button stop that rat. This changes what visitors see, so it's a design call.
+
+### Explicit review ids
+
+Reviews are identified by `reviewerId` (reactions, the active-rat registry). That holds while each rat reviews one venue. If a rat ever reviews a second venue, reviews need their own `id` and the reactions keys need migrating. Decide before writing a second review for any rat.
+
+### About page back link underline
+
+`.about-page a` (specificity 0,1,1) sets `text-decoration: underline`, which beats `.about-back`'s `text-decoration: none` (0,1,0), so the back link shows an underline and its own `border-bottom`. Fixing it changes how the link looks; pick one line (probably the border, which matches the header links) and compare on a preview.
+
+---
+
 ## Performance and cost (only if traffic grows)
 
 Context: the reactions store (`upstash-kv-aero-basket`) is a Vercel Marketplace install on Upstash's **Free plan: 500,000 commands a month**, no payment method attached. Running out doesn't bill; the API stops answering until the month resets and the chips fall back to local counts. Check usage in the Vercel dashboard (Storage tab) before doing either item below.
@@ -98,6 +124,9 @@ KEYS = `rl:<ip>:<minute>`, `reactions:<target>`; ARGV = rate limit (30), type, d
 - **Alley pulse under an open modal.** `.pin[data-lock-state='unlocked']` animates `filter: drop-shadow` forever (`alleyPulse`), which re-rasterizes the animated WebP every frame, including behind an open modal. Cheapest fix: `body:has(.modal[data-state='open']) .pin { animation-play-state: paused; }`. Better: move the glow to a `::before` with a static shadow and animate only opacity/transform.
 - **Oscilloscope repaints silence.** While a review modal is open, `src/components/oscilloscope.js` redraws at 60 fps even when the signal is flat or the canvas is scrolled out of view. Skip drawing when all levels are below ~1e-3 and the last frame was already flat; pause via IntersectionObserver when off-screen.
 - **Mobile pin labels.** `.pin-label` uses `backdrop-filter: blur(2px)` over the playing video: nine backdrop blurs per frame for an effect barely visible behind its 0.85-opacity background.
+- **Pause the map video under a full-height mobile sheet.** The sheet covers the map completely, but the MP4 keeps decoding behind it.
+- **Precompute per-play work.** `RatGenerator.start()` tokenizes, syllabifies and looks up keywords on every play; the result per review is fixed, so it could be computed once and cached by review. Only worth it if start-up latency on slow phones becomes noticeable.
+- **`modulepreload`.** `index.html` could list the module graph with `<link rel="modulepreload">` so the browser fetches it in parallel instead of discovering imports one level at a time.
 - **Volume slider.** `setVolume()` writes localStorage on every `input` event while dragging; persisting on `change` is enough.
 
 ---
@@ -105,6 +134,12 @@ KEYS = `rl:<ip>:<minute>`, `reactions:<target>`; ARGV = rate limit (30), type, d
 ## Code tidy (low risk, no behaviour change)
 
 - **Venue open effects re-run on page switch.** `Modal.switchReview()` re-fires `onOpen` so `main.js` can rebind the play button, which re-runs venue effects (bed, `trainOnOpen`, `markVisited`). Harmless today (one review at the JMZ platform, the others are idempotent), but a second JMZ review would fire a train on every page flip. Split the hooks: `onOpen(venueId)` for venue effects, once; `onReviewShown(review)` for the rat; let the modal own its play button and emit `onPlayToggle`.
+- **Keyword processors as a registry.** `keyword-processors.js` exposes `matchProcessor`, and `RatGenerator` branches on the processor name (kHole, timeGlitch). A table of `{ name: apply(voice, t) }` would let a new processor be added in one file.
+- **Voice tables.** Every profile in `rat-profiles.js` sets `keywordTriggers: SHARED_TRIGGERS`, and `RatGenerator` re-lowercases the list per rat; one exported, pre-lowercased `COCAINE_TRIGGERS` set would replace eleven identical fields. `tierSkew` is a free-text string interpreted in two places in `rat-generator.js` (`applyTierSkew` and `SYLLABLE_RATES`); a `TIER_SKEWS` table holding each skew's weights and syllable rate would put them together. Must keep the rng call order identical (run the audio proof below).
+- **JS timers that copy CSS durations.** Three durations are written in both JS and CSS: the pin unlock burst (1300 ms, `main.js` → `[data-just-unlocked]`), the loading-screen fade (`FADE_OUT_MS`, 700 ms) and the alley hint fade (`ALLEY_HINT_FADE_MS`, 800 ms). Listen for `animationend`/`transitionend` instead, with a fallback timeout in case the animation never runs (reduced motion, hidden tab).
+- **Peek tooltip.** The tooltip rebuilds its content on every hover; cache it per venue and only refresh the reaction tally. Its photo could use `buildVenuePhoto` from `modal.js` instead of its own `<img>` code.
+- **Alley hint timer.** In `modal.js`, the hint's auto-dismiss `setTimeout` isn't cleared when the alley card closes, so it still fires later (marking the hint seen and touching a detached node). Keep the id and clear it in the card's teardown.
+- **Volume range in two places.** The slider's `min`/`max` in `index.html` repeat `VOLUME_MIN_DB`/`VOLUME_MAX_DB` in `master-controls.js`. Setting them from JS changes the first paint (the thumb jumps), so they stay duplicated; a comment beside the constants points at the HTML.
 - **Loading screen shells.** `renderInitial()` and `renderReturning()` in `loading-screen.js` repeat the same shell (dialog attributes, header, rat crew, footer, status cycle). Extract `mountShell({ state, body, ctaLabel })`.
 - **Chrome bar tokens.** Header padding (`calc(var(--chrome-pad-y) + env(safe-area-inset-top)) var(--chrome-pad-x) var(--chrome-pad-y)`) is written for three bars and the footer padding for two; `.page-title` and `.loading-title` share eight declarations kept "in sync" by comment. Add `--chrome-header-pad` / `--chrome-footer-pad` tokens and group the two titles.
 - **Colour literals.** `rgba(197, 191, 174, …)` (the text colour at various alphas) and other `rgba(184, 255, 0, …)` accent alphas are still literals; use `color-mix(in srgb, var(--color-text) N%, transparent)` (already used elsewhere in the file). Give the alley glow's off-palette `rgba(180, 255, 100, …)` its own token rather than silently switching it to the accent. `oscilloscope.js` hard-codes the same RGB values.
@@ -122,6 +157,16 @@ KEYS = `rl:<ip>:<minute>`, `reactions:<target>`; ARGV = rate limit (30), type, d
 - **Search.** Request indexing for `https://bushwick.shoro.space/` and `/about.html` in Google Search Console (the first attempt hit the daily quota). Update the portfolio record page's links to point at `bushwick.shoro.space` instead of the old `vercel.app` address.
 - **About copy (Shoro's call).** The "on playback" section's first paragraph says rat speech is "never twice the same", which only describes the default mode; the paragraph after it explains 'in their tongue'.
 - **Cross-browser check.** Safari desktop and a real iPhone haven't been tested since the October 2026 cleanup (CLAUDE.md "Verification").
+
+---
+
+## How to prove a refactor doesn't change output
+
+CLAUDE.md asks for proof when a refactor touches rendering or the voice. What worked in October 2026:
+
+- **Rendering.** Check out `main` in a git worktree, serve it with `scripts/dev-server.py` on a second port, and load both builds in same-origin iframes. Seed `Math.random`, finish CSS transitions (`getAnimations().forEach(a => a.finish())`), wait for the map and audio to settle, then compare `getComputedStyle` and `getBoundingClientRect` for every element in each state (map, peek tooltips, each card kind, About) at 1024px and 375px. Expect zero differences.
+- **Voice.** In 'in their tongue' mode, patch `Tone.ToneBufferSource.prototype.start` and `Tone.Player.prototype.start` to log each event (buffer length, playback rate, time relative to the first event, offset, duration, volume), start a `RatGenerator` for every review, and hash the log. The hashes must match between `main` and the branch.
+- Remove the worktree, the second server and any symlink afterwards.
 
 ---
 

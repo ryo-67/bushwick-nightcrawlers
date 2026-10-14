@@ -26,14 +26,9 @@
 import { reviews } from '../src/content/reviews.js';
 import { venues } from '../src/content/venues.js';
 
-const VALID_TYPES = new Set([
-  'helpful',
-  'thanks',
-  'love',
-  'ohno',
-  'report',
-  'respects',
-]);
+// Counted and returned. 'report' is counted too but never returned.
+const PUBLIC_TYPES = ['helpful', 'thanks', 'love', 'ohno', 'respects'];
+const VALID_TYPES = new Set([...PUBLIC_TYPES, 'report']);
 // Reaction targets are reviewer ids, plus the ids of memorial venues
 // (closed venues whose tombstone takes reactions: Rash's pay-respects
 // counter).
@@ -66,7 +61,7 @@ async function redisPipeline(commands) {
 
 function countsFromHgetall(flat) {
   // Upstash returns HGETALL as a flat [field, value, ...] array.
-  const counts = { helpful: 0, thanks: 0, love: 0, ohno: 0, respects: 0 };
+  const counts = Object.fromEntries(PUBLIC_TYPES.map((type) => [type, 0]));
   if (Array.isArray(flat)) {
     for (let i = 0; i + 1 < flat.length; i += 2) {
       const key = flat[i];

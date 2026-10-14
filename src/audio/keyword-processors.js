@@ -21,16 +21,15 @@
  * a property check.
  */
 
-import { lettersOnly } from './normalize.js';
+import { lookupByLetters } from './normalize.js';
 
 // K-hole: phaser sweep + ping-pong delay trails + LPF dip, all
 // activate together over a 2.5s envelope. The voice keeps talking
 // through the dip; what changes is its spatial presence (wide stereo
 // trails), its timbre (swirling phaser), and its high-frequency
 // content (closed filter). Dissolution, not muting.
-export function kHole(rat, time) {
+function kHole(rat, t) {
   if (!rat.kHolePhaser) return;
-  const t = typeof time === 'number' ? time : window.Tone.now();
 
   const phW = rat.kHolePhaser.wet;
   const ppW = rat.kHolePingPong.wet;
@@ -69,9 +68,8 @@ export function kHole(rat, time) {
 // time instability inside the word, not a smooth echo. Arrhythmic
 // step times are intentional — the abrupt setValueAtTime transitions
 // produce stutter; a smooth ramp would just be tremolo.
-export function timeGlitch(rat, time) {
+function timeGlitch(rat, t) {
   if (!rat.glitchDelay) return;
-  const t = typeof time === 'number' ? time : window.Tone.now();
 
   const w = rat.glitchDelay.wet;
   const v = rat.glitchVibrato.depth;
@@ -112,7 +110,7 @@ const TIME_WORDS = [
   'timelines',
 ];
 
-export const KEYWORD_PROCESSORS = {
+const KEYWORD_PROCESSORS = {
   ketamine: kHole,
 };
 for (const word of TIME_WORDS) {
@@ -120,7 +118,5 @@ for (const word of TIME_WORDS) {
 }
 
 export function matchProcessor(word) {
-  if (typeof word !== 'string') return null;
-  const normalized = lettersOnly(word);
-  return KEYWORD_PROCESSORS[normalized] || null;
+  return lookupByLetters(KEYWORD_PROCESSORS, word);
 }

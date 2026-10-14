@@ -25,47 +25,49 @@ import { preloadBeds, startBedsPlayback } from './beds.js';
 import { loadBufferWithRetry } from './load-buffer.js';
 import { rampParam } from './ramp.js';
 import { KEYS, readFlag, writeFlag } from '../storage.js';
-import { reviews } from '../content/reviews.js';
 import { rats } from '../content/rats.js';
 import { venues } from '../content/venues.js';
-import { applyOnEngineStart as applyMasterControls } from './master-controls.js';
+import { applyToTone as applyMasterControls } from './master-controls.js';
+import { KEYWORD_EFFECTS } from './keyword-effects.js';
 
 // Master foreground level for the most-recent rat. Tune by ear.
-export const RAT_FOREGROUND_GAIN = 0.25;
+const RAT_FOREGROUND_GAIN = 0.25;
 
 // Spatial recency ladder. Three parallel curves, applied per rank:
 //   - gain: how loud each rat is at its rank
 //   - lowpass cutoff (Hz): air-absorption mimic; older rats lose treble
 //   - reverb send (0..1): older rats are heard mostly through reflections
-// Index 0 = foreground, index N = N steps back. RAT_CAP must equal length.
-export const RAT_GAIN_LADDER = [1.0, 0.3, 0.12, 0.05, 0.02];
-export const RAT_LPF_LADDER = [20000, 5000, 2500, 1200, 600];
-export const RAT_REVERB_SEND_LADDER = [0.0, 0.15, 0.3, 0.45, 0.55];
+// Index 0 = foreground, index N = N steps back. One entry per voice
+// slot, so the ladders' length is the voice cap.
+const RAT_GAIN_LADDER = [1.0, 0.3, 0.12, 0.05, 0.02];
+const RAT_LPF_LADDER = [20000, 5000, 2500, 1200, 600];
+const RAT_REVERB_SEND_LADDER = [0.0, 0.15, 0.3, 0.45, 0.55];
 
-// Maximum simultaneous rats. The 6th opening evicts the oldest.
-export const RAT_CAP = 5;
+// Maximum simultaneous rats (5). The next one evicts the oldest.
+const RAT_CAP = RAT_GAIN_LADDER.length;
 
 // Fadeout used for natural completion and cap eviction. Same value
 // for both — natural completion's fade is silent (audio is over),
 // but the timing keeps cleanup symmetric.
-export const RAT_FADE_OUT_SEC = 1.0;
+const RAT_FADE_OUT_SEC = 1.0;
 
 // Ramp time when recency rank changes (a new rat opens, a rat ends).
 // Smooth enough to avoid clicks, fast enough to feel responsive.
-export const RAT_LADDER_RAMP_SEC = 0.4;
+const RAT_LADDER_RAMP_SEC = 0.4;
 
-// Review-bearing venue ids, derived from reviews data so this list
-// stays in sync with the content layer.
-const REVIEW_VENUE_IDS = Array.from(
-  new Set(Object.values(reviews).map((r) => r.venueId))
-);
+// Review venues count toward unlocking gated pins (the alley).
+const REVIEW_VENUE_IDS = Object.values(venues)
+  .filter((v) => v.kind === 'review')
+  .map((v) => v.id);
 
 const BANK_DIRS = {
   usvs: 'assets/sounds/usvs',
   'usvs-cocaine': 'assets/sounds/usvs-cocaine',
 };
 
-const BANK_FILES = {
+// The files in each USV bank (manifest.js); RatGenerator reads the
+// same table to rebuild its full syllable pools.
+export const BANK_FILES = {
   usvs: USVS,
   'usvs-cocaine': USVS_COCAINE,
 };
@@ -75,7 +77,13 @@ const banks = {
   'usvs-cocaine': [],
 };
 
-const EFFECT_NAMES = ['chime', 'cough', 'fizz', 'vibrate', 'camera', 'linkedin'];
+// Every sample the keyword table can fire, so a new entry there loads
+// without another list to update.
+const EFFECT_NAMES = [
+  ...new Set(
+    Object.values(KEYWORD_EFFECTS).flatMap((spec) => [spec.effect, ...(spec.layered ?? [])])
+  ),
+];
 const effectBuffers = new Map();
 
 let ready = false;
@@ -243,7 +251,6 @@ export function start() {
       try {
         fn();
       } catch (e) {
-        // eslint-disable-next-line no-console
         console.error(e);
       }
     }
@@ -293,48 +300,37 @@ export function getEffectBuffer(name) {
 
 function applyRankToRat(ratGen, rank) {
   if (!ratGen.perRatGain || !ratGen.perRatLPF || !ratGen.perRatReverbSend) return;
-  const gainTarget = RAT_GAIN_LADDER[rank] ?? 0;
-  const lpfTarget = RAT_LPF_LADDER[rank] ?? RAT_LPF_LADDER[RAT_LPF_LADDER.length - 1];
-  const sendTarget = RAT_REVERB_SEND_LADDER[rank] ?? RAT_REVERB_SEND_LADDER[RAT_REVERB_SEND_LADDER.length - 1];
-  rampParam(ratGen.perRatGain.gain, gainTarget, RAT_LADDER_RAMP_SEC);
-  rampParam(ratGen.perRatLPF.frequency, lpfTarget, RAT_LADDER_RAMP_SEC);
-  rampParam(ratGen.perRatReverbSend.gain, sendTarget, RAT_LADDER_RAMP_SEC);
+  // rank < RAT_CAP: the registry never holds more rats than ladder rungs.
+  rampParam(ratGen.perRatGain.gain, RAT_GAIN_LADDER[rank], RAT_LADDER_RAMP_SEC);
+  rampParam(ratGen.perRatLPF.frequency, RAT_LPF_LADDER[rank], RAT_LADDER_RAMP_SEC);
+  rampParam(ratGen.perRatReverbSend.gain, RAT_REVERB_SEND_LADDER[rank], RAT_LADDER_RAMP_SEC);
 }
 
 function recomputeLadder() {
-  const entries = Array.from(ratRegistry.entries());
-  const total = entries.length;
-  for (let idx = 0; idx < total; idx += 1) {
-    const [, ratGen] = entries[idx];
-    const rank = total - 1 - idx; // 0 = most recent
-    applyRankToRat(ratGen, rank);
+  for (const [reviewerId, rank] of Object.entries(getActiveRatRanks())) {
+    applyRankToRat(ratRegistry.get(reviewerId), rank);
   }
 }
 
 function notifyActiveRatsListeners() {
-  const snapshot = getActiveRatRanks();
+  const ranks = getActiveRatRanks();
   for (const fn of activeRatsListeners) {
     try {
-      fn(snapshot);
+      fn(ranks);
     } catch (e) {
-      // eslint-disable-next-line no-console
       console.error(e);
     }
   }
 }
 
+// { reviewerId: rank } for every speaking rat; 0 = most recent.
 export function getActiveRatRanks() {
-  const entries = Array.from(ratRegistry.entries());
-  const total = entries.length;
-  return entries.map(([reviewerId], idx) => ({
-    reviewerId,
-    rank: total - 1 - idx,
-  }));
+  const ids = Array.from(ratRegistry.keys());
+  return Object.fromEntries(ids.map((id, idx) => [id, ids.length - 1 - idx]));
 }
 
 export function onActiveRatsChange(fn) {
   activeRatsListeners.add(fn);
-  return () => activeRatsListeners.delete(fn);
 }
 
 export function registerRat(reviewerId, ratGen) {

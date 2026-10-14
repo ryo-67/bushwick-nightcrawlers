@@ -3,6 +3,8 @@ import { RAT_PATH_D, RAT_VIEWBOX } from './rat-silhouette.js';
 import { buildRedactedPhoto } from './redacted-photo.js';
 import { KEYS, readFlag, writeFlag, readLocal, writeLocal } from '../storage.js';
 import { getReactionCounts, postReaction } from './reactions-client.js';
+import { prefersReducedMotion } from '../device.js';
+import { splitTokens, isSpace } from '../audio/normalize.js';
 
 // Alley modal framing line — describes the alley's social function,
 // not its location. Edit this single line to change the framing copy.
@@ -78,6 +80,22 @@ const PLAY_ICON =
 const PAUSE_ICON =
   '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">' +
   '<path d="M7.4 5.6h3.6v12.8H7.4z M13.2 5.6h3.6v12.8h-3.6z" fill="currentColor"/></svg>';
+
+// The play button's three states. The card builds it 'loading';
+// main.js moves it to 'idle' once the audio engine is up.
+const PLAY_STATES = {
+  loading: { disabled: true, icon: PLAY_ICON, label: 'Play review (audio loading)', title: 'audio loading…' },
+  idle: { disabled: false, icon: PLAY_ICON, label: 'Play review', title: '' },
+  playing: { disabled: false, icon: PAUSE_ICON, label: 'Pause review', title: '' },
+};
+
+function renderPlayButton(btn, state) {
+  const { disabled, icon, label, title } = PLAY_STATES[state];
+  btn.disabled = disabled;
+  btn.innerHTML = icon;
+  btn.setAttribute('aria-label', label);
+  btn.title = title;
+}
 
 // Compact tallies: 999 → then 1k, 1.1k, 12k, 1m, 1.1b… One
 // decimal below 10 units, floor above. Optimism about the rat
@@ -230,6 +248,17 @@ function buildReactionChip(row, targetId, { type, label, labelActive, icon }) {
   return btn;
 }
 
+// A row of reaction chips for one target: starts on local counts and
+// adopts the shared tallies when the API answers.
+function buildReactionBar(targetId, specs, className) {
+  const element = document.createElement('div');
+  element.className = className;
+  const row = createReactionRow(targetId);
+  for (const spec of specs) element.appendChild(buildReactionChip(row, targetId, spec));
+  getReactionCounts(targetId).then(row.adopt).catch(() => {});
+  return { element, row };
+}
+
 // Returns all reviews for a venue in reviews.js insertion order
 // (primary first by convention — reviews.js was authored that way).
 export function findReviewsForVenue(venueId, reviews) {
@@ -253,20 +282,17 @@ function buildVenuePhoto(venue) {
   return wrap;
 }
 
-// Splits the review the same way RatGenerator's tokenize() does
-// (whitespace-separated words, in order), so word i here is the word
-// the voice schedules as i. Returns the word spans in order.
+// Splits with splitTokens, as RatGenerator's tokenize() does, so span i
+// is the word the voice schedules as i. Returns the spans in order.
 function appendReviewBodyWithWordSpans(parent, text) {
   const words = [];
-  for (const token of text.split(/(\s+)/)) {
-    if (token === '') continue;
-    if (/^\s+$/.test(token)) {
+  for (const token of splitTokens(text)) {
+    if (isSpace(token)) {
       parent.appendChild(document.createTextNode(token));
       continue;
     }
     const span = document.createElement('span');
     span.className = 'word';
-    span.dataset.index = String(words.length);
     span.textContent = token;
     parent.appendChild(span);
     words.push(span);
@@ -305,12 +331,8 @@ export class Modal {
         this.close();
         return;
       }
-      // Arrow keys page through reviews when the modal is multi-reviewer.
-      // Defensive: don't steal arrows from input/textarea (none currently
-      // exist in the modal but future additions shouldn't break here).
+      // Arrow keys page through reviews when the venue has several.
       if (this.currentVenueReviews && this.currentVenueReviews.length >= 2) {
-        const activeTag = (document.activeElement?.tagName || '').toLowerCase();
-        if (activeTag === 'input' || activeTag === 'textarea') return;
         if (event.key === 'ArrowRight') {
           event.preventDefault();
           this.switchReviewBy(1);
@@ -343,16 +365,12 @@ export class Modal {
 
     this.root.replaceChildren();
 
-    // The card follows the venue's kind (see venues.js). A review
-    // venue whose review is missing falls back to the tombstone.
-    let card;
-    if (venue.kind === 'gathering') {
-      card = this.buildAlleyCard(venue);
-    } else if (venue.kind === 'review' && reviewer && review) {
-      card = this.buildReviewCard(venue, reviewer, review, allReviews);
-    } else {
-      card = this.buildTombstoneCard(venue);
-    }
+    // The card follows the venue's kind (see venues.js).
+    const card = {
+      review: () => this.buildReviewCard(venue, reviewer, review, allReviews),
+      gathering: () => this.buildAlleyCard(venue),
+      memorial: () => this.buildTombstoneCard(venue),
+    }[venue.kind]();
     this.root.appendChild(card);
 
     this.root.dataset.state = 'open';
@@ -381,7 +399,7 @@ export class Modal {
       child.removeAttribute('inert');
     });
 
-    this.oscilloscope = null;
+    this.disposeOscilloscope();
     this.wordEls = null;
     this.activeWordEl = null;
     this.currentVenueId = null;
@@ -395,25 +413,16 @@ export class Modal {
     }
   }
 
+  // The oscilloscope is only a Tone.Waveform analyser on the mix, so
+  // disposing it on close is fine (unlike the rats' audio nodes).
+  disposeOscilloscope() {
+    this.oscilloscope?.dispose();
+    this.oscilloscope = null;
+  }
+
   setPlayState(state) {
     const btn = this.root.querySelector('.play-button');
-    if (!btn) return;
-    if (state === 'loading') {
-      btn.disabled = true;
-      btn.innerHTML = PLAY_ICON;
-      btn.setAttribute('aria-label', 'Play review (audio loading)');
-      btn.title = 'audio loading…';
-    } else if (state === 'idle') {
-      btn.disabled = false;
-      btn.innerHTML = PLAY_ICON;
-      btn.setAttribute('aria-label', 'Play review');
-      btn.title = '';
-    } else if (state === 'playing') {
-      btn.disabled = false;
-      btn.innerHTML = PAUSE_ICON;
-      btn.setAttribute('aria-label', 'Pause review');
-      btn.title = '';
-    }
+    if (btn) renderPlayButton(btn, state);
   }
 
   // Gated by reviewerId so cumulative-voicing background rats can't
@@ -487,16 +496,7 @@ export class Modal {
   buildCardShell(ariaLabel) {
     const card = document.createElement('div');
     card.className = 'modal-card';
-
-    const close = document.createElement('button');
-    close.type = 'button';
-    close.className = 'modal-close';
-    close.setAttribute('aria-label', 'Close');
-    close.textContent = '×';
-    close.addEventListener('click', () => this.close());
-    card.appendChild(close);
-
-    if (ariaLabel) this.root.setAttribute('aria-label', ariaLabel);
+    this.root.setAttribute('aria-label', ariaLabel);
     return card;
   }
 
@@ -506,7 +506,7 @@ export class Modal {
   // structure stays consistent across the review / alley /
   // tombstone variants. Caller is responsible for appending the
   // returned node to the card.
-  buildModalHeadline(card, titleText) {
+  buildModalHeadline(titleText) {
     const headline = document.createElement('h1');
     headline.className = 'modal-venue-headline';
 
@@ -522,8 +522,13 @@ export class Modal {
     text.textContent = titleText;
     row.appendChild(text);
 
-    const close = card.querySelector('.modal-close');
-    if (close) row.appendChild(close);
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'modal-close';
+    close.setAttribute('aria-label', 'Close');
+    close.textContent = '×';
+    close.addEventListener('click', () => this.close());
+    row.appendChild(close);
 
     headline.appendChild(row);
     return headline;
@@ -560,10 +565,10 @@ export class Modal {
     return wrap;
   }
 
-  buildReviewCard(venue, reviewer, review, allReviews = [review]) {
+  buildReviewCard(venue, reviewer, review, allReviews) {
     const card = this.buildCardShell(`Review of ${venue.displayName} by ${reviewer.displayName}`);
 
-    const headline = this.buildModalHeadline(card, venue.displayName);
+    const headline = this.buildModalHeadline(venue.displayName);
     card.appendChild(headline);
 
     // No venue aggregate — with at most two reviews per venue
@@ -585,16 +590,8 @@ export class Modal {
   }
 
   populateReviewContent(container, venue, reviewer, review) {
-    // Dispose any existing oscilloscope before its DOM is replaced —
-    // otherwise the Tone.Waveform analyser leaks across tab switches.
-    if (this.oscilloscope) {
-      try {
-        this.oscilloscope.dispose();
-      } catch {
-        // already disposed
-      }
-      this.oscilloscope = null;
-    }
+    // The old review's analyser goes before its DOM is replaced.
+    this.disposeOscilloscope();
     container.replaceChildren();
 
     const reviewerBlock = document.createElement('header');
@@ -660,10 +657,7 @@ export class Modal {
     const play = document.createElement('button');
     play.type = 'button';
     play.className = 'play-button';
-    play.disabled = true;
-    play.title = 'audio loading…';
-    play.setAttribute('aria-label', 'Play review (audio loading)');
-    play.innerHTML = PLAY_ICON;
+    renderPlayButton(play, 'loading');
     oscPlayer.appendChild(play);
 
     info.appendChild(oscPlayer);
@@ -692,17 +686,11 @@ export class Modal {
 
   buildReactions(review) {
     const reviewId = review.reviewerId;
-    const reactions = document.createElement('div');
-    reactions.className = 'review-reactions';
+    const { element: reactions, row } = buildReactionBar(reviewId, REACTIONS, 'review-reactions');
 
-    const row = createReactionRow(reviewId);
-    for (const spec of REACTIONS) {
-      reactions.appendChild(buildReactionChip(row, reviewId, spec));
-    }
-
-    // The report analogue — Yelp's "Report review", in city
-    // terms. One-way (no un-reporting a rat to the city), no
-    // public tally; the count lands server-side all the same.
+    // The report analogue — Yelp's "Report review", in city terms.
+    // No public tally; the count lands server-side all the same.
+    // Clicking again takes the report back.
     const report = document.createElement('button');
     report.type = 'button';
     report.className = 'review-report';
@@ -720,10 +708,6 @@ export class Modal {
       if (row.shared) postReaction(reviewId, 'report', next ? 1 : -1).catch(() => {});
     });
 
-    // Adopt the shared tallies when the API answers; stay on local
-    // counts when it doesn't.
-    getReactionCounts(reviewId).then(row.adopt).catch(() => {});
-
     // Report rides the chip row itself — far right, vertically
     // centered against the chips. (No tally line — the counts live
     // in the chips.)
@@ -732,7 +716,7 @@ export class Modal {
   }
 
   buildAlleyCard(venue) {
-    const card = this.buildCardShell(`${venue.displayName} — where the rats meet`);
+    const card = this.buildCardShell(`${venue.displayName} — ${ALLEY_MEET_FRAMING}`);
     card.classList.add('alley-modal');
 
     // Sticky title bar: headline + close + (mobile) drag handle,
@@ -741,7 +725,7 @@ export class Modal {
     // below. On mobile they scroll out with the rest of the body (a
     // single scroll context, only the title anchored); on desktop
     // CSS keeps them fixed and scrolls only the card list.
-    const name = this.buildModalHeadline(card, venue.displayName);
+    const name = this.buildModalHeadline(venue.displayName);
     card.appendChild(name);
 
     const header = document.createElement('div');
@@ -923,10 +907,7 @@ export class Modal {
 
     for (const cardEl of sorted) container.appendChild(cardEl);
 
-    const reduceMotion =
-      window.matchMedia &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reduceMotion) return;
+    if (prefersReducedMotion()) return;
 
     for (const cardEl of sorted) {
       const before = beforeRects.get(cardEl);
@@ -962,7 +943,7 @@ export class Modal {
     // mobile CSS overrides height/max-height for this class.
     card.classList.add('modal-card-tombstone');
 
-    const name = this.buildModalHeadline(card, venue.displayName);
+    const name = this.buildModalHeadline(venue.displayName);
     // The review anatomy, dead. Empty aggregate rides the
     // headline row itself — title, stars, close — so the header
     // reads as one line on every breakpoint.
@@ -970,8 +951,7 @@ export class Modal {
     rating.className = 'tombstone-rating';
     rating.appendChild(buildStarRow(0, {}));
     const headlineRow = name.querySelector('.modal-venue-headline-row');
-    const closeBtn = headlineRow?.querySelector('.modal-close');
-    if (headlineRow) headlineRow.insertBefore(rating, closeBtn ?? null);
+    headlineRow.insertBefore(rating, headlineRow.querySelector('.modal-close'));
     card.appendChild(name);
 
     const photo = buildVenuePhoto(venue);
@@ -1013,11 +993,6 @@ export class Modal {
   // The tombstone's single reaction — a literal pay-respects
   // button, keyed by venue id ('rash') since there's no reviewer.
   buildRespects(memorialId) {
-    const wrap = document.createElement('div');
-    wrap.className = 'review-reactions tombstone-respects';
-    const row = createReactionRow(memorialId);
-    wrap.appendChild(buildReactionChip(row, memorialId, RESPECTS));
-    getReactionCounts(memorialId).then(row.adopt).catch(() => {});
-    return wrap;
+    return buildReactionBar(memorialId, [RESPECTS], 'review-reactions tombstone-respects').element;
   }
 }

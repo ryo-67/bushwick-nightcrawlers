@@ -21,10 +21,15 @@ import {
 } from './audio/master-controls.js';
 import { install as installViewportReadout } from './debug/viewport-readout.js';
 import { forgetVisitor, readSession, writeSession, SESSION_ENTERED } from './storage.js';
+import { isTouchScreen } from './device.js';
+import { validateContent } from './validate-content.js';
 
 // No-op unless `?debug=viewport` is on the URL. See module header
 // in src/debug/viewport-readout.js for details.
 installViewportReadout();
+
+// Content mistakes surface as console errors here, not as odd UI later.
+validateContent();
 
 // The peek card's call to action, by what the pin opens.
 const CTA_BY_KIND = {
@@ -161,31 +166,24 @@ function setupPinTooltip() {
     const vw = window.innerWidth;
     const vh = window.innerHeight;
     const pinCenterX = pinRect.left + pinRect.width / 2;
+    const M = VIEWPORT_MARGIN;
 
-    let top = pinRect.top - ttRect.height - VIEWPORT_MARGIN;
-    let placement = 'above';
-    if (top < VIEWPORT_MARGIN) {
-      placement = 'below';
-      top = pinRect.bottom + VIEWPORT_MARGIN;
-    }
-    if (placement === 'below' && top + ttRect.height > vh - VIEWPORT_MARGIN) {
-      const aboveSpace = pinRect.top;
-      const belowSpace = vh - pinRect.bottom;
-      if (aboveSpace > belowSpace) {
-        placement = 'above';
-        top = Math.max(VIEWPORT_MARGIN, pinRect.top - ttRect.height - VIEWPORT_MARGIN);
-      }
-    }
+    // Above the pin when it fits. Otherwise below, unless below runs
+    // off the bottom and there's more room above, in which case pin
+    // it to the top margin.
+    const above = pinRect.top - ttRect.height - M;
+    const below = pinRect.bottom + M;
+    const belowOverflows = below + ttRect.height > vh - M;
+    const moreRoomAbove = pinRect.top > vh - pinRect.bottom;
+    let top = below;
+    if (above >= M) top = above;
+    else if (belowOverflows && moreRoomAbove) top = M;
 
-    let left = pinCenterX - ttRect.width / 2;
-    if (left < VIEWPORT_MARGIN) left = VIEWPORT_MARGIN;
-    if (left + ttRect.width > vw - VIEWPORT_MARGIN) {
-      left = vw - ttRect.width - VIEWPORT_MARGIN;
-    }
+    // Centred on the pin, kept inside the side margins.
+    const left = Math.min(Math.max(pinCenterX - ttRect.width / 2, M), vw - ttRect.width - M);
 
     tooltip.style.left = `${left}px`;
     tooltip.style.top = `${top}px`;
-    tooltip.dataset.placement = placement;
   }
 
   // Deterministic per-venue tilt for the hover peek: hash the venue
@@ -199,7 +197,7 @@ function setupPinTooltip() {
   }
 
   function show(pin) {
-    if (isPointerCoarse()) return;
+    if (isTouchScreen()) return;
     const venue = venues[pin.dataset.pinId];
     if (!venue) return;
     currentPin = pin;
@@ -230,13 +228,6 @@ function setupPinTooltip() {
 
 let modalRef = null;
 let currentRatGen = null;
-
-// Touch screens (no hover) get toasts; mouse users get hover tooltips.
-// Decided by input type, not width, so a wide tablet still gets the
-// toast and a narrow desktop window doesn't.
-function isPointerCoarse() {
-  return window.matchMedia('(hover: none), (pointer: coarse)').matches;
-}
 
 // A venue with unlockAfterVisits (the alley) is always on the map but
 // greyed out until that many review venues have been opened; then it
@@ -449,16 +440,6 @@ function setupMapDragPan() {
   wrapper.addEventListener('touchmove', () => { mapUserPanned = true; }, { passive: true });
 }
 
-function syncPlayState() {
-  if (!modalRef || !modalRef.isOpen()) return;
-  if (!engine.isReady()) {
-    modalRef.setPlayState('loading');
-    return;
-  }
-  if (!currentRatGen) return;
-  modalRef.setPlayState(currentRatGen.isPlaying() ? 'playing' : 'idle');
-}
-
 // Runs fn now if the audio engine is up; otherwise once it is, but
 // only if this venue's modal is still the one open by then.
 function whenReadyWhileOpen(venueId, fn) {
@@ -491,24 +472,22 @@ function handleModalOpen(venueId, ctx) {
   // trainOnOpen (the JMZ platform): fire an immediate train pass so
   // visiting reliably triggers a "train arriving" event. The
   // site-wide intermittent schedule keeps running in parallel.
-  if (venue?.trainOnOpen) whenReadyWhileOpen(venueId, beds.triggerTrainPass);
+  if (venue.trainOnOpen) whenReadyWhileOpen(venueId, beds.triggerTrainPass);
 
   // Gathering (the alley): no review-card path. Sync the mini-card
   // visuals to whatever's currently in the registry (returning
   // visitors might have rats still playing from before).
-  if (venue?.kind === 'gathering') {
+  if (venue.kind === 'gathering') {
     syncAlleyCardStates();
     return;
   }
 
-  const review = ctx?.review;
-  if (!review) return; // memorial — no review, no rat generator
+  // Memorials have no review and no rat.
+  if (venue.kind !== 'review') return;
 
-  // Mark this venue as visited (review-bearing only).
+  const { review } = ctx;
   engine.markVisited(venueId);
-
   const profile = ratProfiles[review.reviewerId];
-  if (!profile) return;
 
   // Factory so we can rebuild the rat after a pause (since pause
   // unregisters and disposes — there's no resume).
@@ -533,14 +512,13 @@ function handleModalOpen(venueId, ctx) {
 
   currentRatGen = makeRatGen();
 
-  syncPlayState();
+  // The card's play button starts in 'loading'; it becomes playable
+  // as soon as the engine is up (now, if it already is).
+  whenReadyWhileOpen(venueId, () => modalRef.setPlayState('idle'));
   // The scope is never dead air — idle, it taps the master
   // bus and murmurs with the live ambient corner (rumble, traffic,
   // any still-talking rats). Play refocuses it on this rat's voice.
   startAmbientScope();
-
-  // syncPlayState showed 'loading' if the engine isn't up yet.
-  if (!engine.isReady()) whenReadyWhileOpen(venueId, () => modalRef.setPlayState('idle'));
 
   const playBtn = modalRef.root.querySelector('.play-button');
   if (!playBtn) return;
@@ -599,11 +577,7 @@ function spawnAlleyOneLiner(reviewerId) {
 }
 
 function syncAlleyCardStates() {
-  if (!modalRef?.setAlleyCardStates) return;
-  const ranks = engine.getActiveRatRanks();
-  const rankMap = {};
-  for (const { reviewerId, rank } of ranks) rankMap[reviewerId] = rank;
-  modalRef.setAlleyCardStates(rankMap);
+  modalRef?.setAlleyCardStates(engine.getActiveRatRanks());
 }
 
 function handleModalClose() {
@@ -611,7 +585,6 @@ function handleModalClose() {
   // It continues in the engine's registry as a background voice
   // until natural completion or cap eviction.
   currentRatGen = null;
-  modalRef?.oscilloscope?.dispose();
   beds.stopActiveBed();
 
   // Refresh gated pins: visiting a venue may have just crossed an
@@ -695,20 +668,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // inside the click/keydown/touchstart handler.
   const bootAudioAndVideo = () => {
     engine.start().catch((e) => {
-      // eslint-disable-next-line no-console
       console.error('Audio engine failed to start:', e);
       // V74: if the engine still allows another load attempt, the
       // next gesture (a pin, the footer, a key) retries — Tone.start()
       // stays inside that gesture's handler.
       if (engine.canRetryStart()) armGestureBoot();
     });
-    const mapVideo = document.querySelector('.map-bg');
-    if (mapVideo && typeof mapVideo.play === 'function') {
-      const playPromise = mapVideo.play();
-      if (playPromise && typeof playPromise.catch === 'function') {
-        playPromise.catch(() => {});
-      }
-    }
+    document.querySelector('.map-bg')?.play().catch(() => {});
   };
 
   // One-shot: boot audio/video on the next click, keydown, or
@@ -736,7 +702,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // subsequent calls, so the loading screen's own subscribePreload
   // shares it.
   engine.preload().catch((e) => {
-    // eslint-disable-next-line no-console
     console.error('Audio preload failed:', e);
   });
 
@@ -767,15 +732,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // loading screen shows on every navigation. Acceptable.
   const sessionEntered = readSession(SESSION_ENTERED) === '1';
 
-  let navType = 'navigate';
-  try {
-    const navEntries = performance.getEntriesByType('navigation');
-    if (navEntries && navEntries.length && navEntries[0].type) {
-      navType = navEntries[0].type;
-    }
-  } catch {
-    // performance API unavailable — fall through to default 'navigate'
-  }
+  const navType = performance.getEntriesByType('navigation')[0]?.type ?? 'navigate';
 
   // Show loading screen on: reload always, OR on initial-navigate
   // when no session flag is set. Skip on: back_forward navigation,
@@ -853,7 +810,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // message as a toast; mouse users already see it in the hover
     // tooltip (setupPinTooltip).
     if (isLocked(venues[pinId])) {
-      if (isPointerCoarse()) {
+      if (isTouchScreen()) {
         tooltip.hide();
         showLockedToast(venues[pinId]);
       }

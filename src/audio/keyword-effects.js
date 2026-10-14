@@ -16,7 +16,7 @@
  * glitch on time-words) are §12.4c, not here.
  */
 
-import { lettersOnly } from './normalize.js';
+import { lookupByLetters } from './normalize.js';
 
 export const KEYWORD_EFFECTS = {
   tagged:     { effect: 'chime', volume: -5, layered: ['vibrate'] },
@@ -27,9 +27,9 @@ export const KEYWORD_EFFECTS = {
   viral:      { effect: 'cough', volume: -9 },
   sniff:      { effect: 'cough', volume: -9 },
   sniffs:     { effect: 'cough', volume: -9 },
-  diet:       { effect: 'fizz', volume: -7, offset: 0 },
-  fizzy:      { effect: 'fizz', volume: -7, offset: 0 },
-  pepsico:    { effect: 'fizz', volume: -7, offset: 0 },
+  diet:       { effect: 'fizz', volume: -7 },
+  fizzy:      { effect: 'fizz', volume: -7 },
+  pepsico:    { effect: 'fizz', volume: -7 },
   subscribe:  { effect: 'vibrate', volume: -11 },
   following:  { effect: 'vibrate', volume: -11 },
   followers:  { effect: 'vibrate', volume: -11 },
@@ -39,7 +39,5 @@ export const KEYWORD_EFFECTS = {
 };
 
 export function matchKeyword(word) {
-  if (typeof word !== 'string') return null;
-  const normalized = lettersOnly(word);
-  return KEYWORD_EFFECTS[normalized] || null;
+  return lookupByLetters(KEYWORD_EFFECTS, word);
 }

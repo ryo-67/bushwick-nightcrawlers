@@ -6,6 +6,7 @@
  * in styles.css.
  */
 import { RAT_PATH_D, RAT_VIEWBOX } from './rat-silhouette.js';
+import { prefersReducedMotion } from '../device.js';
 
 const RAT_WIDTHS = [28, 22, 25];
 const RUN_MS = 6000;
@@ -38,11 +39,11 @@ export function buildRatCrew() {
 // its own tempo and bob rhythm, so the group reads as animals
 // following each other rather than a sprite strip. Returns how long
 // the pass takes, in ms; the caller removes .is-running after it.
-export function runRatCrew(strip, direction) {
+function runRatCrew(strip, direction) {
   strip.dataset.direction = direction > 0 ? 'ltr' : 'rtl';
   const svgs = Array.from(strip.querySelectorAll('svg'));
   const count = 1 + Math.floor(Math.random() * svgs.length);
-  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reduce = prefersReducedMotion();
   let longest = 0;
   svgs.forEach((svg, i) => {
     const included = i < count;
@@ -64,4 +65,35 @@ export function runRatCrew(strip, direction) {
   void strip.offsetWidth;
   strip.classList.add('is-running');
   return longest;
+}
+
+// Runs the crew on a loop: a pass after firstDelayMs (default: a
+// random interval), then a random minMs–maxMs pause after each pass,
+// alternating direction. runNow() sends a crew immediately unless one
+// is mid-crossing; stop() cancels whatever is pending.
+export function startRatCrewLoop(strip, { minMs, maxMs, firstDelayMs }) {
+  let direction = -1;
+  let timer = null;
+  const randomPause = () => minMs + Math.random() * (maxMs - minMs);
+
+  function run() {
+    direction = -direction;
+    const longest = runRatCrew(strip, direction);
+    timer = setTimeout(() => {
+      strip.classList.remove('is-running');
+      timer = setTimeout(run, randomPause());
+    }, longest + 100);
+  }
+
+  timer = setTimeout(run, firstDelayMs ?? randomPause());
+  return {
+    runNow() {
+      if (strip.classList.contains('is-running')) return;
+      clearTimeout(timer);
+      run();
+    },
+    stop() {
+      clearTimeout(timer);
+    },
+  };
 }

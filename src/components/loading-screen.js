@@ -1,6 +1,6 @@
 import { LOADING_NARRATIVE } from '../content/loading-narrative.js';
 import * as engine from '../audio/engine.js';
-import { buildRatCrew, runRatCrew } from './rat-crew.js';
+import { buildRatCrew, startRatCrewLoop } from './rat-crew.js';
 import { KEYS, readFlag, writeFlag } from '../storage.js';
 
 const CARD_ADVANCE_MS = 3500;
@@ -39,12 +39,12 @@ export class LoadingScreen {
     this.statusTimer = null;
     this.statusMsgIndex = 0;
     this.preloadFallbackTimer = null;
-    this.ratTimer = null;
-    this.ratClearTimer = null;
-    this.ratDirection = -1;
+    this.ratLoop = null;
+    // Stacking order for dragged cards; each drag lifts a card above
+    // the rest.
+    this.cardZ = 10;
     this.typewriterTimers = [];
 
-    this.advanceClickHandler = null;
     this.escHandler = null;
   }
 
@@ -91,7 +91,6 @@ export class LoadingScreen {
     el.setAttribute('role', 'dialog');
     el.setAttribute('aria-modal', 'true');
     el.setAttribute('aria-labelledby', 'loading-title');
-    el.dataset.state = 'initial';
 
     el.appendChild(this.buildNoise());
     el.appendChild(this.buildHeader());
@@ -114,13 +113,12 @@ export class LoadingScreen {
     // advances cards. A card that was just dragged sets
     // dragJustEnded on itself; we honor that flag so a
     // drag-release click doesn't double as an advance trigger.
-    this.advanceClickHandler = (e) => {
+    el.addEventListener('click', (e) => {
       if (e.target.closest('.loading-footer')) return;
       const card = e.target.closest('.loading-card');
       if (card && card.dataset.dragJustEnded === 'true') return;
       this.advanceCard();
-    };
-    el.addEventListener('click', this.advanceClickHandler);
+    });
 
     this.escHandler = (e) => {
       if (e.key === 'Escape') {
@@ -134,7 +132,7 @@ export class LoadingScreen {
     this.el = el;
 
     this.startStatusCycle();
-    this.scheduleRat();
+    this.startRatLoop();
     // First card reveal happens in the next frame so the initial
     // mount paints with all cards in `hidden` state, then the first
     // transitions in cleanly.
@@ -147,7 +145,6 @@ export class LoadingScreen {
     el.setAttribute('role', 'dialog');
     el.setAttribute('aria-modal', 'true');
     el.setAttribute('aria-labelledby', 'loading-title');
-    el.dataset.state = 'returning';
 
     el.appendChild(this.buildNoise());
     // Same chrome as the first-visit variant — title-only
@@ -174,7 +171,7 @@ export class LoadingScreen {
     this.el = el;
 
     this.startStatusCycle();
-    this.scheduleRat();
+    this.startRatLoop();
   }
 
   buildNoise() {
@@ -371,9 +368,8 @@ export class LoadingScreen {
   }
 
   bumpCardZIndex() {
-    if (typeof this._cardZCounter !== 'number') this._cardZCounter = 10;
-    this._cardZCounter += 1;
-    return this._cardZCounter;
+    this.cardZ += 1;
+    return this.cardZ;
   }
 
   // ---- card sequence ----
@@ -390,7 +386,6 @@ export class LoadingScreen {
 
     const cardEl = this.cardEls[this.cardIndex];
     cardEl.dataset.state = 'visible';
-    if (this.el) this.el.dataset.state = `card-${this.cardIndex + 1}`;
 
     if (this.cardIndex < total - 1) {
       this.advanceTimer = setTimeout(() => this.advanceCard(), CARD_ADVANCE_MS);
@@ -408,7 +403,6 @@ export class LoadingScreen {
       this.cardEls[i].dataset.state = 'visible';
     }
     this.cardIndex = this.cardEls.length - 1;
-    if (this.el) this.el.dataset.state = `card-${this.cardIndex + 1}`;
     this.refreshCta();
   }
 
@@ -456,10 +450,9 @@ export class LoadingScreen {
     engine
       .preload()
       .then(() => {
-        if (!this.audioReady) this.setAudioReady();
+        this.setAudioReady();
       })
       .catch((e) => {
-        // eslint-disable-next-line no-console
         console.error('Audio preload failed:', e);
         this.preloadFailed = true;
         this.clearPreloadFallback();
@@ -470,17 +463,14 @@ export class LoadingScreen {
 
   // V74: once the preload has failed, the cycling loading messages
   // would promise a load that isn't coming. failedMessage replaces
-  // them. While the copy slot still holds its TODO placeholder,
-  // render nothing new and leave the cycle running.
+  // them.
   showFailedMessage() {
-    const msg = LOADING_NARRATIVE.failedMessage;
-    if (!msg || msg.startsWith('TODO')) return;
     if (this.entered || !this.el) return;
     if (this.statusTimer) {
       clearInterval(this.statusTimer);
       this.statusTimer = null;
     }
-    this.typeMessage(msg);
+    this.typeMessage(LOADING_NARRATIVE.failedMessage);
   }
 
   // V74: escape hatch only. Enables Enter in the late state; leaves
@@ -517,13 +507,9 @@ export class LoadingScreen {
     this.refreshCta();
 
     // "The rats are ready" gets a visual beat: a crew scuttles
-    // across immediately instead of waiting out the idle interval.
-    // Skip if a run is already mid-crossing.
-    const ratEl = this.el?.querySelector('.loading-rat');
-    if (ratEl && !ratEl.classList.contains('is-running')) {
-      if (this.ratTimer) clearTimeout(this.ratTimer);
-      this.runRat();
-    }
+    // across now (unless one is mid-crossing) instead of waiting
+    // out the idle interval.
+    this.ratLoop?.runNow();
   }
 
   refreshCta() {
@@ -551,21 +537,11 @@ export class LoadingScreen {
 
   // ---- rat silhouette scheduling ----
 
-  scheduleRat() {
-    const range = RAT_MAX_INTERVAL_MS - RAT_MIN_INTERVAL_MS;
-    const delay = RAT_MIN_INTERVAL_MS + Math.random() * range;
-    this.ratTimer = setTimeout(() => this.runRat(), delay);
-  }
-
-  runRat() {
-    const ratEl = this.el?.querySelector('.loading-rat');
-    if (!ratEl) return;
-    this.ratDirection = -this.ratDirection;
-    const longest = runRatCrew(ratEl, this.ratDirection);
-    this.ratClearTimer = setTimeout(() => {
-      ratEl.classList.remove('is-running');
-      this.scheduleRat();
-    }, longest + 100);
+  startRatLoop() {
+    this.ratLoop = startRatCrewLoop(this.el.querySelector('.loading-rat'), {
+      minMs: RAT_MIN_INTERVAL_MS,
+      maxMs: RAT_MAX_INTERVAL_MS,
+    });
   }
 
   // ---- entry transition ----
@@ -581,7 +557,6 @@ export class LoadingScreen {
       try {
         this.onEnter();
       } catch (e) {
-        // eslint-disable-next-line no-console
         console.error('LoadingScreen onEnter handler threw:', e);
       }
     }
@@ -590,14 +565,13 @@ export class LoadingScreen {
   }
 
   unmount() {
-    if (this.advanceTimer) clearTimeout(this.advanceTimer);
-    if (this.statusTimer) clearInterval(this.statusTimer);
-    if (this.preloadFallbackTimer) clearTimeout(this.preloadFallbackTimer);
-    if (this.ratTimer) clearTimeout(this.ratTimer);
-    if (this.ratClearTimer) clearTimeout(this.ratClearTimer);
+    clearTimeout(this.advanceTimer);
+    clearInterval(this.statusTimer);
+    clearTimeout(this.preloadFallbackTimer);
+    this.ratLoop?.stop();
     for (const t of this.typewriterTimers) clearTimeout(t);
     this.typewriterTimers = [];
-    if (this.resizeSettleTimer) clearTimeout(this.resizeSettleTimer);
+    clearTimeout(this.resizeSettleTimer);
     if (this.resizeHandler) {
       window.removeEventListener('resize', this.resizeHandler);
       this.resizeHandler = null;

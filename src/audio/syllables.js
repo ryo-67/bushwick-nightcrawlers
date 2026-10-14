@@ -37,7 +37,7 @@ export function syllableChunks(word) {
   return cores;
 }
 
-export function syllableCount(word) {
+function syllableCount(word) {
   const w = lettersOnly(word);
   if (w.length === 0) return 1;
   if (w.length <= 3) return 1;

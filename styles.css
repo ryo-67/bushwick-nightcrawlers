@@ -58,16 +58,11 @@ body {
      overflow:auto is the actual scroll surface; without this, hard
      upward pan bleeds the map content above the header. */
   background-color: var(--color-bg);
-}
-
-html,
-body {
   margin: 0;
   padding: 0;
 }
 
 body {
-  background: var(--color-bg);
   color: var(--color-text);
   font-family: var(--font-data);
   font-variant-numeric: tabular-nums;
@@ -107,32 +102,6 @@ body:not(.about-page) main {
    accent green (handled by per-component a:hover rules). */
 a:visited {
   color: inherit;
-}
-
-body::after {
-  content: '';
-  position: fixed;
-  /* Not `inset: 0`: on iOS Safari a fixed element with inset:0
-     clips to the visual viewport (= innerHeight), which on the
-     body-locked map page stops above the URL-bar floating pill, so
-     the grain would end in a visible band at y=innerHeight. The
-     100lvh extent covers the largest viewport, including the area
-     behind the pill, so the grain runs to the physical screen
-     bottom. Without a floating URL bar (desktop, PWA standalone)
-     100lvh === innerHeight. */
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 100lvh;
-  pointer-events: none;
-  background-image: url('assets/grain.png');
-  background-repeat: repeat;
-  mix-blend-mode: multiply;
-  opacity: 0.35;
-  /* 10000 sits explicitly above .loading-screen (z:9999) so the
-     grain texture overlays every visual state, including the
-     loading splash, without depending on DOM order. */
-  z-index: 10000;
 }
 
 main {
@@ -246,9 +215,6 @@ main {
   pointer-events: auto;
   transform: translate(-50%, -50%);
   transition: transform 120ms ease;
-  background: transparent;
-  border: none;
-  padding: 0;
 }
 
 .pin img {
@@ -424,7 +390,6 @@ main {
   z-index: 1000;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 100ms linear;
   text-align: left;
   left: -9999px;
   top: -9999px;
@@ -432,12 +397,12 @@ main {
      id so hover peeks lean left or right instead of all tilting
      the same way. Drops in with a small settle. */
   transform: translateY(6px) scale(0.985) rotate(var(--peek-rotate, -1.2deg));
-  transform-origin: center center;
   transition: opacity 120ms linear,
     transform 180ms cubic-bezier(0.2, 0.9, 0.3, 1);
 }
 
 .pin-tooltip.is-visible {
+  opacity: 1;
   transform: translateY(0) scale(1) rotate(var(--peek-rotate, -1.2deg));
 }
 
@@ -483,10 +448,6 @@ main {
 .modal-venue-photo img,
 .rat-selfie {
   filter: saturate(0.7) contrast(1.08);
-}
-
-.pin-tooltip.is-visible {
-  opacity: 1;
 }
 
 .pin-tooltip-photo {
@@ -899,7 +860,6 @@ main {
 .alley-card:hover,
 .alley-card:focus-visible {
   background: rgba(184, 255, 0, 0.04);
-  outline: none;
 }
 
 .alley-card:focus-visible {
@@ -1079,7 +1039,6 @@ main {
 .pagination-arrow:hover,
 .pagination-arrow:focus-visible {
   opacity: 1;
-  outline: none;
 }
 
 .pagination-arrow:focus-visible {
@@ -1315,7 +1274,7 @@ main {
 
 
 .word {
-  transition: color 80ms ease, font-weight 80ms ease;
+  transition: color 80ms ease;
 }
 
 .word.is-active {
@@ -1534,20 +1493,16 @@ main {
   font-size: 0.75rem;
 }
 
-.header-about,
 .page-controls a {
   color: var(--color-text);
   text-decoration: none;
   border-bottom: 1px solid currentColor;
 }
 
-.header-about:hover,
-.header-about:focus-visible,
 .page-controls a:hover,
 .page-controls a:focus-visible {
   color: var(--color-accent);
   border-bottom-color: var(--color-accent);
-  outline: none;
 }
 
 /* Tap target: the links draw 16px tall, so an invisible pseudo-box
@@ -1689,18 +1644,21 @@ main {
   height: 14px;
   background: transparent;
   cursor: pointer;
+  /* main.js sets --fill from the volume; both engines' tracks paint
+     this one gradient (their pseudo-elements can't share a rule). */
   --fill: 100%;
-}
-
-.footer-volume::-webkit-slider-runnable-track {
-  height: 2px;
-  background: linear-gradient(
+  --volume-track: linear-gradient(
     to right,
     var(--color-accent) 0%,
     var(--color-accent) var(--fill),
     rgba(197, 191, 174, 0.3) var(--fill),
     rgba(197, 191, 174, 0.3) 100%
   );
+}
+
+.footer-volume::-webkit-slider-runnable-track {
+  height: 2px;
+  background: var(--volume-track);
 }
 
 .footer-volume::-webkit-slider-thumb {
@@ -1717,13 +1675,7 @@ main {
 
 .footer-volume::-moz-range-track {
   height: 2px;
-  background: linear-gradient(
-    to right,
-    var(--color-accent) 0%,
-    var(--color-accent) var(--fill),
-    rgba(197, 191, 174, 0.3) var(--fill),
-    rgba(197, 191, 174, 0.3) 100%
-  );
+  background: var(--volume-track);
   border: none;
 }
 
@@ -2198,7 +2150,6 @@ main {
 .pin-tooltip.pin-tooltip-locked {
   width: auto;
   max-width: 18rem;
-  white-space: normal;
   text-align: center;
   padding: 0.75rem 0.875rem;
 }

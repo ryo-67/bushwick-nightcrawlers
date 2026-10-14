@@ -49,6 +49,8 @@ For the asset checklist and citations: `docs/ASSETS.md`. Some of its planning no
 │   ├── main.js             # Bootstrap: pins, peek tooltips, modal wiring, footer, audio boot
 │   ├── storage.js          # Every localStorage/sessionStorage key + safe read/write + forgetVisitor()
 │   ├── framed.js           # Behaviour when the portfolio embeds the piece in an iframe
+│   ├── device.js           # Touch-screen and reduced-motion media queries
+│   ├── validate-content.js # Startup check that venues, reviews and rats agree (console errors only)
 │   ├── audio/
 │   │   ├── engine.js           # Singleton: preload, start, cumulative-voicing registry, visit tracking
 │   │   ├── rat-generator.js    # One rat speaking one review (tokenize, schedule, keyword effects)
@@ -62,7 +64,7 @@ For the asset checklist and citations: `docs/ASSETS.md`. Some of its planning no
 │   │   ├── playback-mode.js    # 'moment' / 'tongue'
 │   │   ├── load-buffer.js      # Tolerant single-file loading (one retry, then null)
 │   │   ├── ramp.js             # Click-free parameter ramps
-│   │   ├── normalize.js        # Shared keyword normalisation
+│   │   ├── normalize.js        # Word splitting and keyword normalisation
 │   │   ├── manifest.js         # GENERATED — scripts/generate-audio-manifest.js
 │   │   └── usv-features.js     # GENERATED — scripts/analyze_usv_features.py
 │   ├── components/
@@ -149,13 +151,17 @@ V24 is camouflage, not a fix: paint still stops at dvh. The architectural fix (m
 
 Write maintainable, human-readable, clean code, and leave the code you touch cleaner than you found it.
 
-- **Reuse before writing.** Use the shared helpers instead of re-implementing them: `src/storage.js` (browser storage), `src/components/reactions-client.js` (the reactions API), `src/audio/ramp.js` (gain/parameter fades), `src/audio/normalize.js` (keyword keys), `src/audio/load-buffer.js` (audio loading), `src/components/rat-crew.js` (the rat crew), `buildStarRow`/`formatCount`/`findReviewsForVenue` in `modal.js`. If you need something twice, extract it once.
+- **Readable without the original author.** Someone new should understand a file from its names, structure and comments alone, without the conversation or commit that produced it. Name things for what they do; say why in a comment when the code can't.
+- **One source of truth.** Every constant, list, threshold and piece of logic lives in exactly one place, and everything else reads it. No copied constants (e.g. a JS timer that repeats a CSS duration, an HTML attribute that repeats a JS limit, two lists of the same names) and no copied logic (e.g. two word splitters that must agree). Derive instead of duplicating.
+- **Reuse existing helpers.** Use the shared modules instead of re-implementing them: `src/storage.js` (browser storage), `src/components/reactions-client.js` (the reactions API), `src/audio/ramp.js` (gain/parameter fades), `src/audio/normalize.js` (text keys and word splitting), `src/audio/load-buffer.js` (audio loading), `src/device.js` (touch and reduced-motion checks), `src/components/rat-crew.js` (the rat crew), `buildStarRow`/`formatCount`/`findReviewsForVenue` in `modal.js`. If you need something twice, extract it once.
+- **One concern per file.** A module owns one job (storage, the reactions API, one card type's building, one audio layer). Don't grow a file with an unrelated responsibility because it's open; give the new concern its own module.
 - **Data, not special cases.** Behaviour that belongs to a venue goes in `venues.js` as a field and the code reads it; never branch on a specific venue, rat or review id.
 - **Fix the cause, at the right depth.** Don't layer overrides, `!important`, or another `:not()` on top of a rule to patch a symptom; change the rule or the mechanism underneath.
-- **Small, named pieces.** Prefer short functions with names that say what they do over long handlers; keep nesting shallow; name constants instead of using magic numbers and colour literals (use the CSS tokens).
-- **No dead code.** Delete unused functions, exports, selectors, state and files rather than leaving them "just in case"; git history keeps them. Don't leave commented-out code.
+- **Simple over general.** Write the plainest code that does today's job. No speculative options, hooks or abstraction layers for needs that don't exist yet; small, named functions with shallow nesting; named constants and CSS tokens instead of magic numbers and colour literals.
+- **No leftover dead code or debug logs.** Delete unused functions, exports, selectors, state, parameters and files rather than keeping them "just in case" (git history keeps them). No commented-out code, no `console.log`, no unreachable guards.
 - **Comments say why, for the code as it is now.** No history notes about code that's gone; update or delete a comment when the code under it changes.
-- **Verify before shipping.** `node --check` every changed JS file, exercise the change in a local preview (`scripts/dev-server.py`), and for refactors confirm behaviour is unchanged.
+- **Refactors must not change output, and must prove it when they touch rendering.** A refactor changes structure, not behaviour. When it touches CSS, markup or anything that renders, capture the rendered result before and after (computed styles and element boxes for the key states, or screenshots) at desktop and phone widths, and show they match. Audio refactors must keep timing, the cumulative mix and 'in their tongue' determinism (same order and number of `rng` calls).
+- **Verify before shipping.** `node --check` every changed JS file and exercise the change in a local preview (`scripts/dev-server.py`).
 
 ## Code style
 

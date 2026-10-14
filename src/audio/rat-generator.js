@@ -30,8 +30,8 @@ import { matchProcessor } from './keyword-processors.js';
 import { panForVenue } from './spatial.js';
 import { rampParam } from './ramp.js';
 import { USV_FEATURES } from './usv-features.js';
-import { USVS, USVS_COCAINE } from './manifest.js';
 import { syllableChunks } from './syllables.js';
+import { splitTokens, isSpace } from './normalize.js';
 
 // The syllabic voice is the footer mode 'in their tongue'
 // (playback-mode.js). This URL flag is a dev override that forces
@@ -73,28 +73,23 @@ function normalizeWord(word) {
     .replace(/[^\w]+$/, '');
 }
 
+// Word i here is span i in the review card: both split with
+// splitTokens (normalize.js).
 function tokenize(text, triggerSet) {
-  const tokens = text.split(/(\s+)/);
-  const words = [];
-  let index = 0;
-  for (const t of tokens) {
-    if (t === '' || /^\s+$/.test(t)) continue;
-    const lower = normalizeWord(t);
-    const lettersOnly = t.replace(/[^A-Za-z]/g, '');
-    const isAllCaps =
-      lettersOnly.length >= 2 && lettersOnly === lettersOnly.toUpperCase();
-    words.push({
-      index,
-      raw: t,
-      lower,
-      isAllCaps,
-      isSentenceEnd: /[.!?]$/.test(t),
-      isCommaEnd: /[,;:]$/.test(t),
-      isKeywordTrigger: triggerSet.has(lower),
+  return splitTokens(text)
+    .filter((token) => !isSpace(token))
+    .map((t) => {
+      const lower = normalizeWord(t);
+      const letters = t.replace(/[^A-Za-z]/g, '');
+      return {
+        raw: t,
+        lower,
+        isAllCaps: letters.length >= 2 && letters === letters.toUpperCase(),
+        isSentenceEnd: /[.!?]$/.test(t),
+        isCommaEnd: /[,;:]$/.test(t),
+        isKeywordTrigger: triggerSet.has(lower),
+      };
     });
-    index += 1;
-  }
-  return words;
 }
 
 function eligibleTiers(word) {
@@ -132,7 +127,6 @@ const SYLLABLE_RATES = {
 // resolveAvailable() substitutes deterministically — 'in their
 // tongue' stays identical for every visitor with the full bank, and
 // only the picks that land on a gap change for one without.
-const BANK_MANIFESTS = { usvs: USVS, 'usvs-cocaine': USVS_COCAINE };
 const fullBanks = {};
 function getFullBank(name) {
   if (fullBanks[name]) return fullBanks[name];
@@ -141,7 +135,7 @@ function getFullBank(name) {
   const loaded = new Map(bank.map((s) => [s.filename, s]));
   const feats = USV_FEATURES[name] || {};
   const full = [];
-  for (const filename of BANK_MANIFESTS[name]) {
+  for (const filename of engine.BANK_FILES[name]) {
     const s = loaded.get(filename);
     if (s) {
       full.push(s);
@@ -399,7 +393,7 @@ export class RatGenerator {
   // duration including its trailing gap.
   scheduleSyllabicWord(word, cursor, chainHead, pools) {
     const Tone = window.Tone;
-    const chunks = syllableChunks(word.lower || word.raw);
+    const chunks = syllableChunks(word.lower);
     const n = chunks.length;
     const rate = (SYLLABLE_RATES[this.profile.tierSkew] || 5) * this.voiceTempo;
     const slot = 1 / rate;
@@ -505,11 +499,14 @@ export class RatGenerator {
         processor(this, cursor);
       }
 
-      const wordTime = cursor;
-      Tone.Draw.schedule(() => {
-        if (myId !== this.playbackId) return;
-        this.modal?.highlightWord?.(i, this.reviewerId);
-      }, wordTime);
+      // Word highlighting rides Tone.Draw so the text stays in step
+      // with the audio. A rat with no card (the alley) skips it.
+      if (this.modal) {
+        Tone.Draw.schedule(() => {
+          if (myId !== this.playbackId) return;
+          this.modal?.highlightWord(i, this.reviewerId);
+        }, cursor);
+      }
 
       cursor += wordDur;
       if (word.isSentenceEnd) {
@@ -517,13 +514,16 @@ export class RatGenerator {
       }
     }
 
-    const endTime = cursor;
-    Tone.Draw.schedule(() => {
+    // Completion runs on Tone's own clock, not Tone.Draw: Draw rides
+    // requestAnimationFrame and silently drops events more than 0.25 s
+    // late, so a review ending in a background tab would never finish
+    // and its rat would hold a voice slot until evicted.
+    Tone.getContext().setTimeout(() => {
       if (myId !== this.playbackId) return;
       this._isPlaying = false;
-      this.modal?.clearHighlights?.(this.reviewerId);
+      this.modal?.clearHighlights(this.reviewerId);
       this.onComplete?.();
-    }, endTime);
+    }, cursor - Tone.now());
   }
 
   stop() {
@@ -538,31 +538,19 @@ export class RatGenerator {
       }
     }
     this.activeSources = [];
-    this.modal?.clearHighlights?.(this.reviewerId);
+    this.modal?.clearHighlights(this.reviewerId);
   }
 
   scheduleEffect(spec, time) {
     if (this._disposed) return;
-    const primary = this.getOrCreateEffectPlayer(spec.effect);
-    if (primary) {
+    for (const name of [spec.effect, ...(spec.layered ?? [])]) {
+      const player = this.getOrCreateEffectPlayer(name);
+      if (!player) continue;
       try {
-        primary.volume.value = spec.volume;
-        primary.start(time, spec.offset ?? 0);
+        player.volume.value = spec.volume;
+        player.start(time);
       } catch {
-        // Player may have been disposed mid-schedule, or the buffer
-        // was never loaded. Skip silently.
-      }
-    }
-    if (spec.layered) {
-      for (const layerName of spec.layered) {
-        const layer = this.getOrCreateEffectPlayer(layerName);
-        if (!layer) continue;
-        try {
-          layer.volume.value = spec.volume;
-          layer.start(time);
-        } catch {
-          // ignore
-        }
+        // Player disposed mid-schedule, or its buffer never loaded.
       }
     }
   }

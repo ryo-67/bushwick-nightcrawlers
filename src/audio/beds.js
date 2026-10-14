@@ -123,7 +123,6 @@ let myrtleTrafficPlayer = null;
 let myrtleTrafficGain = null;
 let trainPlayer = null;
 let trainGain = null;
-let trainTimerId = null;
 
 // venueId → Promise<bed|null>, stored before the first await so a
 // quick close-and-reopen reuses the in-flight build instead of
@@ -196,7 +195,7 @@ export function triggerTrainPass() {
 function scheduleNextTrainPass() {
   const range = TRAIN_INTERVAL_MAX_SEC - TRAIN_INTERVAL_MIN_SEC;
   const delaySec = TRAIN_INTERVAL_MIN_SEC + Math.random() * range;
-  trainTimerId = setTimeout(() => {
+  setTimeout(() => {
     triggerTrainPass();
     scheduleNextTrainPass();
   }, delaySec * 1000);
@@ -214,10 +213,10 @@ function loadBedBuffer(file) {
   return bedBuffers.get(file);
 }
 
+// Callers check VENUE_BED_MAP first, so the venue has a bed.
 function ensureBed(venueId) {
   if (!bedBuilds.has(venueId)) {
-    const entry = VENUE_BED_MAP[venueId];
-    bedBuilds.set(venueId, entry?.components?.length ? buildBed(venueId, entry) : Promise.resolve(null));
+    bedBuilds.set(venueId, buildBed(venueId, VENUE_BED_MAP[venueId]));
   }
   return bedBuilds.get(venueId);
 }
@@ -237,17 +236,16 @@ async function buildBed(venueId, entry) {
   // train) stay centered.
   const bedPanner = new Tone.Panner(panForVenue(venueId)).toDestination();
   const sharedGain = new Tone.Gain(0).connect(bedPanner);
-  const components = await Promise.all(entry.components.map(async (comp) => {
+  const players = (await Promise.all(entry.components.map(async (comp) => {
     const buffer = await loadBedBuffer(comp.file);
     if (!buffer) return null;
     const componentGain = new Tone.Gain(Tone.dbToGain(comp.gainDb)).connect(sharedGain);
     const player = new Tone.Player({ loop: true, autostart: false }).connect(componentGain);
     player.buffer = buffer;
-    return { player, componentGain, file: comp.file };
-  }));
+    return player;
+  }))).filter(Boolean);
 
-  const loaded = components.filter(Boolean);
-  if (loaded.length === 0) {
+  if (players.length === 0) {
     // Nothing loaded: drop the empty graph and forget the build so
     // the next open retries.
     sharedGain.dispose();
@@ -257,10 +255,9 @@ async function buildBed(venueId, entry) {
   }
 
   const bed = {
-    components: loaded,
+    players,
     sharedGain,
-    persistent: !!entry.persistent,
-    persistentGainDb: entry.persistentGainDb ?? -6,
+    entry, // its VENUE_BED_MAP entry: persistent, persistentGainDb
     // Pending stop from a non-persistent fade-out; a quick reopen
     // cancels it so the old timer can't silence the reopened bed.
     stopTimer: null,
@@ -274,19 +271,19 @@ function fadeIn(bed) {
   bed.stopTimer = null;
   // Shared gain at unity; the component gains carry the mix.
   rampParam(bed.sharedGain.gain, 1, BED_FADE_IN);
-  for (const comp of bed.components) {
-    if (comp.player.state !== 'started') comp.player.start();
+  for (const player of bed.players) {
+    if (player.state !== 'started') player.start();
   }
 }
 
 function fadeOut(venueId) {
   const bed = venueBeds.get(venueId);
   if (!bed) return;
-  if (bed.persistent) {
+  if (bed.entry.persistent) {
     // Persistent: fade shared gain to reduced level, components keep
     // looping. The bed becomes a background layer once the user has
     // experienced it.
-    rampParam(bed.sharedGain.gain, window.Tone.dbToGain(bed.persistentGainDb), BED_FADE_OUT);
+    rampParam(bed.sharedGain.gain, window.Tone.dbToGain(bed.entry.persistentGainDb), BED_FADE_OUT);
     return;
   }
 
@@ -295,9 +292,9 @@ function fadeOut(venueId) {
   rampParam(bed.sharedGain.gain, 0, BED_FADE_OUT);
   bed.stopTimer = setTimeout(() => {
     bed.stopTimer = null;
-    for (const comp of bed.components) {
+    for (const player of bed.players) {
       try {
-        if (comp.player.state === 'started') comp.player.stop();
+        if (player.state === 'started') player.stop();
       } catch {
         // already stopped — fine
       }
@@ -307,11 +304,7 @@ function fadeOut(venueId) {
 
 export async function startVenueBed(venueId) {
   if (!VENUE_BED_MAP[venueId]) {
-    if (activeBedVenueId) {
-      const previous = activeBedVenueId;
-      activeBedVenueId = null;
-      fadeOut(previous);
-    }
+    stopActiveBed();
     return;
   }
   if (activeBedVenueId === venueId) return;

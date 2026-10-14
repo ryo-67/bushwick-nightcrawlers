@@ -17,7 +17,6 @@ export async function loadBufferWithRetry(url, retries = 1) {
       return buffer;
     } catch (e) {
       if (attempt === retries) {
-        // eslint-disable-next-line no-console
         console.error(`Audio file failed to load: ${url}`, e);
         return null;
       }
