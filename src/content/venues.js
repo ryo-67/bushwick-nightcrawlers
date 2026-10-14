@@ -1,6 +1,16 @@
+// Every venue on the map. `kind` says what a pin opens:
+//   'review'    — a rat's review card (reviews.js holds the text)
+//   'gathering' — the alley: mini-cards for every rat, no review
+//   'memorial'  — a closed venue's tombstone (Rash)
+// Optional behaviour lives in data, not in code that checks ids:
+//   unlockAfterVisits / lockedMessage — the pin stays greyed out
+//     until that many review venues have been opened
+//   closedNote  — the stamp across a memorial's photo
+//   trainOnOpen — opening the pin fires a train pass
 export const venues = {
   'market-hotel': {
     id: 'market-hotel',
+    kind: 'review',
     displayName: 'Market Hotel',
     address: '1140 Myrtle Ave (2F)',
     reviewerId: 'razor-whisker',
@@ -13,6 +23,7 @@ export const venues = {
   },
   'mr-kiwi': {
     id: 'mr-kiwi',
+    kind: 'review',
     displayName: 'Mr. Kiwi',
     address: '1140 Myrtle Ave (1F)',
     reviewerId: 'comrade-crumb',
@@ -25,6 +36,7 @@ export const venues = {
   },
   'trifecta': {
     id: 'trifecta',
+    kind: 'review',
     displayName: 'The Trifecta',
     address: 'Myrtle Ave + Broadway',
     reviewerId: 'old-cheese',
@@ -34,6 +46,7 @@ export const venues = {
   },
   'jmz-platform': {
     id: 'jmz-platform',
+    kind: 'review',
     displayName: 'JMZ platform',
     address: 'Above the intersection',
     reviewerId: 'pinky-mae',
@@ -44,10 +57,14 @@ export const venues = {
     // (initBeds), not gated on visiting this pin. Field is metadata —
     // runtime ambient logic lives in beds.js.
     bedAmbient: true,
+    trainOnOpen: true,
     mapCoordinates: { x: 10, y: 50 },
   },
   'alley': {
     id: 'alley',
+    kind: 'gathering',
+    unlockAfterVisits: 5,
+    lockedMessage: "the rats don't know you yet. come back when you've met more of us.",
     displayName: 'The Alley',
     address: 'Behind Market Hotel',
     reviewerId: null,
@@ -57,6 +74,8 @@ export const venues = {
   },
   'rash': {
     id: 'rash',
+    kind: 'memorial',
+    closedNote: '[closed February 2026]',
     displayName: 'Rash',
     address: '941 Willoughby Ave',
     reviewerId: null,
@@ -81,6 +100,7 @@ export const venues = {
   },
   'ornithology': {
     id: 'ornithology',
+    kind: 'review',
     displayName: 'Ornithology Jazz Club',
     address: '6 Suydam St',
     reviewerId: 'wyckoff-six',
@@ -90,6 +110,7 @@ export const venues = {
   },
   'mood-ring': {
     id: 'mood-ring',
+    kind: 'review',
     displayName: 'Mood Ring',
     address: '1260 Myrtle Ave',
     reviewerId: 'mira-wong-witherspoon',
@@ -99,6 +120,7 @@ export const venues = {
   },
   'bossa-nova': {
     id: 'bossa-nova',
+    kind: 'review',
     displayName: 'Bossa Nova Civic Club',
     address: '1271 Myrtle Ave',
     reviewerId: 'dj-nibblers',
@@ -113,6 +135,7 @@ export const venues = {
   // east of the map frame. Kept on-piece for cultural completeness.
   'caffeine-underground': {
     id: 'caffeine-underground',
+    kind: 'review',
     displayName: 'Caffeine Underground',
     address: 'Beneath Popeyes via steam grate',
     reviewerId: 'rosemary-rib',

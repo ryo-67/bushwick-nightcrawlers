@@ -5,7 +5,7 @@
  * globally, so the next visitor sees everyone's tallies. The rats
  * speak in the moment; the visitors accumulate on record.
  *
- * GET  /api/reactions?review=<reviewerId | 'rash'>
+ * GET  /api/reactions?review=<reviewerId | memorial venue id>
  *        → { helpful, thanks, love, ohno, respects }   (counts ≥ 0)
  * POST /api/reactions  { review, type, delta }  (delta ∈ {1, -1})
  *        → the same map, after the update. type is one of the keys
@@ -24,6 +24,7 @@
  * remembers whether *you* reacted; the server only counts.
  */
 import { reviews } from '../src/content/reviews.js';
+import { venues } from '../src/content/venues.js';
 
 const VALID_TYPES = new Set([
   'helpful',
@@ -33,13 +34,13 @@ const VALID_TYPES = new Set([
   'report',
   'respects',
 ]);
-// Reaction targets are reviewer ids, plus memorial venue ids —
-// closed venues with no reviewer whose tombstone takes reactions
-// (currently Rash's pay-respects counter).
-const VALID_REVIEWS = new Set(
-  Object.values(reviews).map((r) => r.reviewerId)
-);
-VALID_REVIEWS.add('rash');
+// Reaction targets are reviewer ids, plus the ids of memorial venues
+// (closed venues whose tombstone takes reactions: Rash's pay-respects
+// counter).
+const VALID_REVIEWS = new Set([
+  ...Object.values(reviews).map((r) => r.reviewerId),
+  ...Object.values(venues).filter((v) => v.kind === 'memorial').map((v) => v.id),
+]);
 const RATE_LIMIT_PER_MIN = 30;
 
 function redisEnv() {

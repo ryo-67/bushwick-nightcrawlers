@@ -326,61 +326,49 @@ main {
   display: none;
 }
 
-/* Alley pin: locked (visited < threshold) and unlocked states. The
-   pin is always rendered; visual treatment indicates whether the
-   experience is available. Locked taps surface a toast (mobile) or
-   the gating message in the hover tooltip (desktop).
-   V9: switched from CSS filter:grayscale(1) (which persisted on
-   Safari iOS even after the rule no longer matched — V7/V8 CSS-
-   level fixes didn't take) to a two-asset swap. The pin renders
-   both alley.webp (color) and alley-gray.webp (grayscale); CSS
-   toggles display:none between them based on data-alley-state.
-   Pre-baked grayscale defeats every form of filter compositing
-   cache. */
-.pin[data-pin-id='alley'][data-alley-state='locked'] {
+/* Gated pins (venues.js unlockAfterVisits — the alley): always on
+   the map, but locked until enough venues have been met. Locked
+   taps surface a toast (mobile) or the gating message in the hover
+   tooltip (desktop). main.js sets data-lock-state.
+   The pin carries two pre-baked images, colour and grey, and CSS
+   swaps them (V9: a CSS grayscale filter stuck on iOS Safari after
+   it stopped matching). Grey shows by default, before main.js has
+   set the state. */
+.pin[data-lock-state='locked'] {
   opacity: 0.4;
   cursor: not-allowed;
 }
 
-.pin[data-pin-id='alley'][data-alley-state='locked']:hover {
+.pin[data-lock-state='locked']:hover {
   opacity: 0.45;
 }
 
-/* Default + locked: show the pre-baked grayscale image. */
-.pin[data-pin-id='alley'] .pin-img-color {
+.pin .pin-img-color {
   display: none;
 }
 
-.pin[data-pin-id='alley'] .pin-img-gray {
+.pin .pin-img-gray {
   display: block;
 }
 
-/* Unlocked: swap to the color image, hide grayscale. */
-.pin[data-pin-id='alley'][data-alley-state='unlocked'] .pin-img-color {
+.pin[data-lock-state='unlocked'] .pin-img-color {
   display: block;
 }
 
-.pin[data-pin-id='alley'][data-alley-state='unlocked'] .pin-img-gray {
+.pin[data-lock-state='unlocked'] .pin-img-gray {
   display: none;
 }
 
-/* Unlocked alley: a one-shot burst plays first (driven by the
-   `data-alley-just-unlocked` flag set in main.js when state
-   transitions live), then a steady pulse takes over. On reload
-   the flag isn't present so only the pulse runs — preserves the
-   pulse without re-playing the dramatic moment.
-   Explicit filter:none + opacity:1 + cursor:pointer clear the
-   locked state's grayscale + dimmed cursor when the state flips
-   live (some browsers cache the previous filter value until
-   reflow). main.js forces a reflow on the transition as a
-   belt-and-suspenders. */
-.pin[data-pin-id='alley'][data-alley-state='unlocked'] {
+/* Unlocked: a one-shot burst plays first (data-just-unlocked, set
+   by main.js when the pin unlocks live), then a steady pulse takes
+   over. On reload the flag isn't there, so only the pulse runs. */
+.pin[data-lock-state='unlocked'] {
   opacity: 1;
   cursor: pointer;
   animation: alleyPulse 2s ease-in-out infinite;
 }
 
-.pin[data-pin-id='alley'][data-alley-state='unlocked'][data-alley-just-unlocked='true'] {
+.pin[data-lock-state='unlocked'][data-just-unlocked='true'] {
   opacity: 1;
   cursor: pointer;
   animation:
@@ -2328,10 +2316,6 @@ main {
     right: auto;
     transform: translateY(-50%);
     margin: 0;
-  }
-
-  .pin[data-pin-id='alley'] .pin-label {
-    display: none;
   }
 
   /* Toast lift on mobile so it doesn't sit under any fixed CTA. */

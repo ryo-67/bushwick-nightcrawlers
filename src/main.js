@@ -26,10 +26,15 @@ import { forgetVisitor, readSession, writeSession, SESSION_ENTERED } from './sto
 // in src/debug/viewport-readout.js for details.
 installViewportReadout();
 
+// The peek card's call to action, by what the pin opens.
+const CTA_BY_KIND = {
+  review: 'read reviews',
+  gathering: 'step into the alley',
+  memorial: 'pay respects',
+};
+
 function ctaCopyForVenue(venue) {
-  if (venue.id === 'alley') return 'step into the alley';
-  if (venue.id === 'rash') return 'pay respects';
-  return 'read reviews';
+  return CTA_BY_KIND[venue.kind] ?? CTA_BY_KIND.review;
 }
 
 const VIEWPORT_MARGIN = 12;
@@ -49,14 +54,13 @@ function setupPinTooltip() {
   function populate(venue) {
     tooltip.replaceChildren();
 
-    // Locked alley: show only the gating message, no photo / no CTA.
+    // Locked pin: show only the gating message, no photo / no CTA.
     // Same copy as the mobile tap toast so messaging is consistent.
-    const lockedAlley = venue.id === 'alley' && !isAlleyUnlocked();
-    if (lockedAlley) {
+    if (isLocked(venue)) {
       tooltip.classList.add('pin-tooltip-locked');
       const msg = document.createElement('div');
       msg.className = 'pin-tooltip-locked-message';
-      msg.textContent = ALLEY_LOCKED_MESSAGE;
+      msg.textContent = venue.lockedMessage;
       tooltip.appendChild(msg);
       return;
     }
@@ -226,60 +230,52 @@ function setupPinTooltip() {
 let modalRef = null;
 let currentRatGen = null;
 
-// Alley pin is always rendered. Locked (greyed) until the user has
-// visited 5 other venues; then unlocks with a subtle pulsing glow.
-// The threshold lives here so it can be tuned in one place. The
-// gating copy is shared between the desktop hover tooltip and the
-// mobile tap toast so messaging is consistent across surfaces.
-const ALLEY_UNLOCK_THRESHOLD = 5;
-const ALLEY_LOCKED_MESSAGE =
-  "the rats don't know you yet. come back when you've met more of us.";
-
-function isAlleyUnlocked() {
-  return engine.visitedReviewVenueCount() >= ALLEY_UNLOCK_THRESHOLD;
+// A venue with unlockAfterVisits (the alley) is always on the map but
+// greyed out until that many review venues have been opened; then it
+// unlocks with a subtle pulsing glow. Its lockedMessage is shared by
+// the desktop hover tooltip and the mobile tap toast.
+function isLocked(venue) {
+  return !!venue?.unlockAfterVisits && engine.visitedReviewVenueCount() < venue.unlockAfterVisits;
 }
 
-function updateAlleyPinState() {
-  const alleyPin = document.querySelector('.pin[data-pin-id="alley"]');
-  if (!alleyPin) return;
-  const newState = isAlleyUnlocked() ? 'unlocked' : 'locked';
-  const prevState = alleyPin.dataset.alleyState;
-  if (prevState === newState) return;
-  alleyPin.dataset.alleyState = newState;
+const GATED_VENUES = Object.values(venues).filter((v) => v.unlockAfterVisits);
 
-  // First-time unlock in this session: tag with a one-shot flag
-  // that CSS reads to play the burst animation, then clear after
-  // the burst completes (1.2s). Reloads find the pin unlocked but
-  // without the flag, so only the steady pulse runs.
-  // V9: V7/V8's filter-related defensive reflows are gone since
-  // the lock state is now driven by a two-asset swap (alley.webp
-  // vs alley-gray.webp via display toggle), not CSS filter. No
-  // compositing cache to defeat.
-  if (prevState === 'locked' && newState === 'unlocked') {
-    alleyPin.dataset.alleyJustUnlocked = 'true';
-    setTimeout(() => {
-      if (alleyPin.dataset.alleyJustUnlocked === 'true') {
-        delete alleyPin.dataset.alleyJustUnlocked;
-      }
-    }, 1300);
+function updateLockedPins() {
+  for (const venue of GATED_VENUES) {
+    const pin = document.querySelector(`.pin[data-pin-id="${venue.id}"]`);
+    if (!pin) continue;
+    const newState = isLocked(venue) ? 'locked' : 'unlocked';
+    const prevState = pin.dataset.lockState;
+    if (prevState === newState) continue;
+    pin.dataset.lockState = newState;
+
+    // First unlock this session: a one-shot flag CSS reads to play
+    // the burst animation, cleared once it's done (1.2s). Reloads
+    // find the pin unlocked without the flag, so only the steady
+    // pulse runs. (The lock itself is a two-image swap, colour vs
+    // grey, not a CSS filter.)
+    if (prevState === 'locked' && newState === 'unlocked') {
+      pin.dataset.justUnlocked = 'true';
+      setTimeout(() => delete pin.dataset.justUnlocked, 1300);
+    }
   }
 }
 
-function hideAlleyLockedToast() {
+function hideLockedToast() {
   const toast = document.querySelector('.alley-locked-toast');
   if (!toast || toast.dataset.state !== 'visible') return;
   toast.dataset.state = 'hidden';
   clearTimeout(toast._hideTimer);
 }
 
-function showAlleyLockedToast() {
+function showLockedToast(venue) {
   let toast = document.querySelector('.alley-locked-toast');
   if (!toast) {
     toast = document.createElement('div');
     toast.className = 'alley-locked-toast';
-    toast.textContent = ALLEY_LOCKED_MESSAGE;
     document.body.appendChild(toast);
   }
+  toast.textContent = venue.lockedMessage;
   toast.dataset.state = 'visible';
   clearTimeout(toast._hideTimer);
   toast._hideTimer = setTimeout(() => {
@@ -292,8 +288,8 @@ function setupPinPositions() {
   // static pin in index.html. venues.js is the single source of
   // truth for pin placement; tuning a pin is a one-file change.
   // Also attach a venue-name label per pin — hidden on desktop via
-  // CSS, shown on mobile only. Alley is excluded; its locked/
-  // unlocked styling carries the visual meaning there.
+  // CSS, shown on mobile only. The gathering pin (the alley) is
+  // excluded; its locked/unlocked styling carries the meaning there.
   for (const pin of document.querySelectorAll('.pin')) {
     const venue = venues[pin.dataset.pinId];
     if (!venue || !venue.mapCoordinates) continue;
@@ -301,7 +297,7 @@ function setupPinPositions() {
     pin.style.left = `${x}%`;
     pin.style.top = `${y}%`;
 
-    if (venue.id !== 'alley' && !pin.querySelector('.pin-label')) {
+    if (venue.kind !== 'gathering' && !pin.querySelector('.pin-label')) {
       const label = document.createElement('span');
       label.className = 'pin-label';
       label.textContent = venue.displayName;
@@ -476,21 +472,22 @@ function handleModalOpen(venueId, ctx) {
   // immediately tapped a different (unlocked) pin, the toast is
   // now stale — dismiss it so it doesn't linger over the new
   // modal.
-  hideAlleyLockedToast();
+  hideLockedToast();
 
   // Kick off venue bed (no-op for unmapped venues).
   whenReadyWhileOpen(venueId, () => beds.startVenueBed(venueId).catch(() => {}));
 
-  // jmz-platform: fire an immediate train pass so visiting the
-  // platform reliably triggers a "train arriving" event. The
-  // site-wide intermittent train schedule keeps running in parallel
-  // for ambient feel under any pin.
-  if (venueId === 'jmz-platform') whenReadyWhileOpen(venueId, beds.triggerTrainPass);
+  const venue = venues[venueId];
 
-  // Alley: no review-card path. Sync the mini-card visuals to
-  // whatever's currently in the registry (returning visitors might
-  // have rats still playing from before).
-  if (venueId === 'alley') {
+  // trainOnOpen (the JMZ platform): fire an immediate train pass so
+  // visiting reliably triggers a "train arriving" event. The
+  // site-wide intermittent schedule keeps running in parallel.
+  if (venue?.trainOnOpen) whenReadyWhileOpen(venueId, beds.triggerTrainPass);
+
+  // Gathering (the alley): no review-card path. Sync the mini-card
+  // visuals to whatever's currently in the registry (returning
+  // visitors might have rats still playing from before).
+  if (venue?.kind === 'gathering') {
     syncAlleyCardStates();
     return;
   }
@@ -611,7 +608,7 @@ function handleModalClose() {
   // Refresh alley state: visiting a venue may have just crossed
   // the unlock threshold. The state attribute drives both the
   // pin's locked/unlocked CSS and the tooltip text on next hover.
-  updateAlleyPinState();
+  updateLockedPins();
 }
 
 function setupFooterAudioControls() {
@@ -816,13 +813,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // Listener stays subscribed for the page lifetime; the modal-side
   // bail-out (only update when alley is open) keeps it cheap.
   engine.onActiveRatsChange(() => {
-    if (modalRef?.isOpen() && modalRef.currentVenueId === 'alley') {
+    if (modalRef?.isOpen() && venues[modalRef.currentVenueId]?.kind === 'gathering') {
       syncAlleyCardStates();
     }
   });
 
   setupPinPositions();
-  updateAlleyPinState();
+  updateLockedPins();
   centerMapOnVenueCluster();
   // Debounced: mid-relayout resize ticks can transiently report the
   // wrapper as non-overflowing, which would register as an axis flip
@@ -846,12 +843,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const pinId = pin.dataset.pinId;
     if (!pinId) return;
 
-    // Locked alley: surface the gating message via toast instead of
+    // Locked pin: surface the gating message via toast instead of
     // opening the modal. Desktop hover tooltip carries the same copy
     // (handled in setupPinTooltip).
-    if (pinId === 'alley' && !isAlleyUnlocked()) {
+    if (isLocked(venues[pinId])) {
       tooltip.hide();
-      showAlleyLockedToast();
+      showLockedToast(venues[pinId]);
       return;
     }
 

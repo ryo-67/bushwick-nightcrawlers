@@ -7,7 +7,6 @@ import { getReactionCounts, postReaction } from './reactions-client.js';
 // Alley modal framing line — describes the alley's social function,
 // not its location. Edit this single line to change the framing copy.
 const ALLEY_MEET_FRAMING = 'where the rats meet';
-const RASH_CLOSED_NOTE = '[closed February 2026]';
 // V51: modern Yelp's reaction set, in the site's lowercase voice —
 // the reactions are real visitors reaching across the fourth wall
 // now, so the options read as human responses to a rat's review
@@ -344,13 +343,12 @@ export class Modal {
 
     this.root.replaceChildren();
 
-    // The alley gets its gathering card; a venue with a review gets
-    // the review card; anything else (Rash) is a closed venue's
-    // tombstone.
+    // The card follows the venue's kind (see venues.js). A review
+    // venue whose review is missing falls back to the tombstone.
     let card;
-    if (venue.id === 'alley') {
+    if (venue.kind === 'gathering') {
       card = this.buildAlleyCard(venue);
-    } else if (reviewer && review) {
+    } else if (venue.kind === 'review' && reviewer && review) {
       card = this.buildReviewCard(venue, reviewer, review, allReviews);
     } else {
       card = this.buildTombstoneCard(venue);
@@ -988,13 +986,13 @@ export class Modal {
       // condemnation-notice red, tilted like the peeks.
       const stamp = document.createElement('span');
       stamp.className = 'tombstone-closed-stamp';
-      stamp.textContent = RASH_CLOSED_NOTE;
+      stamp.textContent = venue.closedNote;
       photo.appendChild(stamp);
       card.appendChild(photo);
     } else {
       const closed = document.createElement('p');
       closed.className = 'venue-closed-note';
-      closed.textContent = RASH_CLOSED_NOTE;
+      closed.textContent = venue.closedNote;
       card.appendChild(closed);
     }
 
