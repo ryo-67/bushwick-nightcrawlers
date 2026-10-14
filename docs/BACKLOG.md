@@ -58,21 +58,17 @@ Last reviewed: 2026-10-14.
 
 ### Render pins from `venues.js`
 
-**Problem.** `index.html` hard-codes the ten pin buttons (image, label text, aria-label) while `venues.js` holds everything else about each venue; `main.js` then positions them from `mapCoordinates`. Adding or renaming a venue means editing both.
+**Problem.** `index.html` hard-codes the ten pin elements (venue id, image path, aria-label; the alley also has a grey image), while `venues.js` holds everything else; `main.js` positions the pins and adds their visible labels from `displayName`. Adding or renaming a venue means editing both files.
 
-**Proposed change.** Build the pins in `main.js` from `venues`. Needs a `pinLabel` field (labels are shorter than `name` for some venues, and the alley has none), which is a content-file change.
+**Proposed change.** Build the pins in `main.js` from `venues`. The image path derives from the id (`assets/pins/<id>.webp`, plus `-gray` for a venue with `unlockAfterVisits`). Two aria-labels differ from `displayName` ("alley between Mr Kiwi and JMZ (ambient only)", "Rash (closed February 2026)"), so they'd move into `venues.js` as a `pinAriaLabel` field.
 
-**Risk.** Low to medium. The first paint would wait for the module instead of the HTML, so pins appear a frame later; compare the loading-screen-to-map transition.
+**Trade-off.** One place to edit, but pin images start downloading after the scripts load instead of during HTML parsing, and on a return visit (no loading screen) the pins could appear a beat after the map. Needs the rendering proof.
 
-### Reopening a card while its rat is still talking
-
-**State today.** Closing a review card leaves the rat speaking (cumulative mix). Reopening the same card starts a fresh play button; word highlighting only resumes because the modal checks the reviewer id.
-
-**Option.** Let the reopened card adopt the running rat: show it as playing, resume highlighting from the current word, and let the stop button stop that rat. This changes what visitors see, so it's a design call.
+**Decision so far.** Low value while no new venues are planned.
 
 ### Explicit review ids
 
-Reviews are identified by `reviewerId` (reactions, the active-rat registry). That holds while each rat reviews one venue. If a rat ever reviews a second venue, reviews need their own `id` and the reactions keys need migrating. Decide before writing a second review for any rat.
+Reviews are identified by `reviewerId` (reactions, the active-rat registry). That holds while each rat reviews one venue. If a rat ever reviews a second venue, reviews need their own `id` and the reactions keys need migrating. Parked: no new venues or reviews are planned. Revisit before writing a second review for any rat.
 
 ### About page back link underline
 
@@ -138,7 +134,6 @@ KEYS = `rl:<ip>:<minute>`, `reactions:<target>`; ARGV = rate limit (30), type, d
 - **Voice tables.** Every profile in `rat-profiles.js` sets `keywordTriggers: SHARED_TRIGGERS`, and `RatGenerator` re-lowercases the list per rat; one exported, pre-lowercased `COCAINE_TRIGGERS` set would replace eleven identical fields. `tierSkew` is a free-text string interpreted in two places in `rat-generator.js` (`applyTierSkew` and `SYLLABLE_RATES`); a `TIER_SKEWS` table holding each skew's weights and syllable rate would put them together. Must keep the rng call order identical (run the audio proof below).
 - **JS timers that copy CSS durations.** Three durations are written in both JS and CSS: the pin unlock burst (1300 ms, `main.js` → `[data-just-unlocked]`), the loading-screen fade (`FADE_OUT_MS`, 700 ms) and the alley hint fade (`ALLEY_HINT_FADE_MS`, 800 ms). Listen for `animationend`/`transitionend` instead, with a fallback timeout in case the animation never runs (reduced motion, hidden tab).
 - **Peek tooltip.** The tooltip rebuilds its content on every hover; cache it per venue and only refresh the reaction tally. Its photo could use `buildVenuePhoto` from `modal.js` instead of its own `<img>` code.
-- **Alley hint timer.** In `modal.js`, the hint's auto-dismiss `setTimeout` isn't cleared when the alley card closes, so it still fires later (marking the hint seen and touching a detached node). Keep the id and clear it in the card's teardown.
 - **Volume range in two places.** The slider's `min`/`max` in `index.html` repeat `VOLUME_MIN_DB`/`VOLUME_MAX_DB` in `master-controls.js`. Setting them from JS changes the first paint (the thumb jumps), so they stay duplicated; a comment beside the constants points at the HTML.
 - **Loading screen shells.** `renderInitial()` and `renderReturning()` in `loading-screen.js` repeat the same shell (dialog attributes, header, rat crew, footer, status cycle). Extract `mountShell({ state, body, ctaLabel })`.
 - **Chrome bar tokens.** Header padding (`calc(var(--chrome-pad-y) + env(safe-area-inset-top)) var(--chrome-pad-x) var(--chrome-pad-y)`) is written for three bars and the footer padding for two; `.page-title` and `.loading-title` share eight declarations kept "in sync" by comment. Add `--chrome-header-pad` / `--chrome-footer-pad` tokens and group the two titles.
@@ -172,4 +167,6 @@ CLAUDE.md asks for proof when a refactor touches rendering or the voice. What wo
 
 ## Done
 
+- 2026-10-14 — Reopening a review card while its rat is still speaking picks that rat back up (playing state, highlighting continues, back to the front of the mix); the alley hint's timer is cleared on close, so a hint closed early isn't marked seen. Branch `simplify-2`.
+- 2026-10-14 — Second cleanup pass: `dc0e188` (branch `simplify-2`).
 - 2026-10-14 — Cleanup and venue `kind` shipped: `5ffcf5c`, `3d4fe8e`, `250d058`, `16e1f85`, `1bb6b13`.

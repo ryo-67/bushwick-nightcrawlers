@@ -333,8 +333,24 @@ export function onActiveRatsChange(fn) {
   activeRatsListeners.add(fn);
 }
 
+export function getActiveRat(reviewerId) {
+  return ratRegistry.get(reviewerId) ?? null;
+}
+
+// Moves a speaking rat to the front of the mix (rank 0), as if it had
+// just started. Used when its card is reopened mid-review.
+export function bringRatForward(reviewerId) {
+  const rg = ratRegistry.get(reviewerId);
+  if (!rg) return;
+  ratRegistry.delete(reviewerId);
+  ratRegistry.set(reviewerId, rg);
+  recomputeLadder();
+  notifyActiveRatsListeners();
+}
+
 export function registerRat(reviewerId, ratGen) {
-  // Displace any rat with the same id (modal-reopen of an active rat).
+  // Displace any rat with the same id (the same rat starting again,
+  // e.g. its alley one-liner while its review is still playing).
   // Immediate stop + dispose; the new instance will play fresh.
   const existing = ratRegistry.get(reviewerId);
   if (existing) {

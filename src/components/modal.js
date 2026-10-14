@@ -313,6 +313,7 @@ export class Modal {
     this.currentReviewIndex = 0;
     this.previousFocus = null;
     this.oscilloscope = null;
+    this.alleyHintTimer = null;
     // The current review's word spans, and the one lit by the voice.
     this.wordEls = null;
     this.activeWordEl = null;
@@ -400,6 +401,7 @@ export class Modal {
     });
 
     this.disposeOscilloscope();
+    clearTimeout(this.alleyHintTimer);
     this.wordEls = null;
     this.activeWordEl = null;
     this.currentVenueId = null;
@@ -759,12 +761,11 @@ export class Modal {
         dismissed = true;
         markAlleyHintSeen();
         hint.classList.add('is-fading');
-        setTimeout(() => {
-          if (hint.parentNode) hint.remove();
-        }, ALLEY_HINT_FADE_MS + 50);
+        setTimeout(() => hint.remove(), ALLEY_HINT_FADE_MS + 50);
       };
 
-      setTimeout(dismissHint, ALLEY_HINT_TIMEOUT_MS);
+      // Cleared on close, so a hint closed early isn't marked seen.
+      this.alleyHintTimer = setTimeout(dismissHint, ALLEY_HINT_TIMEOUT_MS);
       card.addEventListener('click', (e) => {
         if (e.target.closest('.alley-card')) dismissHint();
       });

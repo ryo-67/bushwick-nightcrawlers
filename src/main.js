@@ -510,15 +510,26 @@ function handleModalOpen(venueId, ctx) {
     return rg;
   }
 
-  currentRatGen = makeRatGen();
-
-  // The card's play button starts in 'loading'; it becomes playable
-  // as soon as the engine is up (now, if it already is).
-  whenReadyWhileOpen(venueId, () => modalRef.setPlayState('idle'));
-  // The scope is never dead air — idle, it taps the master
-  // bus and murmurs with the live ambient corner (rumble, traffic,
-  // any still-talking rats). Play refocuses it on this rat's voice.
-  startAmbientScope();
+  // Reopening a card whose rat is still speaking this review picks
+  // that rat back up: the button shows it playing, highlighting
+  // carries on from the word it's on, and it returns to the front of
+  // the mix. (The same rat speaking its alley one-liner doesn't count.)
+  const running = engine.getActiveRat(review.reviewerId);
+  if (running?.reviewText === review.text) {
+    currentRatGen = running;
+    engine.bringRatForward(review.reviewerId);
+    modalRef.setPlayState('playing');
+    startVoiceScope();
+  } else {
+    currentRatGen = makeRatGen();
+    // The card's play button starts in 'loading'; it becomes playable
+    // as soon as the engine is up (now, if it already is).
+    whenReadyWhileOpen(venueId, () => modalRef.setPlayState('idle'));
+    // The scope is never dead air — idle, it taps the master
+    // bus and murmurs with the live ambient corner (rumble, traffic,
+    // any still-talking rats). Play refocuses it on this rat's voice.
+    startAmbientScope();
+  }
 
   const playBtn = modalRef.root.querySelector('.play-button');
   if (!playBtn) return;
@@ -533,9 +544,7 @@ function handleModalOpen(venueId, ctx) {
       currentRatGen = null;
     } else {
       if (!currentRatGen) currentRatGen = makeRatGen();
-      modalRef.oscilloscope?.setSourceMode('voice');
-      modalRef.oscilloscope?.attach(engine.getRatGain());
-      modalRef.oscilloscope?.start();
+      startVoiceScope();
       engine.registerRat(review.reviewerId, currentRatGen);
       currentRatGen.start();
       modalRef.setPlayState('playing');
@@ -551,6 +560,15 @@ function startAmbientScope() {
   if (!osc || !window.Tone) return;
   osc.setSourceMode('ambient');
   osc.attach(window.Tone.getDestination());
+  osc.start();
+}
+
+// Playing scope = the rats' voice bus at full scale.
+function startVoiceScope() {
+  const osc = modalRef?.oscilloscope;
+  if (!osc) return;
+  osc.setSourceMode('voice');
+  osc.attach(engine.getRatGain());
   osc.start();
 }
 
