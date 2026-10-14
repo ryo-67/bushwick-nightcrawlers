@@ -86,7 +86,8 @@ For the asset checklist and citations: `docs/ASSETS.md`. Some of its planning no
 │   ├── photos/, selfies/   # WebP
 │   ├── sounds/             # ambient/, effects/, usvs/, usvs-cocaine/ — all WebM/Opus
 │   └── og.jpg, favicon.svg, apple-touch-icon.png
-└── docs/                   # STRATEGY.md, ASSETS.md, BACKLOG.md (parked work)
+├── docs/                   # STRATEGY.md, ASSETS.md, BACKLOG.md (parked work)
+└── .vercelignore           # Keeps docs/, scripts/, CLAUDE.md, .claude/ off the live site
 ```
 
 `assets/source-pins/` (the GIF originals for the pins) is local-only and gitignored.
@@ -144,13 +145,25 @@ The Rash tombstone (`.modal-card.modal-card-tombstone`) is content-sized (`heigh
 
 V24 is camouflage, not a fix: paint still stops at dvh. The architectural fix (make `.modal` `position: absolute`, pin `.map-wrapper`, `position: sticky` on the card, undo the body lock) is deferred.
 
+## Code quality (applies to every change)
+
+Write maintainable, human-readable, clean code, and leave the code you touch cleaner than you found it.
+
+- **Reuse before writing.** Use the shared helpers instead of re-implementing them: `src/storage.js` (browser storage), `src/components/reactions-client.js` (the reactions API), `src/audio/ramp.js` (gain/parameter fades), `src/audio/normalize.js` (keyword keys), `src/audio/load-buffer.js` (audio loading), `src/components/rat-crew.js` (the rat crew), `buildStarRow`/`formatCount`/`findReviewsForVenue` in `modal.js`. If you need something twice, extract it once.
+- **Data, not special cases.** Behaviour that belongs to a venue goes in `venues.js` as a field and the code reads it; never branch on a specific venue, rat or review id.
+- **Fix the cause, at the right depth.** Don't layer overrides, `!important`, or another `:not()` on top of a rule to patch a symptom; change the rule or the mechanism underneath.
+- **Small, named pieces.** Prefer short functions with names that say what they do over long handlers; keep nesting shallow; name constants instead of using magic numbers and colour literals (use the CSS tokens).
+- **No dead code.** Delete unused functions, exports, selectors, state and files rather than leaving them "just in case"; git history keeps them. Don't leave commented-out code.
+- **Comments say why, for the code as it is now.** No history notes about code that's gone; update or delete a comment when the code under it changes.
+- **Verify before shipping.** `node --check` every changed JS file, exercise the change in a local preview (`scripts/dev-server.py`), and for refactors confirm behaviour is unchanged.
+
 ## Code style
 
 - ES module imports, named exports only; no default exports
 - Classes for stateful audio objects (RatGenerator, Oscilloscope, Modal); pure functions for tokenizers and scanners
 - Vanilla CSS with custom properties for theme tokens (`--color-*`, `--font-*`, `--space-*`, `--chrome-*`)
 - 2-space indentation, single quotes for strings
-- Comments explain what the code does now. "V-numbers" refer to past iterations; don't add history notes about code that's gone.
+- "V-numbers" in comments refer to past iterations (e.g. V24, V74); keep the ones that explain current behaviour, don't add new history.
 
 ## Don't
 
@@ -169,6 +182,7 @@ V24 is camouflage, not a fix: paint still stops at dvh. The architectural fix (m
 - The Vercel project (`bushwick-nightcrawlers`, team `ryo-67s-projects`) is linked to GitHub. **A push to `main` deploys to production** (bushwick.shoro.space). A push to any other branch builds a preview.
 - Work on a branch; ship to `main` only when Shoro says so. Changes to visitor-facing copy go to a preview first for Shoro's approval.
 - `bushwick-nightcrawlers.vercel.app` 308-redirects to bushwick.shoro.space with paths kept.
+- `.vercelignore` keeps `docs/`, `scripts/`, `CLAUDE.md` and `.claude/` out of the deployed site (they stay on GitHub). Anything else in the repo root is publicly served, so don't commit private notes outside those paths.
 - Previews sit behind Vercel's login; plain `curl` gets a redirect. Use the Vercel connector's authenticated fetch to read them.
 - Run `vercel api …` from outside the repo: inside it the CLI mistakes the `api/` folder for a subdirectory deploy.
 - Deleting deployments needs confirmation, which this environment can't give; Shoro removes old previews with `vercel rm <url> --scope ryo-67s-projects`.
