@@ -692,8 +692,6 @@ export class Modal {
 
   buildReactions(review) {
     const reviewId = review.reviewerId;
-    const wrap = document.createElement('div');
-
     const reactions = document.createElement('div');
     reactions.className = 'review-reactions';
 
@@ -730,8 +728,7 @@ export class Modal {
     // centered against the chips. (No tally line — the counts live
     // in the chips.)
     reactions.appendChild(report);
-    wrap.appendChild(reactions);
-    return wrap;
+    return reactions;
   }
 
   buildAlleyCard(venue) {

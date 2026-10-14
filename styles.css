@@ -409,8 +409,9 @@ main {
   }
 }
 
-/* Toast — bottom-centered notification for locked-alley taps on
-   mobile (and desktop, as a complement to the tooltip). */
+/* Toast — bottom-centered notification for taps on a locked pin
+   from a touch screen, at any width. Mouse users get the same
+   message in the hover tooltip instead (main.js decides). */
 .alley-locked-toast {
   position: fixed;
   /* V26: clear the footer control bar (~3rem) plus a gap. */
@@ -3358,13 +3359,6 @@ main {
 
 /* ===== V11 desktop-only overrides ===== */
 @media (min-width: 769px) {
-  /* Locked-alley toast: desktop has hover tooltip carrying the
-     same gating message — toast on click is redundant. Suppress
-     on wide viewports; mobile keeps it (no hover state). */
-  .alley-locked-toast {
-    display: none !important;
-  }
-
   /* Tombstone (Rash) on desktop: no special height override.
      V11 added height:auto + max-height:80vh, which made the
      sheet shorter than other modals (which use the default

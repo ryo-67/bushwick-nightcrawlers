@@ -1,7 +1,7 @@
 import { LoadingScreen } from './components/loading-screen.js';
 import { Modal, buildStarRow, formatCount, findReviewsForVenue } from './components/modal.js';
 import { buildRedactedPhoto } from './components/redacted-photo.js';
-import { getReactionCounts } from './components/reactions-client.js';
+import { getReactionCounts, onReactionCounts } from './components/reactions-client.js';
 import { rats } from './content/rats.js';
 import { venues } from './content/venues.js';
 import { reviews } from './content/reviews.js';
@@ -46,10 +46,6 @@ function setupPinTooltip() {
   document.body.appendChild(tooltip);
 
   let currentPin = null;
-
-  function isPointerCoarse() {
-    return window.matchMedia('(hover: none), (pointer: coarse)').matches;
-  }
 
   function populate(venue) {
     tooltip.replaceChildren();
@@ -139,8 +135,13 @@ function setupPinTooltip() {
   }
 
   // Session cache for peek tallies — one fetch per reviewer, and
-  // silence (0) when the API is absent.
+  // silence (0) when the API is absent. Fresh counts from anywhere
+  // (the modal's fetch, or the reply to your own reaction) replace
+  // the cached tally.
   const peekTallies = new Map();
+  onReactionCounts((reviewerId, counts) => {
+    peekTallies.set(reviewerId, Promise.resolve(counts.helpful || 0));
+  });
   function fetchPeekTally(reviewerId) {
     if (peekTallies.has(reviewerId)) return peekTallies.get(reviewerId);
     const p = getReactionCounts(reviewerId)
@@ -229,6 +230,13 @@ function setupPinTooltip() {
 
 let modalRef = null;
 let currentRatGen = null;
+
+// Touch screens (no hover) get toasts; mouse users get hover tooltips.
+// Decided by input type, not width, so a wide tablet still gets the
+// toast and a narrow desktop window doesn't.
+function isPointerCoarse() {
+  return window.matchMedia('(hover: none), (pointer: coarse)').matches;
+}
 
 // A venue with unlockAfterVisits (the alley) is always on the map but
 // greyed out until that many review venues have been opened; then it
@@ -843,12 +851,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const pinId = pin.dataset.pinId;
     if (!pinId) return;
 
-    // Locked pin: surface the gating message via toast instead of
-    // opening the modal. Desktop hover tooltip carries the same copy
-    // (handled in setupPinTooltip).
+    // Locked pin: don't open the modal. Touch screens get the gating
+    // message as a toast; mouse users already see it in the hover
+    // tooltip (setupPinTooltip).
     if (isLocked(venues[pinId])) {
-      tooltip.hide();
-      showLockedToast(venues[pinId]);
+      if (isPointerCoarse()) {
+        tooltip.hide();
+        showLockedToast(venues[pinId]);
+      }
       return;
     }
 

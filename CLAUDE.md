@@ -96,13 +96,13 @@ For the asset checklist and citations: `docs/ASSETS.md`. Some of its planning no
 - `kind: 'review'` — opens a rat's review card (text in `reviews.js`, keyed by venue).
 - `kind: 'gathering'` — the alley: a card of every rat's one-liner. No pin label.
 - `kind: 'memorial'` — a closed venue's tombstone (Rash). Takes a pay-respects reaction keyed by the venue id; the API derives its valid targets from this.
-- `unlockAfterVisits` + `lockedMessage` — the pin is greyed out (`data-lock-state`) until that many review venues have been opened; the message shows in the desktop tooltip and the mobile toast.
+- `unlockAfterVisits` + `lockedMessage` — the pin is greyed out (`data-lock-state`) until that many review venues have been opened. Mouse users see the message in the hover tooltip; touch screens get it as a toast on tap, at any width.
 - `closedNote` — the stamp across a memorial's photo.
 - `trainOnOpen` — opening the pin fires a train pass (the JMZ platform).
 - `photoPath`, or `photoRedacted: { stamp, note }` for a venue with no usable photo.
 - `mapCoordinates` (percent of the map) and optional `labelPosition`.
 
-Per-venue ambient beds (files and gains) live in `VENUE_BED_MAP` in `src/audio/beds.js`. The `bedComponents`, `bedPersistent`, `bedAmbient` and `address` fields in `venues.js` are not read by any code.
+Per-venue ambient beds (files, gains, and whether a bed persists after close) live in `VENUE_BED_MAP` in `src/audio/beds.js`, next to the code that plays them; they're mix settings, not content. A review venue's rat comes from `reviews.js` (each review names its `venueId` and `reviewerId`).
 
 ## Map and pin layering
 
