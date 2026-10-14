@@ -22,6 +22,8 @@ For full project context, read `docs/STRATEGY.md`. Most decisions and rationale 
 - §10 Tech stack and implementation patterns (code patterns, file structure)
 - §12 Build plan (per-task scoping)
 
+Parked work (deferred refactors, performance items, photo-permission follow-ups) is logged in `docs/BACKLOG.md`, written so it can be resumed without prior context. Add to it rather than leaving decisions in a conversation.
+
 For the asset checklist and citations: `docs/ASSETS.md`. Some of its planning notes are out of date (pitch-variance and time-stretch features that were never built, a `CREDITS.md` that doesn't exist); where it disagrees with the code or this file, the code and this file win.
 
 ## Stack
@@ -84,7 +86,7 @@ For the asset checklist and citations: `docs/ASSETS.md`. Some of its planning no
 │   ├── photos/, selfies/   # WebP
 │   ├── sounds/             # ambient/, effects/, usvs/, usvs-cocaine/ — all WebM/Opus
 │   └── og.jpg, favicon.svg, apple-touch-icon.png
-└── docs/                   # STRATEGY.md, ASSETS.md
+└── docs/                   # STRATEGY.md, ASSETS.md, BACKLOG.md (parked work)
 ```
 
 `assets/source-pins/` (the GIF originals for the pins) is local-only and gitignored.
