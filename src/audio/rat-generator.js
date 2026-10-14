@@ -16,11 +16,11 @@
  *
  * Playback mode (read at start() time):
  *   'moment' — Math.random, generative each play; word-level voice
- *   'tongue' — syllabic voice, fully deterministic (word-seeded
- *              sequences + seeded mulberry32 residual randomness)
+ *   'tongue' — syllabic voice, fully deterministic (syllable-core-
+ *              seeded samples + seeded mulberry32 residual randomness)
  *
  * Pause behavior: stop() halts immediately; clicking play again
- * restarts from word 0. No mid-stream resume in this version.
+ * restarts from word 0. No mid-stream resume.
  */
 
 import * as engine from './engine.js';
@@ -33,11 +33,11 @@ import { USV_FEATURES } from './usv-features.js';
 import { USVS, USVS_COCAINE } from './manifest.js';
 import { syllableChunks } from './syllables.js';
 
-// V71: the syllabic voice ships as the footer mode 'in their tongue'
-// (playback-mode.js). This URL flag survives as a dev override that
-// forces syllabic scheduling regardless of the selected mode.
+// The syllabic voice is the footer mode 'in their tongue'
+// (playback-mode.js). This URL flag is a dev override that forces
+// syllabic scheduling regardless of the selected mode.
 // Cocaine-register words are word-level in EVERY mode — the drug
-// register smears the language (user call, Aug 2026).
+// register smears the language.
 const VOICE_MODE = (() => {
   try {
     return new URLSearchParams(window.location.search).get('voice') || 'word';
@@ -104,18 +104,16 @@ function eligibleTiers(word) {
   return ['short', 'medium'];
 }
 
-// ——— Syllabic voice mode (V68) ———————————————————————————————
+// ——— Syllabic voice mode ————————————————————————————————————
 //
-// Words become sequences of short USVs at syllable rate. The word
-// itself seeds the sequence (fnv1a of the normalized word), so the
-// same word produces the same squeak run in every review, every
-// visit, both playback modes — the translation is real. Rat identity
+// Words become sequences of short USVs at syllable rate. Each
+// syllable core seeds its own sample (see scheduleSyllabicWord), so
+// the same word produces the same squeak run in every review and
+// every visit — the translation is real. Rat identity
 // lives in the voice (per-rat playback rate, syllable tempo, and the
 // existing per-rat chain), not in sample choice.
 
 // tierSkew personality → syllables per second. Manic rats talk fast.
-// V70: lifted ~20% across the board — the V68 rates read fine per
-// word but dragged over a full review.
 const SYLLABLE_RATES = {
   'short-dominant': 8,
   'short-across-all': 8,
@@ -174,7 +172,7 @@ function getSyllablePools() {
     const entry = { ...s, eff: f.eff, onset: f.onset, contour: f.contour };
     // 300ms ceiling: slightly past the syllable slot (samples get
     // capped to the slot at schedule time) — the wider pool matters
-    // more than the trim, with 37 → ~43 samples it dilutes how often
+    // more than the trim, with 37 → 41 samples it dilutes how often
     // any one distinctive vocalization recurs across words.
     if (f.eff <= 0.3) {
       short.push(entry);
@@ -202,10 +200,10 @@ function resolveAvailable(pool, idx) {
 
 // Contour seasoning: a soft positional bias — multi-syllable words
 // open leaning trill and close leaning fall; middles and
-// monosyllables lean flat (the unmarked class — V69: monosyllables
-// used to lean trill, which funneled most words through the ten
-// most distinctive samples). Deliberately subtle (45/55 against the
-// whole pool): texture, not a legend.
+// monosyllables lean flat (the unmarked class — leaning trill would
+// funnel most words through the ten most distinctive samples).
+// Deliberately subtle (45/55 against the whole pool): texture, not
+// a legend.
 function pickSyllableSample(pools, chunkRng, pos, n) {
   let biasClass = 'flat';
   if (n > 1 && pos === 0) biasClass = 'trill';
@@ -262,7 +260,7 @@ export class RatGenerator {
     // Per-rat audio chain. Created lazily at start() since engine
     // nodes don't exist until engine.start() resolves.
     //
-    //   source → perRatLPF ─┬─→ perRatGain → ratGain → Destination
+    //   source → perRatLPF ─┬─→ perRatGain → perRatPanner → ratGain → Destination
     //                       └─→ perRatReverbSend → sharedRatReverb
     //                                              → ratGain → Destination
     //
@@ -366,10 +364,10 @@ export class RatGenerator {
 
   configureRng() {
     this.mode = getMode();
-    // V72: 'tongue' absorbed the old 'record' determinism — the
-    // syllable sequences are word-seeded by design, and the residual
-    // randomness (register rolls, pauses, word-level cocaine picks)
-    // is seeded too, so a tongue playback reproduces exactly.
+    // V72: in 'tongue' the syllable samples are seeded by their
+    // syllable cores by design, and the residual randomness (register
+    // rolls, pauses, word-level cocaine picks) is seeded too, so a
+    // tongue playback reproduces exactly.
     if (this.mode === 'tongue') {
       const seed = fnv1a(`${this.reviewerId}\n${this.reviewText}`);
       this.rng = mulberry32(seed);
@@ -391,7 +389,7 @@ export class RatGenerator {
     return resolveAvailable(pool, Math.floor(this.rng() * pool.length));
   }
 
-  // V68/V69: one word as a run of syllable-rate USVs. Each syllable
+  // One word as a run of syllable-rate USVs. Each syllable
   // is seeded by its CORE (leading consonants + vowel nucleus, see
   // syllables.js), not the whole word — so "rat" and "rats" squeak
   // the same, "cheese" and "cheesy" share their opening, and every
@@ -436,8 +434,8 @@ export class RatGenerator {
       this.activeSources.push(src);
       if (k === n - 1) lastDur = dur;
     }
-    // V70: tighter word boundaries — the gap carries the word
-    // separation, the last syllable no longer pads past its sound.
+    // Tight word boundaries — the gap carries the word separation,
+    // and the last syllable doesn't pad past its sound.
     const gap = Math.max(0.09, slot * 0.45);
     return (n - 1) * slot + Math.max(lastDur, slot * 0.5) + gap;
   }

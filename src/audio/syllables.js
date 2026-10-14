@@ -10,7 +10,7 @@ import { lettersOnly } from './normalize.js';
 const VOWEL_GROUP = /[aeiouy]+/g;
 
 /**
- * V69: syllable cores — one per counted syllable, each the chunk's
+ * Syllable cores — one per counted syllable, each the chunk's
  * leading consonant run + vowel nucleus ("crumbs" → ['cru'],
  * "cheesy" → ['chee', 'sy']). The syllabic voice seeds each
  * syllable's sample from its core, so related words share sounds:

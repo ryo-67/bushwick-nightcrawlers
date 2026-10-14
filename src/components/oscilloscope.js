@@ -2,8 +2,8 @@
  * src/components/oscilloscope.js — live waveform visualization.
  *
  * Construction is cheap: just the canvas, idle baseline. The audio
- * tap is wired later via attach(toneNode), once the engine has a
- * ratGain to expose.
+ * tap is wired later via attach(toneNode) — the rat bus while a
+ * review plays, the master output while idle.
  *
  * Lifecycle:
  *   attach(toneNode) — connects toneNode → Tone.Waveform analyser.
@@ -17,7 +17,7 @@
 const ACTIVE_STROKE = 'rgba(184, 255, 0, 0.85)';
 const IDLE_STROKE = 'rgba(197, 191, 174, 0.4)';
 
-// V47: adaptive normalization replaces the fixed amplitude scale.
+// Adaptive normalization rather than a fixed amplitude scale.
 // The analyser taps a point in the chain whose level varies with
 // master gain and the rat's recency-ladder rank — any fixed
 // multiplier is either flat for quiet rats or pinned for loud
@@ -34,7 +34,7 @@ const SHAPE_EXP = 1.6;
 const PEAK_DECAY = 0.998; // per frame (~60fps): adapts over ~5s
 const PEAK_FLOOR = 0.01;
 
-// V46: envelope rendering. A raw 1024-sample trace of pitched USV
+// Envelope rendering. A raw 1024-sample trace of pitched USV
 // content packs hundreds of oscillations into the strip — visual
 // noise with illegible peaks. Instead the buffer is folded into
 // BUCKETS peak-amplitude columns and drawn as a smooth mirrored
@@ -73,7 +73,7 @@ export class Oscilloscope {
     return this.canvas;
   }
 
-  // V60: 'voice' draws at full scale; 'ambient' caps the envelope
+  // 'voice' draws at full scale; 'ambient' caps the envelope
   // low so the idle scope reads as the corner murmuring, not a
   // performance. Resets the normalizer — the two sources sit at
   // very different levels.

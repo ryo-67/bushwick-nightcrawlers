@@ -28,13 +28,12 @@ import { panForVenue } from './spatial.js';
 import { loadBufferWithRetry } from './load-buffer.js';
 import { rampParam } from './ramp.js';
 
-// Component gainDb values anchored to the established baseline
-// (see git history for previous tuning passes). Primary loop
-// component matches the most recent per-venue level (cafe -11,
-// bar -13, rave -11, firetruck -19). Secondary atomic ambient at
-// -22 to -28; tertiary subtle at -28 to -32. Multi-component beds
-// should sum-perceived to roughly the existing single-file bed
-// level, not pile additively louder. Tune by ear in verification.
+// Component gainDb values. Primary loop components sit at the
+// per-venue level (cafe -11, bar -13, rave -11, firetruck -19).
+// Secondary atomic ambient at -22 to -28; tertiary subtle at -28 to
+// -32. Multi-component beds should sum-perceived to roughly a
+// single-file bed's level, not pile additively louder. Tune by ear
+// in verification.
 const VENUE_BED_MAP = {
   'caffeine-underground': {
     components: [
@@ -91,8 +90,8 @@ const VENUE_BED_MAP = {
   },
   'alley': {
     components: [
-      { file: 'water-drip.webm', gainDb: -24 },        // primary (was secondary)
-      { file: 'leaky-pipe.webm', gainDb: -28 },        // secondary (was tertiary)
+      { file: 'water-drip.webm', gainDb: -24 },        // primary
+      { file: 'leaky-pipe.webm', gainDb: -28 },        // secondary
     ],
   },
   'ornithology': {
@@ -143,8 +142,8 @@ let activeBedVenueId = null;
 // to startBedsPlayback().
 //
 // V74: each bed loads on its own (one retry, then left silent)
-// instead of awaiting Tone.loaded() — that waits on EVERY in-flight
-// Tone download, so one failed USV file used to reject the beds too.
+// rather than awaiting Tone.loaded() — that waits on EVERY in-flight
+// Tone download, so one failed USV file would reject the beds too.
 // Nodes are created once, so a preload retry only refetches what's
 // still missing.
 export async function preloadBeds() {

@@ -88,7 +88,7 @@ export const ratProfiles = {
     tierSkew: 'mixed',
     keywordTriggers: SHARED_TRIGGERS,
   },
-  // Cameo profiles — added so Tabitha and Vintage Vermin can speak
+  // Cameo profiles, so Tabitha and Vintage Vermin can speak
   // (their full reviews + alley one-liners). Defaults match the
   // characters' descriptions; tunable by ear.
   'tabitha-von-wyckoff': {

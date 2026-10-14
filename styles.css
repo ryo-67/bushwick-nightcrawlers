@@ -2,7 +2,7 @@
   --color-bg: #0A0A0A;
   --color-text: #C5BFAE;
   --color-accent: #B8FF00;
-  /* V66: bureaucracy red (report-to-311, closure stamp). Lifted
+  /* Bureaucracy red (report-to-311, closure stamp). Lifted
      from Yelp's #D32323, which is only ~3.8:1 on the page black —
      this value holds ≥5:1 (WCAG AA for normal text) at full
      opacity. Never render it below opacity 1 on text. */
@@ -16,7 +16,7 @@
   --space-md: 1rem;
   --space-lg: 2rem;
 
-  /* V30: shared chrome geometry. The map page's header and the
+  /* Shared chrome geometry. The map page's header and the
      loading screen's header are the SAME bar: identical height,
      padding, and a single vertical midline every chrome element
      centers on (title, about link, status text, the enter/skip
@@ -35,7 +35,7 @@
   --chrome-bar-h: calc(var(--chrome-control-h) + 2 * var(--chrome-pad-y) + 1px);
 }
 
-/* V33: one override retunes every chrome bar (headers and footers,
+/* One override retunes every chrome bar (headers and footers,
    map page and loading screen) for phones. */
 @media (max-width: 768px) {
   :root {
@@ -55,9 +55,8 @@ html,
 body {
   /* Explicit bg so iOS Safari elastic-scroll overscroll doesn't
      reveal the layer behind the wrapper. The map-wrapper's
-     overflow:auto on mobile is the actual scroll surface; without
-     this, hard upward pan bleeds the map content above the
-     header. */
+     overflow:auto is the actual scroll surface; without this, hard
+     upward pan bleeds the map content above the header. */
   background-color: var(--color-bg);
 }
 
@@ -73,22 +72,16 @@ body {
   font-family: var(--font-data);
   font-variant-numeric: tabular-nums;
   position: relative;
-  /* V21: dropped min-height:100vh and overflow-x:hidden. The map
-     page body is sized by body:not(.about-page) { height:100dvh }
-     and that rule also sets overflow:hidden. The about page lets
-     content drive body height and has no horizontal overflow
-     source. */
 }
 
 /* Map page (everything that isn't the about page) is a single-
-   screen experience: page-header on top, map-wrapper fills the
-   remainder. V20 restructured as a flex column so the wrapper
-   fills main height without calc() arithmetic on 100dvh - header
-   (which was producing banding when the calculation didn't match
-   the actual header height exactly). Body locked to 100dvh +
+   screen experience: page-header on top, page-footer below, and
+   main fills the remainder. A flex column, so the wrapper fills
+   main without calc() arithmetic against the chrome heights (a
+   mismatch there shows as banding). Body locked to 100dvh +
    overflow:hidden so Safari's toolbar collapse can't leave a gap
-   below the map; descendant horizontal pan inside .map-wrapper
-   still works via its own overflow:auto on mobile. */
+   below the map; panning inside .map-wrapper still works via its
+   own overflow:auto. */
 body:not(.about-page) {
   height: 100vh;
   height: 100dvh;
@@ -97,13 +90,10 @@ body:not(.about-page) {
   flex-direction: column;
 }
 
-/* Override the global main { display:flex; align-items:center }
-   rule on the map page. With body as a flex column, main needs
-   to flex-fill the remainder, NOT flex-center the wrapper —
-   centering produced banding above and below the wrapper when
-   wrapper was shorter than viewport. min-height:0 lets the flex
-   child shrink below its content's intrinsic size as required.
-   .about-page main already has its own display:block. */
+/* On the map page main flex-fills the remainder of the body
+   column (block, not flex-centered: centering bands above and
+   below a wrapper shorter than the viewport). min-height:0 lets
+   the flex child shrink below its content's intrinsic size. */
 body:not(.about-page) main {
   flex: 1 1 0;
   min-height: 0;
@@ -122,18 +112,14 @@ a:visited {
 body::after {
   content: '';
   position: fixed;
-  /* V22: was `inset: 0`. On iOS Safari `inset: 0` on a fixed
-     element clips to the visual viewport (= innerHeight), which on
-     the body-locked map page stops above the URL-bar floating-pill
-     zone. The grain texture then ended sharply at y=innerHeight,
-     exactly where full-height sheets (.modal-card height:100dvh)
-     ended too — creating a visible band where the grain treatment
-     stopped and bare html bg began. The 100lvh extent covers the
-     largest possible viewport including the area behind the URL
-     bar pill, so grain treatment is continuous from y:0 to the
-     physical screen bottom. On viewports without a floating URL
-     bar (desktop, PWA standalone) 100lvh === innerHeight, so this
-     resolves identically to the prior inset:0. */
+  /* Not `inset: 0`: on iOS Safari a fixed element with inset:0
+     clips to the visual viewport (= innerHeight), which on the
+     body-locked map page stops above the URL-bar floating pill, so
+     the grain would end in a visible band at y=innerHeight. The
+     100lvh extent covers the largest viewport, including the area
+     behind the pill, so the grain runs to the physical screen
+     bottom. Without a floating URL bar (desktop, PWA standalone)
+     100lvh === innerHeight. */
   top: 0;
   left: 0;
   right: 0;
@@ -143,19 +129,12 @@ body::after {
   background-repeat: repeat;
   mix-blend-mode: multiply;
   opacity: 0.35;
-  /* V21: 10000 sits explicitly above .loading-screen (z:9999) so
-     the grain texture overlays every visual state including the
-     loading splash. Previously both were 9999 and stacking was
-     determined by DOM order — fragile. */
+  /* 10000 sits explicitly above .loading-screen (z:9999) so the
+     grain texture overlays every visual state, including the
+     loading splash, without depending on DOM order. */
   z-index: 10000;
 }
 
-/* V21: removed the module-scope min-height/flex-center on main.
-   On the map page the body:not(.about-page) main override controls
-   layout (flex:1 1 0; display:block). The about page has its own
-   .about-main rules. The original min-height:calc(100vh - 3.5rem)
-   was the source of the V11–V19 banding wars and now has no live
-   consumer. */
 main {
   padding: 0;
 }
@@ -169,19 +148,16 @@ main {
 .map-wrapper {
   position: relative;
   width: 100%;
-  /* V20: height:100% of the flex-filling main, which is itself
-     body-height minus header. No calc() arithmetic to mismatch
-     the actual header height. Toolbar collapse cascades through
+  /* 100% of the flex-filling main, which is itself body height
+     minus header and footer. No calc() arithmetic to mismatch the
+     actual chrome heights. Toolbar collapse cascades through
      body 100dvh → main flex:1 → wrapper 100% → map height:100%. */
   height: 100%;
-  /* V25: overflow auto (was hidden) + container-type: size so the
-     map's anchoring can switch on the wrapper's own aspect ratio
-     (see the @container rule below .map-bg). Width-anchored maps
-     overflow the wrapper's top edge only — unreachable overflow is
-     clipped, never scrollable, so wide viewports render exactly as
-     the old overflow:hidden did. Height-anchored maps overflow to
-     the right and the wrapper becomes the pan surface (previously
-     gated to the ≤768px media query). */
+  /* overflow:auto makes the wrapper the pan surface on whichever
+     axis the map overflows: downward for width-anchored maps, to
+     the right for height-anchored ones. container-type: size lets
+     the map's anchoring switch on the wrapper's own aspect ratio
+     (see the @container rule below .map-bg). */
   overflow: auto;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-x pan-y;
@@ -199,7 +175,7 @@ main {
   display: none;
 }
 
-/* V73: mouse users drag-pan the map (main.js setupMapDragPan).
+/* Mouse users drag-pan the map (main.js setupMapDragPan).
    Grab cursor advertises it; pins keep their own pointer cursor. */
 @media (hover: hover) and (pointer: fine) {
   .map-wrapper {
@@ -211,7 +187,7 @@ main {
   }
 }
 
-/* V21/V25: width-anchored on wide wrappers, height-anchored on
+/* Width-anchored on wide wrappers, height-anchored on
    tall ones. Both share aspect-ratio: 1920 / 1334 (map.mp4's
    intrinsic dimensions) so .map-bg and .pin-layer always render
    at identical sizes — pin percentages from venues.js land on
@@ -223,19 +199,15 @@ main {
 
    Tall wrappers (height:100%, width auto, via the @container rule
    below): produces a map wider than the wrapper, and the excess
-   scrolls horizontally. V25 moved this switch from the ≤768px
-   media query to a container query on the wrapper's own aspect
-   ratio — device width was a proxy that failed on tablet portrait
-   and tall desktop windows (width-anchored map fell short of the
-   wrapper height, leaving a void above the map).
+   scrolls horizontally. The switch is a container query on the
+   wrapper's own aspect ratio, not a device-width media query:
+   device width fails on tablet portrait and tall desktop windows
+   (a width-anchored map falls short of the wrapper height).
 
-   V27: anchored top-left (was bottom-left). Overflow on the side
-   opposite an absolute anchor is unreachable — the old `bottom: 0`
-   made the top crop unscrollable on wide viewports. With top/left
-   anchoring every crop is scrollable, and main.js
-   centerMapOnVenueCluster() scrolls the initial view to the venue
-   cluster centroid on both axes, so short wrappers open centered
-   on the pins instead of pinned to the map's bottom band.
+   Anchored top-left: overflow on the side opposite an absolute
+   anchor is unreachable, so top/left anchoring keeps every crop
+   scrollable. main.js centerMapOnVenueCluster() scrolls the
+   initial view to the venue cluster centroid on both axes.
 
    FILE DEPENDENCY: if assets/map.mp4 is replaced with a video
    at a different aspect ratio, update the aspect-ratio value
@@ -250,10 +222,10 @@ main {
   aspect-ratio: 1920 / 1334;
 }
 
-/* V25: flip to height-anchored the moment the wrapper is
+/* Flip to height-anchored the moment the wrapper is
    proportionally taller than the map. Container query (not media
    query) so the threshold measures the wrapper itself — viewport
-   ratio is off by the header height. JS side: main.js
+   ratio is off by the header and footer heights. JS side: main.js
    centerMapOnVenueCluster() detects the resulting overflow and
    scrolls to the venue-cluster centroid. */
 @container (max-aspect-ratio: 1920 / 1334) {
@@ -331,7 +303,7 @@ main {
    taps surface a toast (mobile) or the gating message in the hover
    tooltip (desktop). main.js sets data-lock-state.
    The pin carries two pre-baked images, colour and grey, and CSS
-   swaps them (V9: a CSS grayscale filter stuck on iOS Safari after
+   swaps them (a CSS grayscale filter stuck on iOS Safari after
    it stopped matching). Grey shows by default, before main.js has
    set the state. */
 .pin[data-lock-state='locked'] {
@@ -376,12 +348,9 @@ main {
     alleyPulse 2s ease-in-out 1.2s infinite;
 }
 
-/* V11 fix: every keyframe transform preserves the parent .pin's
-   translate(-50%, -50%) centering. CSS animations replace the
-   entire transform property during keyframes — declaring only
-   scale() un-translated the pin to its top-left origin, causing
-   the visible location shift between locked (static) and unlocked
-   (animated) states. */
+/* Every keyframe transform keeps the .pin's translate(-50%, -50%)
+   centering: an animation replaces the whole transform property,
+   so a bare scale() would shift the pin to its top-left origin. */
 @keyframes alleyPulse {
   0%,
   100% {
@@ -414,7 +383,7 @@ main {
    message in the hover tooltip instead (main.js decides). */
 .alley-locked-toast {
   position: fixed;
-  /* V26: clear the footer control bar (~3rem) plus a gap. */
+  /* Clear the footer control bar (~3rem) plus a gap. */
   bottom: 4rem;
   left: 50%;
   transform: translateX(-50%) translateY(150%);
@@ -441,9 +410,8 @@ main {
   opacity: 1;
 }
 
-/* Per-pin top/left positioning is now driven by venues.js mapCoordinates
-   via main.js setupPinPositions() — applied as inline style on each
-   .pin element at DOMContentLoaded. */
+/* Per-pin top/left comes from venues.js mapCoordinates, applied as
+   inline style on each .pin by main.js setupPinPositions(). */
 
 .pin-tooltip {
   position: fixed;
@@ -460,9 +428,9 @@ main {
   text-align: left;
   left: -9999px;
   top: -9999px;
-  /* V49: per-venue tilt — main.js sets --peek-rotate from the pin
+  /* Per-venue tilt — main.js sets --peek-rotate from the venue
      id so hover peeks lean left or right instead of all tilting
-     the same way. V59: drops in with a small settle. */
+     the same way. Drops in with a small settle. */
   transform: translateY(6px) scale(0.985) rotate(var(--peek-rotate, -1.2deg));
   transform-origin: center center;
   transition: opacity 120ms linear,
@@ -473,13 +441,7 @@ main {
   transform: translateY(0) scale(1) rotate(var(--peek-rotate, -1.2deg));
 }
 
-/* ASSETS §1.3 photo treatment, finally applied: every photograph
-   (venue shots, selfies, peek photos) reads as newsprint-grade —
-   slightly desaturated, a touch of contrast. Pin art and UI are
-   untouched. */
-/* (see .photo-treatment group below the tooltip rules) */
-
-/* V63: teaser peek rows — title + aggregate stack on the left,
+/* Teaser peek rows — title + aggregate stack on the left,
    CTA chip centered against the whole stack on the right. */
 .pin-tooltip-name-row {
   display: flex;
@@ -504,16 +466,19 @@ main {
 .pin-tooltip-review-count {
   font-family: var(--font-data);
   font-size: 0.6875rem;
-  opacity: 0.7; /* V66: AA floor */
+  opacity: 0.7; /* AA contrast floor */
 }
 
 .pin-tooltip-tally {
   margin-top: 0.35rem;
   font-family: var(--font-data);
   font-size: 0.6875rem;
-  opacity: 0.7; /* V66: AA floor */
+  opacity: 0.7; /* AA contrast floor */
 }
 
+/* ASSETS §1.3 photo treatment: venue photos, review selfies and
+   peek photos read as newsprint-grade — slightly desaturated, a
+   touch of contrast. Pin art and UI are untouched. */
 .pin-tooltip-photo,
 .modal-venue-photo img,
 .rat-selfie {
@@ -595,7 +560,7 @@ main {
   font-family: var(--font-data);
   font-size: 0.6875rem;
   color: var(--color-text);
-  opacity: 0.7; /* V66: AA floor */
+  opacity: 0.7; /* AA contrast floor */
 }
 
 .pin-tooltip-name {
@@ -604,7 +569,7 @@ main {
   color: var(--color-text);
 }
 
-/* V62: CTA chip rides the name line's right edge. */
+/* CTA chip rides the name line's right edge. */
 .pin-tooltip-cta {
   display: inline-block;
   flex-shrink: 0;
@@ -647,7 +612,7 @@ main {
   color: var(--color-text);
   border: 1px solid rgba(184, 255, 0, 0.2);
   width: 100%;
-  /* V36: wider card uses the desktop viewport's spare width so
+  /* Wider card uses the desktop viewport's spare width so
      review text wraps into fewer lines — most reviews then fit
      inside 90vh with no scrolling at all. */
   max-width: 700px;
@@ -666,9 +631,8 @@ main {
 
 /* Close button lives inside .modal-venue-headline as a flex item.
    Static positioning (not absolute) on all viewports — the flex
-   layout in .modal-venue-headline aligns it to the row end. The
-   mobile sticky-title pattern (V5) thus carries the close with it
-   automatically. */
+   layout in .modal-venue-headline aligns it to the row end, so
+   the mobile sticky title carries the close with it. */
 .modal-close {
   position: static;
   flex-shrink: 0;
@@ -695,8 +659,8 @@ main {
 
 /* Headline is a flex column: drag handle (mobile only) on top,
    title-row (title text + close button) below. Desktop keeps the
-   handle hidden via .modal-sheet-handle { display: none } so the
-   visual layout matches the prior single-row look. */
+   handle hidden via .modal-sheet-handle { display: none }, so the
+   headline reads as a single row. */
 .modal-venue-headline {
   display: flex;
   flex-direction: column;
@@ -724,23 +688,17 @@ main {
 }
 
 /* Alley headline flows like every other modal title — static
-   position, no sticky pinning. V14 dropped the V13 sticky pattern
-   because (a) it sat the title flush against the card top while
-   other modals' titles sit 32px down (card padding), making the
-   alley header read visually shorter and offset; (b) combined
-   with the sticky .alley-header below it created a double-sticky
-   scroll where the photo pinned under the title and the rat cards
-   scrolled past it — users perceived this as a bug. Horizontal
-   inset comes from the rule below since .modal-card.alley-modal
-   zeroes its horizontal padding so .alley-cards can run full
-   bleed. Mobile padding override lives in the mobile media query. */
+   position, no sticky pinning. Its horizontal inset comes from
+   here since .modal-card.alley-modal zeroes its horizontal padding
+   so .alley-cards can run full bleed. Mobile padding override
+   lives in the mobile media query. */
 .modal-card.alley-modal .modal-venue-headline {
   padding-left: var(--space-lg);
   padding-right: var(--space-lg);
 }
 
 .reviewer-block {
-  /* V44: the info stack (name row + oscilloscope) is the only
+  /* The info stack (name row + oscilloscope) is the only
      in-flow child, so IT defines the row height; the selfie is
      absolutely positioned to fill the reserved left column
      exactly. This is the only arrangement where the portrait can
@@ -755,7 +713,7 @@ main {
 }
 
 .reviewer-info {
-  /* V43/V44: column — top row (meta + play), then the full-width
+  /* Column — top row (meta + play), then the full-width
      oscilloscope beneath. Fills the selfie's 200px height with
      the scope pushed to the bottom edge so both columns end on
      the same line. */
@@ -776,7 +734,7 @@ main {
 }
 
 .rat-selfie {
-  /* V44: square 200×200 in the reserved left column; the info
+  /* Square 200×200 in the reserved left column; the info
      stack beside it space-betweens to the same 200px (see
      .reviewer-info) so both columns bottom out together. */
   position: absolute;
@@ -813,7 +771,7 @@ main {
 
 
 .reviewer-elite {
-  /* V35: Yelp Elite in the house hand — gold chip, rat mark, year. */
+  /* Yelp Elite in the house hand — gold chip, rat mark, year. */
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
@@ -848,12 +806,7 @@ main {
    between the title bottom and the alley photo reads identically
    to location-modal title → content spacing. Horizontal padding
    aligns the photo + framing line with the title above and the
-   rat-card content below.
-   V14 stripped the desktop sticky behavior on .alley-header.
-   Combined with the sticky headline above, the V11 sticky was the
-   "scroll stickiness bug" — the photo region pinned at top:3.25rem
-   while rat cards scrolled past it, and users perceived that as
-   broken rather than as a reordering affordance. */
+   rat-card content below. */
 .alley-header {
   margin-top: 1.5rem;
   padding: 0 var(--space-lg) var(--space-md);
@@ -864,13 +817,13 @@ main {
    by making the card itself a flex column with overflow:hidden
    (so the card no longer scrolls as a whole) and letting
    .alley-cards absorb remaining vertical space with overflow:auto.
-   Replaces the V11/V13 position:sticky approach, which created
-   the double-stick scroll bug — flex partitioning gives a true
-   fixed-header region without per-element sticky offsets.
-   Mobile keeps the single-scroll-context pattern (card scrolls
-   end-to-end with a sticky headline pinning the title) since
-   sheet height is already constrained by viewport and a
-   nested scroll region inside a draggable sheet reads awkwardly. */
+   Flex partitioning gives a true fixed-header region without
+   per-element sticky offsets (sticky title + sticky photo made a
+   double-sticky scroll that read as a bug). Mobile keeps the
+   single-scroll-context pattern (card scrolls end-to-end with a
+   sticky headline pinning the title) since sheet height is
+   already constrained by viewport and a nested scroll region
+   inside a sheet reads awkwardly. */
 @media (min-width: 769px) {
   .modal-card.alley-modal {
     display: flex;
@@ -889,13 +842,10 @@ main {
     min-height: 0;
     overflow-y: auto;
     /* Boundary divider between the fixed top region (title +
-       photo + framing + hint) and the scrolling list. Matches
-       the site-wide subtle-divider weight used by .alley-card
-       inter-row borders, .review-content section dividers, and
-       .page-header bottom — so the boundary reads as part of the
-       same divider system, not a one-off rule. Border lives on
-       the scroll container's box so it stays anchored at the
-       boundary as the list scrolls. */
+       photo + framing + hint) and the scrolling list, in the same
+       hairline as the .alley-card row borders and the chrome bars.
+       Border lives on the scroll container's box so it stays
+       anchored at the boundary as the list scrolls. */
     border-top: 1px solid var(--color-rule);
   }
 }
@@ -903,13 +853,8 @@ main {
 .alley-cards {
   display: flex;
   flex-direction: column;
-  /* V12 P2: removed module-scope horizontal padding (was
-     `0 var(--space-lg) var(--space-lg)`). The parent
-     .modal-card.alley-modal already pads horizontally by 2rem on
-     desktop; alley-cards adding another 2rem stacked to 4rem
-     total inset — excessive vs location modal cards. Mobile rule
-     at line ~1412 keeps its own horizontal padding since mobile
-     card has padding:0 and children carry their own inset. */
+  /* No horizontal padding: rows run full-bleed and each
+     .alley-card carries its own inset. */
   padding: 0 0 var(--space-lg);
 }
 
@@ -922,7 +867,7 @@ main {
   /* Horizontal padding matches .modal-card padding on other modals
      and the title/photo inset on the alley sheet, so selfies and
      text align with the title above. The row itself spans the full
-     card width (.alley-cards has padding:0) so hover/focus tints
+     card width (.alley-cards has no side padding) so hover/focus tints
      and the bottom rule run edge-to-edge — the full-bleed-with-
      inset-content pattern from the mobile sheet. Vertical padding
      gives the selfie + name + stars + text block breathing room
@@ -1069,7 +1014,7 @@ main {
   letter-spacing: inherit;
   text-transform: inherit;
   color: var(--color-text);
-  /* V66: quietest of the always-on controls, but never below the
+  /* Quietest of the always-on controls, but never below the
      0.7 muted floor — cream under ~0.63 effective opacity on the
      page black drops under WCAG AA (4.5:1). Hover restores full
      opacity. */
@@ -1086,7 +1031,7 @@ main {
   outline: none;
 }
 
-/* V37: pagination is the card's pinned footer bar — sticky at the
+/* Pagination is the card's pinned footer bar — sticky at the
    scroll context's bottom edge, styled like the page footer
    (opaque bar + hairline top rule) so the chrome grammar stays
    consistent. Full-bleed via negative margins against the card's
@@ -1118,9 +1063,8 @@ main {
 
 .pagination-arrow {
   font-family: var(--font-ui);
-  /* V12 P3: bumped from 0.875rem to 1.25rem for readability on
-     desktop multi-review modals. Mobile rule (line ~1705) sets a
-     larger 3rem touch target — this is the desktop default. */
+  /* Desktop size; the mobile rule makes the arrows larger touch
+     targets. */
   font-size: 1.25rem;
   line-height: 1;
   background: transparent;
@@ -1145,9 +1089,6 @@ main {
 
 .pagination-counter {
   font-family: var(--font-ui);
-  /* V12 P3: bumped slightly for desktop readability alongside the
-     larger arrows. */
-  font-size: 0.875rem;
   letter-spacing: 0.02em;
   font-size: 0.6875rem;
   color: var(--color-text);
@@ -1157,19 +1098,13 @@ main {
   text-align: center;
 }
 
-/* Spacing above the rating row: single-review sheets have no
-   pagination so .review-content sits flush against the title
-   bar's underline border — visually too tight. Top margin on
-   .review-content gives the rating breathing room. When
-   pagination IS present (multi-review sheets), the adjacent-
-   sibling rule cancels the margin since pagination already
-   provides vertical space. .review-content + .review-pagination
-   are direct siblings inside .modal-card. */
+/* Top margin gives the reviewer block breathing room below the
+   title bar's underline. */
 .review-content {
   margin-top: 1.5rem;
 }
 
-/* V42: stars alone under the handle. */
+/* Stars alone under the handle. */
 .review-rating {
   display: flex;
   align-items: center;
@@ -1182,9 +1117,9 @@ main {
   gap: 3px;
 }
 
-/* V35: Yelp's signature is the star knocked out of a filled colored
-   box, not a floating glyph. V64: box in the site accent, star
-   cutout in the page black — the rating reads as part of the map's
+/* Yelp's signature is the star knocked out of a filled colored
+   box, not a floating glyph. Box in the site accent, star cutout
+   in the page black — the rating reads as part of the map's
    visual language rather than imported Yelp chrome. Alternating
    per-star tilt keeps it hand-set. */
 .star {
@@ -1222,21 +1157,18 @@ main {
 .review-date {
   font-family: var(--font-data);
   font-size: 0.75rem;
-  opacity: 0.7; /* V66: AA floor */
+  opacity: 0.7; /* AA contrast floor */
 }
 
-/* V36: natural height — no inner scrollbox. The card is the single
-   scroll context on every breakpoint (mobile already worked this
-   way); the old fixed 280px box put a second scrollbar inside the
-   panel and clipped review text behind a fade. */
+/* Natural height — no inner scrollbox. The card is the single
+   scroll context on every breakpoint. */
 .review-body {
   height: auto;
 }
 
-/* V43: one combined meta line ("April 2026 · Translated from 134
-   squeaks"), bottom-right under the review text, in the date's
-   style — no rule of its own (the reactions row and pagination
-   bar carry the only two rules below the text). */
+/* One combined meta line ("April 2026 · Translated from N
+   squeaks") under the review text, in the date's style, with no
+   rule of its own. */
 .review-meta-row {
   display: flex;
   justify-content: flex-start;
@@ -1247,12 +1179,12 @@ main {
   display: flex;
   gap: 0.375rem;
   flex-wrap: wrap;
-  /* V53: no divider above — the meta line and the icon row read
+  /* No divider above — the meta line and the icon row read
      as one footer zone. */
   margin: 0.75rem 0 0;
 }
 
-/* V57: one bordered chip per reaction — icon, label, count inline
+/* One bordered chip per reaction — icon, label, count inline
    inside the box, fit-content width. The .reaction-label::after
    trick reserves the longest state-swapped copy's width so
    toggling can't reflow the row. Active fills the box accent. */
@@ -1323,14 +1255,14 @@ main {
 }
 
 .reaction-count {
-  /* V66: 0.8 because it multiplies with the chip's 0.85 —
+  /* 0.8 because it multiplies with the chip's 0.85 —
      0.8 × 0.85 ≈ 0.68 effective, just above the AA floor. */
   opacity: 0.8;
   display: inline-block;
   font-variant-numeric: tabular-nums;
 }
 
-/* V59 micro-interactions: press squish + a small pop when a chip
+/* Micro-interactions: press squish + a small pop when a chip
    arms. */
 .review-reaction:active {
   transform: scale(0.96);
@@ -1344,10 +1276,10 @@ main {
   40% { transform: rotate(-8deg) scale(1.18); }
 }
 
-/* V52: the report analogue — quiet text action at the row's far
+/* The report analogue — quiet text action at the row's far
    edge, Yelp's "Report review" in city terms. */
 .review-report {
-  /* V56: lives in the chip row — far right, centered against the
+  /* Lives in the chip row — far right, centered against the
      chips. Width reserved for the longer state (::after data-alt)
      with text right-anchored, so toggling to 'reported' changes
      neither size nor the right edge. */
@@ -1362,7 +1294,7 @@ main {
   font-size: 0.6875rem;
   letter-spacing: 0.02em;
   color: var(--color-text);
-  opacity: 0.7; /* V66: AA floor — resting, but still interactive */
+  opacity: 0.7; /* AA contrast floor — resting, but still interactive */
   cursor: pointer;
   transition: opacity 150ms ease, color 150ms ease;
 }
@@ -1375,8 +1307,8 @@ main {
 }
 
 .review-report.is-active {
-  /* Full opacity: the red token's contrast budget assumes it —
-     0.85 here dragged the effective ratio back under AA. */
+  /* Full opacity: the red token only holds AA contrast at
+     opacity 1. */
   opacity: 1;
   color: var(--color-stars);
 }
@@ -1403,7 +1335,7 @@ main {
   letter-spacing: 0.02em;
   font-size: 0.8125rem;
   margin: 0;
-  opacity: 0.7; /* V66: AA floor */
+  opacity: 0.7; /* AA contrast floor */
 }
 
 /* Tombstone epitaph: a few paragraphs that follow the [CLOSED]
@@ -1428,8 +1360,8 @@ main {
   opacity: 1;
 }
 
-/* V65: Rash tombstone — the review anatomy, dead. Empty aggregate
-   under the headline, a stamped closure notice on the photo, an
+/* Rash tombstone — the review anatomy, dead. Empty aggregate
+   in the headline row, a stamped closure notice on the photo, an
    obit-halftone photo treatment, and a pay-respects chip. */
 /* Rides the headline row between title and close: hugs the title
    (auto margin pushes the close away), centered on the title's
@@ -1490,7 +1422,7 @@ main {
   display: block;
 }
 
-/* V45: SoundCloud-embed-style player — the waveform canvas is the
+/* SoundCloud-embed-style player — the waveform canvas is the
    player surface; the transport button overlays its left edge,
    vertically centered. Solid accent square with a bg-color icon
    (the piece's active-control treatment). */
@@ -1538,11 +1470,6 @@ main {
 .page-header {
   position: sticky;
   top: 0;
-  /* V21: dropped V19's transform:translateZ(0) + will-change. The
-     compositor-layer promotion fixed a hard-flick momentum-scroll
-     flicker, but the map page body is now locked (overflow:hidden;
-     height:100dvh) — nothing scrolls past the header, no flicker
-     to fix. About-header keeps its promotion. */
   /* z-index 100: above .map-wrapper (z-index 1) so the wide
      scrolling map can't bleed past the wrapper edge into the
      header area on momentum-scroll overshoot. */
@@ -1552,20 +1479,15 @@ main {
   /* env(safe-area-inset-top) resolves to 0 on devices without a
      notch; on iPhone X+ it pads the header past the status bar
      so the title doesn't overlap. Requires viewport-fit=cover
-     on the meta tag (set in index.html / about.html). The 44px
-     max() floor for env-returns-0 devices lives in the mobile
-     media query (V15 scope-down) so chromium desktop, which
-     correctly resolves env() to 0, doesn't pick up an
-     unnecessary 44px header push. */
+     on the meta tag (set in index.html / about.html). */
   padding: calc(var(--chrome-pad-y) + env(safe-area-inset-top)) var(--chrome-pad-x) var(--chrome-pad-y);
   display: flex;
-  /* V30: centered on the shared chrome midline. Centering was
-     unsafe when the mode/volume controls lived here (their wrap
-     between ~769-1000px grew the row and shoved the title), but
-     the header is title + about only now — nothing can outgrow
-     the bar. The loading header uses the same tokens, so title,
-     about link, status text, and the enter button all share one
-     centerline through the loading→map fade. */
+  /* Centered on the shared chrome midline. The header holds only
+     the title and its links (the playback controls live in the
+     footer), so nothing can outgrow the bar. The loading header
+     uses the same tokens, so title, about link, status text, and
+     the enter button all share one centerline through the
+     loading→map fade. */
   align-items: center;
   justify-content: space-between;
   gap: 1.5rem;
@@ -1604,9 +1526,7 @@ main {
 .page-controls {
   display: flex;
   align-items: center;
-  /* Center controls within the same 1.75rem row as the title, so
-     the unwrapped rendering matches the old align-items: center
-     look exactly. */
+  /* Center controls within the same 1.75rem row as the title. */
   min-height: 1.75rem;
   gap: 0.875rem;
   font-family: var(--font-ui);
@@ -1660,23 +1580,21 @@ main {
   display: none;
 }
 
-/* ===== Footer control bar (V26) =====
-   The playback-mode toggle, volume/mute, and reset moved out of
-   the header into a dedicated bar at the bottom of the body flex
-   column (header / main / footer). This restores STRATEGY's
-   original "footer toggle" placement, frees the header from the
-   mode-set wrap that inflated it between ~769-1000px viewports,
-   and gives the map page a deliberate bottom edge on iOS Safari
-   (body is 100dvh, so the bar sits above the URL-bar pill zone;
-   safe-area padding keeps controls clear of the home indicator).
+/* ===== Footer control bar =====
+   The playback-mode toggle, volume/mute, and reset live in a bar
+   at the bottom of the body flex column (header / main / footer),
+   STRATEGY's "footer toggle" placement. It also gives the map page
+   a deliberate bottom edge on iOS Safari (body is 100dvh, so the
+   bar sits above the URL-bar pill zone; safe-area padding keeps
+   controls clear of the home indicator).
    Same visual grammar as the header: bg, hairline border, UI
    font. z-index 100 matches .page-header, above the map (1),
-   below modals (1000) and the loading screen (9999). */
+   below modals (200) and the loading screen (9999). */
 .page-footer {
   z-index: 100;
   background: var(--color-bg);
   border-top: 1px solid var(--color-rule);
-  /* V33: shared chrome tokens — same bar geometry as the loading
+  /* Shared chrome tokens — same bar geometry as the loading
      screen's footer-as-button, so the two footers hold position
      through the loading→map fade. */
   padding: var(--chrome-pad-y) var(--chrome-pad-x) calc(var(--chrome-pad-y) + env(safe-area-inset-bottom));
@@ -1701,7 +1619,7 @@ main {
 }
 
 .footer-divider {
-  opacity: 0.7; /* V66: AA floor for muted cream on black */
+  opacity: 0.7; /* AA contrast floor for muted cream on black */
 }
 
 .footer-mode-set {
@@ -1729,7 +1647,7 @@ main {
   padding: 0;
   cursor: pointer;
   color: var(--color-text);
-  opacity: 0.7; /* V66: AA floor — inactive mode is still a control */
+  opacity: 0.7; /* AA contrast floor — inactive mode is still a control */
   transition: opacity 100ms linear, color 100ms linear;
 }
 
@@ -1745,11 +1663,11 @@ main {
 }
 
 .footer-mode-pipe {
-  opacity: 0.7; /* V66: AA floor */
+  opacity: 0.7; /* AA contrast floor */
 }
 
-/* V71: three modes can wrap on narrow widths — each pipe travels
-   with its following button so a line never ends on a bare pipe. */
+/* The modes can wrap on narrow widths — each pipe travels with
+   its following button so a line never ends on a bare pipe. */
 .footer-mode-pair {
   display: inline-flex;
   align-items: baseline;
@@ -1765,9 +1683,8 @@ main {
 .footer-volume {
   -webkit-appearance: none;
   appearance: none;
-  /* V26: widened from the header-era 80px — the footer bar has
-     the horizontal room, and a longer track gives finer dB
-     control. */
+  /* A long track gives finer dB control; the footer bar has the
+     horizontal room. */
   width: 180px;
   height: 14px;
   background: transparent;
@@ -1855,25 +1772,16 @@ main {
   display: none;
 }
 
-/* Mobile header reset button: two text variants. Full string on
-   desktop, single 'forget' word on mobile to fit the compressed
-   two-row layout. */
+/* Footer reset and mode buttons carry two text variants each:
+   the full string on desktop, a single word on mobile so the
+   footer keeps one row. */
 .footer-reset-short { display: none; }
 .footer-mode-short { display: none; }
 
 @media (max-width: 768px) {
-  /* V21: dropped main { min-height: calc(100vh - 4.25rem) }.
-     Map page main is sized by flex:1 1 0 inside the body lock;
-     about page main controls its own height. */
-
-  /* Two-row header: title on row 1, controls on row 2. V21
-     restored env(safe-area-inset-top) in the top padding — the
-     prior shorthand silently overrode the base rule's safe-area
-     math, leaving the title under the iPhone notch when the body
-     lock didn't push the page down. */
-  /* V33: header/footer bar geometry comes from the mobile chrome
-     token override at :root — no per-bar padding overrides needed.
-     Only the type scale changes here. */
+  /* Header/footer bar geometry comes from the mobile chrome token
+     override at :root — no per-bar padding overrides needed. Only
+     the type scale changes here. */
   .page-title {
     font-size: 0.875rem;
     line-height: 1.2;
@@ -1881,10 +1789,9 @@ main {
 
   /* Footer controls, phone sizing. Volume slider stays hidden
      (hardware buttons own volume on phones); reset shortens to
-     one word; the mode prefix drops. V34: mode toggle anchors
-     left, mute + reset cluster right (dividers dropped) — mirrors
-     the loading footer's text-left / action-right grammar instead
-     of scattering items and orphan dots across the bar. */
+     one word; the mode prefix drops. Mode toggle anchors left,
+     mute + reset cluster right (dividers dropped), mirroring the
+     loading footer's text-left / action-right grammar. */
   .footer-controls {
     gap: 0.75rem;
     font-size: 0.6875rem;
@@ -1906,21 +1813,13 @@ main {
   .footer-reset-full { display: none; }
   .footer-reset-short { display: inline; }
 
-  /* V71b: modes shorten to one word each on phones (same pattern
-     as the reset button above), so the whole footer keeps a single
-     row: moment · record · tongue. */
+  /* Modes shorten to one word each on phones (same pattern as the
+     reset button above), so the whole footer keeps a single row:
+     moment · tongue. */
   .footer-mode-full { display: none; }
   .footer-mode-short { display: inline; }
 
-  /* V25: map pan + height-anchored sizing moved out of this media
-     query — the wrapper's overflow/pan rules live on the base
-     .map-wrapper, and anchoring switches via the @container
-     aspect-ratio rule next to .map-bg. Phone portrait wrappers are
-     far narrower than 1920/1334, so the container query covers the
-     old mobile behavior identically. */
-
-  /* Modal becomes a bottom sheet on mobile. Backdrop is dimmer
-     (sheet doesn't cover full viewport) and the card slides up
+  /* Modal becomes a bottom sheet on mobile: the card slides up
      from the bottom edge. */
   .modal {
     align-items: flex-end;
@@ -1951,12 +1850,11 @@ main {
   .modal-card {
     width: 100%;
     max-width: 100%;
-    /* V23: card extends to 100lvh so it paints through the URL-bar
-       zone (~40px on iOS 18.7 in body-locked state). Combined with
-       the .modal:not(:has(.modal-card-tombstone)) { height: 100lvh }
+    /* V23: card declared 100lvh tall. Combined with the
+       .modal:not(:has(.modal-card-tombstone)) { height: 100lvh }
        rule above, the modal's flex-end alignment places card top at
-       y=0 and card bottom at y=100lvh — visual surface reaches the
-       device's physical bottom edge.
+       y=0 and card bottom at y=100lvh. iOS Safari still clips the
+       paint at innerHeight (dvh) — see V24 below.
        100vh fallback for legacy browsers without lvh (Safari <15.4).
        Tombstone overrides this back to height:auto below. */
     height: 100vh;
@@ -1990,8 +1888,7 @@ main {
     transform: translateY(0);
   }
 
-  /* V24 supersedes V23: V23's premise (paint reaches lvh) was
-     wrong — iOS Safari clips position:fixed paint to innerHeight
+  /* V24: iOS Safari clips position:fixed paint to innerHeight
      (= dvh) regardless of declared height. V24 fades the visible
      card bottom via mask-image (below) and uses fixed 64px
      padding-bottom (16 base + 48 fade clearance) so the last
@@ -2019,9 +1916,6 @@ main {
      position regardless of layout extent. On chromium/desktop
      where lvh === dvh, the fade lands at the card's bottom edge
      (small visual softening; not a regression).
-
-     border-bottom:none is idempotent (mobile rule above already
-     drops it). Restated here for V24's record.
 
      V24 is camouflage, NOT fix. Paint still stops at dvh on iOS.
      The architectural fix (switch .modal to position:absolute) is
@@ -2064,11 +1958,6 @@ main {
     padding-bottom: 1rem;
   }
 
-  /* Drag handle is now a real DOM element inside .modal-venue-
-     headline (built in modal.js). Pseudo-element approach removed
-     because it competed with the sticky headline for top:0 and
-     caused visible jitter / disappearance on body scroll. */
-
   /* Sticky title bar — carries drag handle, venue name, AND close
      button. All three pin to the top of the scrolling sheet. The
      headline is a flex column on mobile so the drag handle sits
@@ -2090,11 +1979,10 @@ main {
   }
 
   /* Drag handle sits at the top of the sticky title bar (above the
-     title/close row). Inert (no pointer-events) — it's an
-     affordance signaling drag-to-dismiss, not an interactive
-     control. Gesture dismissal itself is Phase 2. Display block
-     overrides the module-scope display:none that keeps the handle
-     hidden on desktop. */
+     title/close row). Inert (no pointer-events) — a visual sheet
+     affordance; there is no drag gesture. Display block overrides
+     the module-scope display:none that keeps the handle hidden on
+     desktop. */
   .modal-sheet-handle {
     display: block;
     flex-shrink: 0;
@@ -2108,13 +1996,9 @@ main {
 
   /* The title text + close button form the second row of the
      headline flex column. Inner flex row aligns title-left,
-     close-right.
-     V25: align-items:center vertically centers the title text
-     against the close button. With title at ~25px tall (1.375rem
-     × 1.15 line-height) and close box at ~44px tall (1.75rem font
-     + 16px padding, min-height 40px), flex-start aligned tops but
-     left visual centers ~9.5px apart — title read low against the
-     X glyph. center aligns the visual midlines. */
+     close-right. align-items:center lines the shorter title text
+     up with the taller close box's midline; flex-start would leave
+     the title reading low against the X glyph. */
   .modal-venue-headline-row {
     display: flex;
     justify-content: space-between;
@@ -2129,32 +2013,19 @@ main {
     margin-top: -0.25rem;
   }
 
-  /* Alley card padding aligned with other mobile sheets. The
-     module-scope rule sets 2rem on desktop; this override gives
-     mobile alley zero padding so the universal child-padding
-     rule above handles the 1rem inset.
-     V8: explicit horizontal padding on alley children too, as
-     belt-and-suspenders — the universal rule should already
-     cover them, but the V7 ship reported the alley content
-     edge-to-edge regardless. */
+  /* Alley card: zero padding, like the other mobile sheets. The
+     universal child-padding rule above supplies the 1rem inset,
+     and the alley children below restate theirs explicitly. */
   .modal-card.alley-modal {
     padding: 0;
   }
 
-  /* V13: restore horizontal padding on the alley headline for
-     mobile only. Module-scope rule above zeroes horizontal
-     padding so desktop can rely on card padding; mobile card
-     padding is 0 so headline needs its own 1rem horizontal to
-     match the mobile location modal title inset. */
+  /* Alley headline: the 1rem mobile inset of the location modal
+     titles, replacing the desktop 2rem from the module-scope rule. */
   .modal-card.alley-modal .modal-venue-headline {
     padding: 0.75rem 1rem 0.5rem;
   }
 
-  /* V9: rewrote as shorthand padding declarations to defeat any
-     module-scope shorthand override (V8's longhand padding-left/
-     right should have won by cascade order but ship reports
-     showed alley still edge-to-edge — using shorthand makes the
-     full padding rectangle explicit). */
   .alley-header {
     padding: 0 1rem var(--space-sm);
   }
@@ -2166,9 +2037,9 @@ main {
      Bumped to .modal-card.alley-modal .alley-cards (specificity
      0,3,0) to beat the universal `.modal-card > *:not(.modal-
      venue-headline) { padding-left/right: 1rem }` rule (0,2,0).
-     V24: bottom value bumped from var(--space-lg) (32px) to 64px
-     to match the non-alley fade-clearance buffer. Last mini-card
-     now ends above the V24 mask's fade zone. */
+     Bottom padding is the same 64px fade clearance as the other
+     sheets (V24), so the last mini-card ends above the mask's
+     fade zone. */
   .modal-card.alley-modal .alley-cards {
     padding: 0 0 calc(var(--space-md) + 48px);
   }
@@ -2205,7 +2076,7 @@ main {
   }
 
   /* Modal itself still accepts touch (close button taps, sheet
-     drag affordance, etc.) — the touch-action lock on body only
+     scrolling, etc.) — the touch-action lock on body only
      blocks the propagation path through body to .map-wrapper. */
   body:has(.modal[data-state='open']) .modal {
     touch-action: auto;
@@ -2219,7 +2090,7 @@ main {
 
   /* Rat metadata centers under the centered rat photo. Body text
      stays left-aligned (long prose reads better that way) — only
-     name/handle/location/elite cluster. */
+     the name/handle/stars/elite cluster. */
   .reviewer-info,
   .reviewer-meta {
     text-align: center;
@@ -2229,13 +2100,8 @@ main {
     justify-content: center;
   }
 
-  /* V7: removed tombstone height overrides — with the Rash
-     epitaph added in V6, the sheet fills 100dvh naturally via
-     the default .modal-card rule. The .modal-card-tombstone
-     class remains on the element for any future variant styling. */
-
-  /* V45: same overlay transport on mobile — the scope is the
-     full-width player, button riding its right edge. */
+  /* Same overlay transport on mobile — the scope is the
+     full-width player, button riding its left edge. */
   .play-button {
     width: 44px;
     height: 44px;
@@ -2326,7 +2192,7 @@ main {
   }
 }
 
-/* Pin tooltip — locked-alley variant. Wider wrap for the longer
+/* Pin tooltip — locked-pin variant. Wider wrap for the longer
    gating message; centered text; no photo/CTA (populate() bails
    early for the locked case). */
 .pin-tooltip.pin-tooltip-locked {
@@ -2345,14 +2211,11 @@ main {
   color: var(--color-text);
 }
 
-/* Second mobile media block: review-card body + pin chrome.
-   Originally lost its enclosing @media wrapper at some point in
-   the file's history; wrapped explicitly here so the rules apply
-   only on mobile as intended. */
+/* Second mobile media block: review-card body + pin chrome. */
 @media (max-width: 768px) {
   .reviewer-block {
-    /* V44: back to a simple stacked flow on phones — the selfie
-       returns to the normal flow, centered above the meta. */
+    /* A simple stacked flow on phones — the selfie sits in the
+       normal flow, centered above the meta. */
     display: flex;
     flex-direction: column;
     align-items: flex-start;
@@ -2364,16 +2227,16 @@ main {
 
   .reviewer-info {
     width: 100%;
-    /* V48: the desktop 200px floor exists to meet the square
+    /* The desktop 200px floor exists to meet the square
        portrait's height; the stacked mobile flow sizes naturally. */
     min-height: 0;
   }
 
-  /* V48 spacing pass: tighter top chrome (pagination now occupies
-     a row), and the content carries its own bottom inset since
-     the DOM-last pagination moved visually to the top. */
+  /* Tighter top chrome (pagination occupies a row up top), and
+     the content carries its own bottom inset since the DOM-last
+     pagination sits visually at the top. */
   .review-content {
-    /* V49: clear air between the pagination bar and the portrait. */
+    /* Clear air between the pagination bar and the portrait. */
     margin-top: 1rem;
     padding-bottom: 1.5rem;
   }
@@ -2382,13 +2245,12 @@ main {
     margin: 0.5rem 0 0;
   }
 
-  /* Rat photo: 70% sheet width centered, square aspect, no
-     radius (V7: rounded corners removed across photos). */
+  /* Rat photo: centered, square aspect, no radius. */
   .rat-selfie {
     position: static;
-    /* V48: trimmed from 70% — the portrait was the sheet's
-       biggest scroll cost; 58% keeps it a portrait moment while
-       pulling the player and text a full viewport-line closer. */
+    /* The portrait is the sheet's biggest scroll cost; 58% keeps
+       it a portrait moment while keeping the player and text
+       close. */
     width: 58%;
     max-width: 58%;
     height: auto;
@@ -2417,8 +2279,7 @@ main {
     height: 70px;
   }
 
-  /* Alley + tombstone photos go full-width on mobile. Square
-     corners per V7. */
+  /* Venue photos go full-width on mobile, square corners. */
   .modal-venue-photo,
   .modal-venue-photo img {
     width: 100%;
@@ -2428,13 +2289,12 @@ main {
     margin: 0.5rem 0;
   }
 
-  /* Tombstone (Rash) photo: V9 dropped aspect-ratio. V11 also
-     removes the module-scope wrapper's rotation/border/bg since
-     those are stylistic chrome that doesn't fit a tombstone
-     marker. The photo displays at natural ratio with the same
-     1rem horizontal inset as other sheet content (via the
-     universal child-padding rule). Accent border on the img
-     itself rather than the wrapper. */
+  /* Tombstone (Rash) photo: natural ratio, without the
+     module-scope wrapper's rotation/border/bg (stylistic chrome
+     that doesn't fit a tombstone marker). Same 1rem horizontal
+     inset as other sheet content (via the universal child-padding
+     rule). Accent border on the img itself rather than the
+     wrapper. */
   .modal-card-tombstone .modal-venue-photo {
     aspect-ratio: auto;
     width: 100%;
@@ -2459,7 +2319,7 @@ main {
     border: 1px solid var(--color-accent);
   }
 
-  /* V11: Rash tombstone sheet sizes to content, not full viewport.
+  /* Rash tombstone sheet sizes to content, not full viewport.
      Slides up from bottom but stops where content ends. Feels
      like a card rather than a full-height interactive sheet. */
   .modal-card.modal-card-tombstone {
@@ -2468,7 +2328,7 @@ main {
     max-height: 100dvh;
   }
 
-  /* V58: chips take the mobile pagination buttons' treatment —
+  /* Chips take the mobile pagination buttons' treatment —
      chunky bordered touch targets sharing the row width (2×2
      grid), bigger text. Report wraps to its own line beneath. */
   .review-reactions {
@@ -2490,7 +2350,7 @@ main {
     font-size: 0.75rem;
   }
 
-  /* V48: pagination rides directly under the sticky headline on
+  /* Pagination rides directly under the sticky headline on
      mobile — flip between reviews the moment the sheet opens, no
      scroll-to-the-end required. The card becomes a flex column so
      `order` can lift the DOM-last pagination to the top without
@@ -2538,14 +2398,11 @@ main {
     opacity: 0.7;
   }
 
-  /* V11: alley photo displays at natural ratio. V10's 16/9
-     forced ratio caused black banding because the source isn't
-     16/9. V13: also stripped the module-scope polaroid styling
-     (transform:rotate(-0.6deg) + border + background) which was
-     producing visible bands at the wrapper edges where the
-     rotated photo didn't fill its AABB. The alley photo wants
-     a clean rectangular display, not the polaroid treatment
-     used on review-card venue photos. */
+  /* Alley photo displays at natural ratio (the source isn't 16/9,
+     so a forced ratio bands), without the module-scope polaroid
+     styling (rotation + border + background), which banded at the
+     wrapper edges where the rotated photo didn't fill its box. A
+     clean rectangle, not the review-card polaroid. */
   .alley-modal .modal-venue-photo {
     aspect-ratio: auto;
     overflow: visible;
@@ -2562,7 +2419,7 @@ main {
     display: block;
   }
 
-  /* V11: clearance between alley photo and the "where the rats
+  /* Clearance between alley photo and the "where the rats
      meet" framing line below. Matches location-sheet rhythm. */
   .alley-modal .modal-venue-photo {
     margin-bottom: 1.5rem;
@@ -2594,14 +2451,15 @@ main {
 
 /* About-header stays sticky on desktop too so the back-to-map
    link is always reachable during long-page scroll, but with no
-   background — the user wanted no black band over scrolling
-   content. The V17 ::before pseudo inherits the parent bg
-   (transparent here on desktop) so it paints nothing visible.
+   background, so no black band sits over scrolling content. The
+   ::before pseudo (safe-area overscroll block at the end of this
+   file) inherits the parent bg, transparent here on desktop, so
+   it paints nothing visible.
    Mobile adds the var(--color-bg) so the link reads clearly
    against scrolling phone content and the safe-area-inset-top
    keeps the link clear of the iPhone status bar. */
 .about-header {
-  /* V34: shared chrome tokens — same bar geometry as the map and
+  /* Shared chrome tokens — same bar geometry as the map and
      loading headers (padding, min-height, centered midline), so
      the back link sits on the same line the map title does.
      Background stays the deliberate split: transparent on desktop
@@ -2613,8 +2471,8 @@ main {
   position: sticky;
   top: 0;
   z-index: 100;
-  /* Compositor-layer promotion: see .page-header rule for full
-     rationale. Same hard-flick flicker risk applies. */
+  /* Compositor-layer promotion guards against a flicker on
+     hard-flick momentum scroll down the About page. */
   transform: translateZ(0);
   will-change: transform;
 }
@@ -2638,10 +2496,7 @@ main {
 
 
 .about-main {
-  /* Override the global `main { display: flex }` rule (which the
-     index page needs for map centering). The about page's main
-     should be normal block flow so its sections stack vertically
-     instead of becoming flex items in a row. */
+  /* Normal block flow so the About sections stack vertically. */
   display: block;
   max-width: 640px;
   margin: 0 auto;
@@ -2663,7 +2518,7 @@ main {
   margin-bottom: var(--space-lg);
 }
 
-/* V61: the About page ends with the loading screen's scuttle —
+/* The About page ends with the loading screen's scuttle —
    a strip the rat crew crosses periodically (about-rats.js reuses
    the .loading-rat classes and keyframes). */
 .about-rat-footer {
@@ -2698,10 +2553,8 @@ main {
   margin-bottom: var(--space-sm);
 }
 
-/* Credits — block-flow dl with green dt headers above each dd. The
-   prior grid layout (max-content 1fr columns) cramped long URLs in
-   the right cell; switching to single-column block flow lets long
-   Freesound URLs and citation blocks breathe. */
+/* Credits — block-flow dl with green dt headers above each dd, so
+   long Freesound URLs and citation blocks get the full width. */
 .credit-list {
   margin: 0;
   font-family: var(--font-data);
@@ -2729,9 +2582,8 @@ main {
   text-decoration-color: var(--color-accent);
 }
 
-/* About page links: V10 reverted from accent-green default to
-   body-text-colored default. The all-green treatment from V7 was
-   visually overwhelming. Underline is the affordance; accent
+/* About page links: body-text colored by default (all-green was
+   visually overwhelming). Underline is the affordance; accent
    green only on hover/focus. */
 .about-page a,
 .about-page a:visited {
@@ -2762,15 +2614,14 @@ main {
   color: var(--color-accent);
 }
 
-/* V10: subheader spacing — paragraph above section headers needed
-   more clearance. ~2rem top margin on h2/h3 inside about content. */
+/* Subheader spacing: ~2rem top margin on h2/h3 inside about
+   content, clear of the paragraph above. */
 .about-section h2,
 .about-section h3,
 .about-section .freesound-subhead {
-  /* V12: bumped specificity to .about-section .freesound-subhead
-     (0,2,0) to beat .about-section p (0,1,1) which was setting
-     margin-top:0 via the shorthand. V10's grouped rule with bare
-     .freesound-subhead (0,1,0) lost the cascade. */
+  /* .about-section .freesound-subhead (0,2,0) beats
+     .about-section p (0,1,1), which sets margin-top:0 via the
+     shorthand. */
   margin-top: 2rem;
 }
 
@@ -2812,10 +2663,10 @@ main {
   font-family: var(--font-ui);
   font-size: 0.75rem;
   letter-spacing: 0.02em;
-  /* V12: bumped to .about-section .freesound-subhead (0,2,0) so
-     this rule beats .about-section p (0,1,1) which was setting
-     margin-top:0 via shorthand. Spacing from preceding paragraph
-     is the load-bearing property here. */
+  /* .about-section .freesound-subhead (0,2,0) so this rule beats
+     .about-section p (0,1,1), which sets margin-top:0 via
+     shorthand. Spacing from the preceding paragraph is the
+     load-bearing property here. */
   margin-top: 2rem;
   margin-bottom: 0.4rem;
   opacity: 0.85;
@@ -2877,7 +2728,7 @@ main {
      peek through at the bottom edge. */
   height: 100vh;
   height: 100dvh;
-  /* V30: no container padding — the header carries the full
+  /* No container padding — the header carries the full
      .page-header bar geometry itself (shared chrome tokens), and
      cards/returning content self-center. No bottom chrome; the
      scuttle rats own the bottom band. */
@@ -2916,7 +2767,7 @@ main {
   z-index: 2;
   display: flex;
   justify-content: space-between;
-  /* V30: this IS the .page-header bar — same tokens, same border,
+  /* This IS the .page-header bar — same tokens, same border,
      same centered midline — so every piece of top chrome (title,
      status, button here; title, about there) holds its position
      through the loading→map fade. */
@@ -2931,10 +2782,8 @@ main {
   font-family: var(--font-editorial);
   font-style: italic;
   font-weight: normal;
-  /* V12 P6: bumped from 1.125rem to 1.25rem to match .page-title
-     so the title doesn't visibly resize during the fade-out
-     transition from loading screen to map view. Italic added for
-     the same reason — page-title is italic by design. */
+  /* Size and italic match .page-title so the title doesn't
+     visibly change during the loading→map fade. */
   font-size: 1.25rem;
   /* Fixed line box matching .page-title; see .page-header. */
   line-height: 1.75rem;
@@ -2992,7 +2841,7 @@ main {
     rotate(var(--card-rotate));
 }
 
-/* V32: cards track their viewport-relative positions instantly
+/* Cards track their viewport-relative positions instantly
    during a live resize — the 600ms reveal transition would restart
    on every resize frame and ease toward stale targets (jitter,
    then a snap when the resize stops). loading-screen.js debounces
@@ -3009,12 +2858,11 @@ main {
     0 18px 36px rgba(0, 0, 0, 0.6);
 }
 
-/* V32: scatter offsets scale with the viewport (vw for the spread,
+/* Scatter offsets scale with the viewport (vw for the spread,
    vh for the vertical drift) instead of fixed rem distances — the
    paste-up breathes apart on wide screens and pulls together on
    narrow or short ones. clamp() bounds keep every card fully
-   on-canvas at the extremes. The old fixed values are the clamp
-   midpoints at a ~1280×900 viewport. */
+   on-canvas at the extremes. */
 .loading-card[data-card-index="0"] {
   --card-rotate: -2deg;
   --card-x: clamp(-16rem, -13vw, -6rem);
@@ -3066,7 +2914,7 @@ main {
 
 .loading-rat {
   position: absolute;
-  /* V33: run just above the footer-as-button bar. Token-derived,
+  /* Run just above the footer-as-button bar. Token-derived,
      so the track follows the bar across breakpoints. */
   bottom: calc(var(--chrome-bar-h) + env(safe-area-inset-bottom) + 2px);
   left: 0;
@@ -3159,7 +3007,7 @@ main {
   to   { transform: translateY(-4%) scaleY(0.93) rotate(-0.8deg); }
 }
 
-/* V33: the footer bar IS the button (a <button> element — see
+/* The footer bar IS the button (a <button> element — see
    buildFooter). Same bar geometry as .page-footer via the shared
    chrome tokens, so the loading footer dissolves into the map
    footer on the same lines. Status message left, action label
@@ -3202,7 +3050,7 @@ main {
   font-family: var(--font-data);
   font-size: 0.8125rem;
   letter-spacing: 0.02em;
-  opacity: 0.7; /* V66: AA floor */
+  opacity: 0.7; /* AA contrast floor */
   margin: 0;
   min-height: 1.2em; /* reserve line height during typewriter clears */
 }
@@ -3220,7 +3068,7 @@ main {
   font-family: var(--font-data);
   font-size: 0.75rem;
   letter-spacing: 0.05em;
-  opacity: 0.7; /* V66: AA floor — skip is interactive */
+  opacity: 0.7; /* AA contrast floor — skip is interactive */
 }
 
 .loading-footer.is-skip:hover .loading-footer-label,
@@ -3289,11 +3137,8 @@ main {
     -webkit-overflow-scrolling: touch;
   }
 
-  /* V7 tightened the three loading cards but V8 listen-test
-     reported the last paragraph of card 03 still clipping on
-     iPhone 13. Pushing sizes down another notch (Option A from
-     the V8 prompt — content trim is the next escalation if
-     this still doesn't fit). */
+  /* Tight card sizing so the last paragraph of card 03 doesn't
+     clip on an iPhone 13-sized screen. */
   .loading-card {
     position: relative;
     --card-rotate: 0deg;
@@ -3357,15 +3202,12 @@ main {
   }
 }
 
-/* ===== V11 desktop-only overrides ===== */
+/* ===== Desktop-only overrides ===== */
 @media (min-width: 769px) {
-  /* Tombstone (Rash) on desktop: no special height override.
-     V11 added height:auto + max-height:80vh, which made the
-     sheet shorter than other modals (which use the default
-     .modal-card { max-height: 90vh }). V13 removes the override
-     so tombstone matches location modal height behavior.
-     The photo still gets a max-height cap to prevent unusually
-     tall sources from dominating the modal. */
+  /* Tombstone (Rash) on desktop keeps the default .modal-card
+     height behavior (max-height: 90vh). The photo gets a
+     max-height cap so unusually tall sources can't dominate the
+     modal. */
   .modal-card-tombstone .modal-venue-photo {
     margin: 1.5rem auto 1rem;
   }
@@ -3380,10 +3222,11 @@ main {
        reviewer-block → review-body: 24px (more than UA-default
          16px so the profile pic has clear separation from the
          review text)
-       review-body → squeaks border: 12px margin-bottom
-       squeaks padding: 12/12 (both top and bottom inset around
-         the "in rat" translation line)
-       reactions padding-top: 12px after the border
+       review-body → meta line: 12px margin-bottom, then the meta
+         line's 8px padding-top
+       meta line ("April 2026 · Translated from N squeaks"):
+         12px padding-bottom
+       reactions: 16px padding top and bottom
      Margins are zeroed where padding handles the gap so the
      spacing reads as a single value rather than collapsed-margin
      arithmetic. Mobile keeps the looser rhythm for touch targets. */
@@ -3401,34 +3244,25 @@ main {
   }
 }
 
-/* ===== V17 safe-area overscroll fix =====
-   V15 confirmed iOS Safari deliberately returns env(safe-area-
-   inset-top) = 0 with viewport-fit=cover declared correctly. The
-   visible "bleed" Shoro reports is iOS rubber-band overscroll —
-   pull-up scroll briefly exposes the page content (map, paragraphs,
-   loading screen contents) above each sticky/fixed surface. Each
-   surface only paints its bg from its top edge down, so the
-   safe-area zone above shows whatever sits underneath.
+/* ===== Safe-area overscroll fix =====
+   iOS Safari deliberately returns env(safe-area-inset-top) = 0
+   even with viewport-fit=cover declared correctly. The visible
+   "bleed" is iOS rubber-band overscroll — pull scroll briefly
+   exposes the page content above a sticky surface, which only
+   paints its bg from its top edge down.
 
    Fix: a position:absolute pseudo-element pinned at bottom:100% of
-   each surface (i.e. directly above its top edge), 100vh tall,
-   inheriting the parent's bg. The pseudo extends each surface's
-   visual bg upward into the safe-area zone so rubber-band exposes
-   the surface color rather than the underlying content.
+   the surface (directly above its top edge), 100vh tall,
+   inheriting the parent's bg, so rubber-band exposes the surface
+   color rather than the underlying content. Rubber-band overshoot
+   on iPhone is bounded at ~screen-height; 100vh covers it.
 
-   100vh extension distance: rubber-band overshoot on iPhone is
-   bounded at ~screen-height; 100vh covers it with margin while
-   future-proofing against larger inset zones on new devices.
+   The sticky parent anchors the pseudo, and `background: inherit`
+   pulls the parent's full background longhand set.
 
-   Each surface inherits the parent's position context (sticky/
-   sticky/fixed) so the pseudo anchors correctly. Each has a
-   shorthand `background: var(--color-bg)` parent, so
-   `background: inherit` pulls the full background longhand set. */
-/* V21: pseudo dropped from .page-header — map page body is locked
-   (overflow:hidden; height:100dvh) so the page can't rubber-band-
-   scroll past the top edge, and the upward bg extension was paint-
-   ing invisibly off-screen forever. About page still scrolls, so
-   the pseudo stays on .about-header for pull-down rubber-band. */
+   Only .about-header needs it: the map page body is locked
+   (overflow:hidden; height:100dvh), so it can't rubber-band past
+   the top edge. */
 .about-header::before {
   content: '';
   position: absolute;
@@ -3440,25 +3274,11 @@ main {
   pointer-events: none;
 }
 
-/* ===== V18 reverts V14/V15 max() padding floor =====
-   With V17's ::before pseudo extending each surface's bg upward
-   into the safe-area zone, the padding floor is excess chrome.
-   env() resolving to 0 in iOS Safari (URL bar pre-insets the page)
-   is correct — the pseudo handles the visual. Base rules with
-   plain env() reverted to V11-era values:
-     - Safari (env=0): page-header 14px, about-header 12px,
-       loading 14/32px
-     - PWA standalone (env > 0): env value adds to base, original
-       intent of the env() math preserved
-   Only the mobile-only overscroll-behavior-y rule from V17 stays
-   in this block. */
+/* The chrome bars use plain env() safe-area padding with no max()
+   floor: env() resolving to 0 in iOS Safari (the URL bar pre-insets
+   the page) is correct, and the pseudo above handles the visual.
+   In a PWA (env > 0) the inset adds to the base padding. */
 @media (max-width: 768px) {
-  /* V21: dropped overscroll-behavior:none on html/body. Map page
-     body has overflow:hidden so it isn't a scroll container — the
-     rule did nothing. About page main is the scroll surface; if
-     rubber-band ever needs suppression there, scope to
-     .about-page main rather than the global mobile selector. */
-
   /* Mobile about-header: adds the var(--color-bg) that desktop
      drops (padding/height come from the mobile chrome tokens),
      plus the hairline the other mobile bars carry. Sticky/

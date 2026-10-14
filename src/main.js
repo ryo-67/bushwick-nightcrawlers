@@ -79,7 +79,7 @@ function setupPinTooltip() {
       );
     }
 
-    // V63: teaser peek — title stacked over the venue aggregate
+    // Teaser peek — title stacked over the venue aggregate
     // (stars · review count), with the CTA chip centered against
     // the whole stack on the right. Nothing that spoils the
     // reviewer.
@@ -188,7 +188,7 @@ function setupPinTooltip() {
     tooltip.dataset.placement = placement;
   }
 
-  // Deterministic per-venue tilt for the hover peek: hash the pin
+  // Deterministic per-venue tilt for the hover peek: hash the venue
   // id into one of a curated set of angles (mixed left and right
   // leans) so the paste-up feels hand-placed but stable per venue.
   const PEEK_ANGLES = [-2.2, 1.6, -1.4, 2.3, -0.8, 1.1];
@@ -321,10 +321,10 @@ function setupPinPositions() {
 
 // Pannable map: the map overflows the wrapper horizontally (tall
 // wrappers: phones, tablet portrait) or vertically (wide wrappers:
-// desktop; V27 top-anchoring made that crop scrollable), and the
-// wrapper scrolls. Center the view on the venue-cluster centroid on
-// both axes so the first paint shows the action area rather than a
-// map corner. Gated on actual overflow, not a breakpoint, so it
+// desktop; the map's top-left anchoring keeps that crop scrollable),
+// and the wrapper scrolls. Center the view on the venue-cluster
+// centroid on both axes so the first paint shows the action area
+// rather than a map corner. Gated on actual overflow, not a breakpoint, so it
 // tracks whatever the CSS decides. Pannability is tracked PER AXIS:
 // crossing the aspect threshold (tablet rotation, window reshape)
 // swaps which axis overflows, and the browser silently zeroes the
@@ -334,7 +334,7 @@ function setupPinPositions() {
 // visitor chose.
 let mapPanAxes = { x: false, y: false };
 
-// V73: once the visitor pans the map themselves (drag, wheel,
+// Once the visitor pans the map themselves (drag, wheel,
 // touch), resizes stop yanking their position back to the cluster.
 // Until then, every resize re-centers — a window reshape must not
 // leave the pins drifting off-viewport in stale scroll pixels.
@@ -367,7 +367,7 @@ function centerMapOnVenueCluster() {
       (panX && !mapPanAxes.x) || (panY && !mapPanAxes.y);
     mapPanAxes = { x: panX, y: panY };
     if (!panX && !panY) return;
-    // V73: re-center on every clipped layout until the visitor pans
+    // Re-center on every clipped layout until the visitor pans
     // themselves; after that, only an axis flip re-centers (the
     // browser zeroes the collapsed axis's scroll on a flip, so the
     // old position is meaningless anyway).
@@ -382,7 +382,7 @@ function centerMapOnVenueCluster() {
   });
 }
 
-// V73: click-and-drag panning for mouse users. Touch keeps native
+// Click-and-drag panning for mouse users. Touch keeps native
 // overflow scrolling (this handler ignores non-mouse pointers); the
 // 4px threshold keeps plain pin clicks intact, and a real drag
 // suppresses the click that would otherwise fire on release over a
@@ -476,13 +476,14 @@ function handleModalOpen(venueId, ctx) {
   // continues playing in the engine's registry as a background voice.
   currentRatGen = null;
 
-  // If the user tapped the locked alley and saw the toast, then
+  // If the user tapped a locked pin and saw the toast, then
   // immediately tapped a different (unlocked) pin, the toast is
   // now stale — dismiss it so it doesn't linger over the new
   // modal.
   hideLockedToast();
 
-  // Kick off venue bed (no-op for unmapped venues).
+  // Kick off the venue bed (a venue without one just fades out the
+  // previous bed).
   whenReadyWhileOpen(venueId, () => beds.startVenueBed(venueId).catch(() => {}));
 
   const venue = venues[venueId];
@@ -501,7 +502,7 @@ function handleModalOpen(venueId, ctx) {
   }
 
   const review = ctx?.review;
-  if (!review) return; // rash — no rat generator
+  if (!review) return; // memorial — no review, no rat generator
 
   // Mark this venue as visited (review-bearing only).
   engine.markVisited(venueId);
@@ -533,7 +534,7 @@ function handleModalOpen(venueId, ctx) {
   currentRatGen = makeRatGen();
 
   syncPlayState();
-  // V60: the scope is never dead air — idle, it taps the master
+  // The scope is never dead air — idle, it taps the master
   // bus and murmurs with the live ambient corner (rumble, traffic,
   // any still-talking rats). Play refocuses it on this rat's voice.
   startAmbientScope();
@@ -613,9 +614,9 @@ function handleModalClose() {
   modalRef?.oscilloscope?.dispose();
   beds.stopActiveBed();
 
-  // Refresh alley state: visiting a venue may have just crossed
-  // the unlock threshold. The state attribute drives both the
-  // pin's locked/unlocked CSS and the tooltip text on next hover.
+  // Refresh gated pins: visiting a venue may have just crossed an
+  // unlock threshold. data-lock-state drives the pin's locked/unlocked
+  // CSS; the tooltip re-checks isLocked() on the next hover.
   updateLockedPins();
 }
 
@@ -728,15 +729,12 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('touchstart', start, true);
   }
 
-  // V12 P1: audio + image preload runs on every map page mount,
-  // independently of loading screen visibility. Without this kickoff,
-  // preload only fires inside LoadingScreen.subscribePreload — so
-  // when the loading screen is skipped (session flag set), buffers
-  // never decode and the audio engine reinit on each pin click is
-  // visibly slow.
+  // Audio + image preload runs on every map page mount, whether or
+  // not the loading screen shows, so a skipped loading screen still
+  // has its buffers decoded before the first pin click.
   // engine.preload() is idempotent — returns the same promise on
-  // subsequent calls. The loading-screen's own subscribePreload
-  // continues to work; this just guarantees the call happens.
+  // subsequent calls, so the loading screen's own subscribePreload
+  // shares it.
   engine.preload().catch((e) => {
     // eslint-disable-next-line no-console
     console.error('Audio preload failed:', e);
@@ -818,8 +816,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Engine fires this after every register / unregister. Modal
   // updates its alley mini-card border opacities from the rank map.
-  // Listener stays subscribed for the page lifetime; the modal-side
-  // bail-out (only update when alley is open) keeps it cheap.
+  // Listener stays subscribed for the page lifetime; the gathering
+  // check (only update while the alley is open) keeps it cheap.
   engine.onActiveRatsChange(() => {
     if (modalRef?.isOpen() && venues[modalRef.currentVenueId]?.kind === 'gathering') {
       syncAlleyCardStates();

@@ -1,11 +1,10 @@
 /**
  * src/audio/load-buffer.js — tolerant single-file buffer loading.
  *
- * V74: the preload used to be all-or-nothing — one failed fetch out
- * of ~190 rejected the whole Promise.all and left the piece silent.
- * Every preload file now goes through here: one retry, then null
- * (logged) instead of a throw, so a single bad file costs one sample
- * rather than the whole corner.
+ * V74: every preload file (~190) goes through here: one retry, then
+ * null (logged) instead of a throw, so a single bad file costs one
+ * sample rather than rejecting the whole preload and leaving the
+ * corner silent.
  */
 
 const RETRY_DELAY_MS = 1000;

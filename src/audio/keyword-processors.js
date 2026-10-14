@@ -5,7 +5,7 @@
  * voice). Processors automate parameters on per-rat audio nodes already
  * inserted into the rat's chain — they modulate the rat's voice itself.
  *
- * Two processors in this version:
+ * Two processors:
  *   - kHole       (Razor Whisker, on "ketamine")
  *   - timeGlitch  (Edible Eddie, on time-words)
  *
@@ -53,11 +53,10 @@ export function kHole(rat, time) {
 
   // Filter uses exponential ramps (smoother for frequency); avoid 0
   // as a target since exponential can't ramp to zero.
-  // Listen-test (Pass A): 320 Hz left voice nearly inaudible (mute,
-  // not dissolve). Raised target to 850 Hz so voice remains
-  // recognizable through the dip. Hold shortened 1.0s → 0.5s so the
-  // dissolution feels like a wave passing through, not a mute-and-
-  // recover. Phaser + ping-pong envelopes unchanged — they carry the
+  // The dip bottoms out at 850 Hz (lower, e.g. 320 Hz, leaves the
+  // voice nearly inaudible — a mute, not a dissolve) and holds only
+  // 0.5s, so the dissolution feels like a wave passing through, not
+  // a mute-and-recover. The phaser + ping-pong envelopes carry the
   // dissolution feel.
   lpf.setValueAtTime(20000, t);
   lpf.exponentialRampToValueAtTime(850, t + 0.5);

@@ -7,11 +7,11 @@ import { getReactionCounts, postReaction } from './reactions-client.js';
 // Alley modal framing line — describes the alley's social function,
 // not its location. Edit this single line to change the framing copy.
 const ALLEY_MEET_FRAMING = 'where the rats meet';
-// V51: modern Yelp's reaction set, in the site's lowercase voice —
-// the reactions are real visitors reaching across the fourth wall
-// now, so the options read as human responses to a rat's review
-// ('oh no' carrying most of the weight). Shaky hand-line icons in
-// 24×24 boxes, drawn in circles by CSS.
+// Modern Yelp's reaction set, in the site's lowercase voice — the
+// reactions are real visitors reaching across the fourth wall, so
+// the options read as human responses to a rat's review ('oh no'
+// carrying most of the weight). Shaky hand-line icons in 24×24
+// viewBoxes.
 const REACTIONS = [
   {
     type: 'helpful',
@@ -40,7 +40,7 @@ const REACTIONS = [
   },
 ];
 
-// V65: praying hands for the Rash tombstone's pay-respects button —
+// Praying hands for the Rash tombstone's pay-respects button —
 // two pressed palms, fingers up, with the emoji's little light rays.
 // Same shaky hand-line dialect as the reaction icons above.
 const PRAY_ICON_PATH =
@@ -142,7 +142,7 @@ function writeCount(reviewId, type, count) {
   writeLocal(KEYS.reactionCount(reviewId, type), count);
 }
 
-// V50/V65: shared social counts. The server (api/reactions.js) is
+// Shared social counts. The server (api/reactions.js) is
 // the source of truth when it answers — every visitor sees the
 // accumulated tallies. localStorage keeps exactly two jobs:
 // remembering whether YOU reacted (the no-account dedup), and
@@ -503,7 +503,7 @@ export class Modal {
   // Build a sticky-header h1 wrapping the title text, the close
   // button, and (on mobile) a drag-handle affordance. Each builder
   // calls this instead of constructing the headline inline so the
-  // structure stays consistent across review / ambient / alley /
+  // structure stays consistent across the review / alley /
   // tombstone variants. Caller is responsible for appending the
   // returned node to the card.
   buildModalHeadline(card, titleText) {
@@ -566,17 +566,17 @@ export class Modal {
     const headline = this.buildModalHeadline(card, venue.displayName);
     card.appendChild(headline);
 
-    // V40: no venue aggregate — with at most two reviews per venue
+    // No venue aggregate — with at most two reviews per venue
     // an average reads as filler, not information.
     const reviewContent = document.createElement('div');
     reviewContent.className = 'review-content';
     card.appendChild(reviewContent);
     this.populateReviewContent(reviewContent, venue, reviewer, review);
 
-    // V37: pagination lives at the END of the reviews, Yelp-style,
-    // as a bar pinned to the card's visible bottom edge (sticky
-    // within the card scroll context) — consistent with the page
-    // footer's bar treatment.
+    // Pagination lives at the END of the reviews, Yelp-style, as a
+    // bar pinned to the card's visible bottom edge (sticky within
+    // the card scroll context) — consistent with the page footer's
+    // bar treatment. Mobile CSS lifts it to the top of the sheet.
     if (allReviews.length >= 2) {
       card.appendChild(this.buildReviewPagination(allReviews));
     }
@@ -613,10 +613,10 @@ export class Modal {
     const meta = document.createElement('div');
     meta.className = 'reviewer-meta';
 
-    // V42 layout: name / handle / stars stacked in the meta
-    // cluster; the play + oscilloscope group rides the right side
-    // of the same row (see .reviewer-info). The date moves to the
-    // meta line under the review, opposite the squeaks count.
+    // Name / handle / stars stacked in the meta cluster, with the
+    // play + oscilloscope player beneath it (see .reviewer-info).
+    // The date lives in the meta line under the review, alongside
+    // the squeaks count.
     const name = document.createElement('h2');
     name.className = 'reviewer-name';
     name.textContent = reviewer.displayName;
@@ -632,7 +632,7 @@ export class Modal {
     ratingRow.appendChild(buildStarRow(review.rating));
     meta.appendChild(ratingRow);
 
-    // V40: no per-review location line — every rat is from
+    // No per-review location line — every rat is from
     // Bushwick; repeating it under each name was filler.
     if (reviewer.elite) {
       // Yelp Elite badge, house style: gold rat mark + year chip
@@ -648,7 +648,7 @@ export class Modal {
 
     info.appendChild(meta);
 
-    // V45: SoundCloud-embed-style player — the waveform canvas is
+    // SoundCloud-embed-style player — the waveform canvas is
     // the player surface, with an icon play/pause button overlaid
     // at its left edge.
     const oscPlayer = document.createElement('div');
@@ -678,7 +678,7 @@ export class Modal {
     const wordCount = this.wordEls.length;
     container.appendChild(body);
 
-    // V43: one combined meta line, bottom-right under the review.
+    // One combined meta line under the review.
     const metaRow = document.createElement('p');
     metaRow.className = 'review-meta-row';
     const metaLine = document.createElement('span');
@@ -700,7 +700,7 @@ export class Modal {
       reactions.appendChild(buildReactionChip(row, reviewId, spec));
     }
 
-    // V52: the report analogue — Yelp's "Report review", in city
+    // The report analogue — Yelp's "Report review", in city
     // terms. One-way (no un-reporting a rat to the city), no
     // public tally; the count lands server-side all the same.
     const report = document.createElement('button');
@@ -724,7 +724,7 @@ export class Modal {
     // counts when it doesn't.
     getReactionCounts(reviewId).then(row.adopt).catch(() => {});
 
-    // V56: report rides the chip row itself — far right, vertically
+    // Report rides the chip row itself — far right, vertically
     // centered against the chips. (No tally line — the counts live
     // in the chips.)
     reactions.appendChild(report);
@@ -738,9 +738,9 @@ export class Modal {
     // Sticky title bar: headline + close + (mobile) drag handle,
     // direct child of card so position:sticky pins it across the
     // full scroll range. Photo + framing live in .alley-header
-    // below — they scroll out with the rest of the body content.
-    // On mobile this gives a single scroll context (the modal
-    // card) with only the title region staying anchored.
+    // below. On mobile they scroll out with the rest of the body (a
+    // single scroll context, only the title anchored); on desktop
+    // CSS keeps them fixed and scrolls only the card list.
     const name = this.buildModalHeadline(card, venue.displayName);
     card.appendChild(name);
 
@@ -760,12 +760,9 @@ export class Modal {
     const oneLiners = this.content.alleyOneLiners || [];
 
     // First-visit hint sits as a sibling between .alley-header and
-    // .alley-cards rather than nested inside the cards container.
-    // Earlier nesting made the hint read ambiguously as either a
-    // caption on the header above or a header on the cards below;
-    // the sibling position with its own margins makes the divider
-    // role clear. FLIP reorder still iterates `.alley-card` only,
-    // so the hint stays where it is during sorting.
+    // .alley-cards, with its own margins, so it reads as a divider
+    // rather than a caption on either zone. FLIP reorder iterates
+    // `.alley-card` only, so the hint stays put during sorting.
     if (!hasSeenAlleyHint()) {
       const hint = document.createElement('p');
       hint.className = 'alley-cards-hint';
@@ -961,12 +958,12 @@ export class Modal {
     const card = this.buildCardShell(`${venue.displayName} (closed)`);
     // Tombstone variant: short content (photo + closure label +
     // optional epitaph), so the mobile sheet sizes to content
-    // rather than filling 100dvh. Hook via the modifier class —
+    // rather than filling the viewport. Hook via the modifier class —
     // mobile CSS overrides height/max-height for this class.
     card.classList.add('modal-card-tombstone');
 
     const name = this.buildModalHeadline(card, venue.displayName);
-    // V66: the review anatomy, dead. Empty aggregate rides the
+    // The review anatomy, dead. Empty aggregate rides the
     // headline row itself — title, stars, close — so the header
     // reads as one line on every breakpoint.
     const rating = document.createElement('span');
@@ -1013,7 +1010,7 @@ export class Modal {
     return card;
   }
 
-  // V65: the tombstone's single reaction — a literal pay-respects
+  // The tombstone's single reaction — a literal pay-respects
   // button, keyed by venue id ('rash') since there's no reviewer.
   buildRespects(memorialId) {
     const wrap = document.createElement('div');

@@ -1,5 +1,5 @@
 /**
- * src/debug/viewport-readout.js — V21 diagnostic overlay.
+ * src/debug/viewport-readout.js — diagnostic overlay.
  *
  * Activated by `?debug=viewport` on the URL. Attaches a fixed
  * top-left readout inside the active modal-card showing layout
@@ -7,9 +7,9 @@
  * heights, and safe-area inset values. Updates live on window
  * resize and visualViewport resize/scroll while the modal is open.
  *
- * Purpose: capture device-real measurements (iPhone Safari)
- * Shoro can screenshot from their phone, so V22 fixes the modal
- * bottom-bleed regression from evidence rather than guesses.
+ * Purpose: capture device-real measurements (iPhone Safari layout
+ * that Chromium emulation can't reproduce) as a phone screenshot,
+ * so mobile-sheet fixes rest on evidence rather than guesses.
  *
  * Production path (no `?debug=viewport`): the install() function
  * bails on the first line; zero DOM nodes added, zero listeners
@@ -43,10 +43,10 @@ function readSafeAreaInset(which) {
   return Number.isFinite(value) ? value : 0;
 }
 
-// Measure 100lvh on the current device. V23 step 1: gate the lvh-based
-// sheet extension on whether iOS Safari actually resolves 100lvh
-// larger than 100dvh in the body-locked URL-bar-stuck state. Probe
-// element sized to 100lvh; bounding rect gives the resolved value.
+// Measure 100lvh on the current device: shows whether iOS Safari
+// resolves 100lvh larger than 100dvh in the body-locked URL-bar-stuck
+// state (the premise of the V23 sheet extension). Probe element
+// sized to 100lvh; bounding rect gives the resolved value.
 function readLvh() {
   const probe = document.createElement('div');
   probe.style.cssText =

@@ -56,7 +56,7 @@ export class LoadingScreen {
     }
     this.subscribePreload();
 
-    // V32: the field-note scatter positions are viewport-relative
+    // The field-note scatter positions are viewport-relative
     // (clamp/vw/vh). While the window is actively resizing, the
     // cards' 600ms reveal transition would restart on every resize
     // frame and ease toward stale targets — jitter, then a final
@@ -110,7 +110,7 @@ export class LoadingScreen {
     // the real card list and opens in the skip state.
     el.appendChild(this.buildFooter({ ctaLabel: LOADING_NARRATIVE.cta }));
 
-    // Tap anywhere on the overlay (outside the header button)
+    // Tap anywhere on the overlay (outside the footer button)
     // advances cards. A card that was just dragged sets
     // dragJustEnded on itself; we honor that flag so a
     // drag-release click doesn't double as an advance trigger.
@@ -150,7 +150,7 @@ export class LoadingScreen {
     el.dataset.state = 'returning';
 
     el.appendChild(this.buildNoise());
-    // V31/V33: same chrome as the first-visit variant — title-only
+    // Same chrome as the first-visit variant — title-only
     // header, footer-as-button. The greeting alone holds the
     // center.
     el.appendChild(this.buildHeader());
@@ -185,8 +185,8 @@ export class LoadingScreen {
   }
 
   buildHeader() {
-    // V33: header is title-only chrome (same shared bar as
-    // .page-header). Status + action moved to the footer bar,
+    // Header is title-only chrome (same shared bar as
+    // .page-header). Status + action live in the footer bar,
     // which is itself the button — see buildFooter.
     const header = document.createElement('header');
     header.className = 'loading-header';
@@ -201,10 +201,10 @@ export class LoadingScreen {
   }
 
   buildFooter({ ctaLabel }) {
-    // V33: the ENTIRE footer bar is the button. Status message on
-    // the left, action label on the right (stacked on mobile);
-    // tapping anywhere on the bar skips during the cards, enters
-    // when ready. Skip is a state of the bar (see refreshCta):
+    // The ENTIRE footer bar is the button. Status message on the
+    // left, action label on the right; tapping anywhere on the bar
+    // skips during the cards, enters when ready. Skip is a state of
+    // the bar (see refreshCta):
     // skip → waiting → (late →) ready.
     const footer = document.createElement('button');
     footer.type = 'button';
@@ -275,8 +275,8 @@ export class LoadingScreen {
     return cardEl;
   }
 
-  // Pointer drag: tap-without-movement still advances (the existing
-  // overlay click handler runs on the synthetic click that fires
+  // Pointer drag: tap-without-movement still advances (the overlay
+  // click handler runs on the synthetic click that fires
   // after pointerup). A drag past the threshold sets dragJustEnded
   // so the overlay handler bails out, leaving the card at its new
   // offset. Dragging is gated on data-state='visible' so reveal-time

@@ -6,7 +6,8 @@
  * importing, so this file fits the bundler-free build.
  *
  * Audio routing:
- *   ToneBufferSource → ratGen.perRatGain → ratGain (master) → Destination
+ *   ToneBufferSource → ratGen's per-rat chain (LPF, gain, panner,
+ *   reverb send) → ratGain (master) → Destination
  *
  * Each RatGenerator owns its own perRatGain (the recency-ladder
  * volume slot). The master ratGain sits at RAT_FOREGROUND_GAIN as
@@ -137,7 +138,7 @@ async function loadBanks() {
 // Warms the browser cache for every selfie + venue photo, so a modal
 // or pin hover resolves its <img> from cache. Started once the audio
 // has loaded rather than awaited with it: the images aren't needed
-// to play anything, and ~4 MB of them used to hold up "the rats are
+// to play anything, and ~4 MB of them would hold up "the rats are
 // ready". Errors resolve (don't reject); the modal/tooltip's own
 // onerror handlers hide broken images.
 function preloadImages() {
