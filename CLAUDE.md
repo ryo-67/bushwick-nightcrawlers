@@ -2,9 +2,14 @@
 
 ## Project context
 
-Single-page sound piece. Hand-drawn map of the Myrtle-Broadway JMZ intersection in Bushwick. Ten pins; click a pin and a rat reviews the venue in Yelp pastiche, with USV (rat ultrasonic-vocalization) audio synced to the review text.
+Single-page sound piece. Hand-drawn map of the Myrtle-Broadway JMZ intersection in Bushwick. Ten pins; click a pin and a rat reviews the venue in Yelp pastiche, voiced with rat vocalizations (USVs) synced word by word to the review text.
 
-Sound art piece, NOT a website with audio. The interactive interface is the score. Audio playback is generative by default — different sample selection per click. A footer toggle ('in the moment' / 'in their tongue') switches to the syllabic voice — words render as syllable-core USV runs, the same word squeaking identically everywhere, with residual randomness seeded so a tongue playback reproduces exactly (it absorbed the old 'on record' mode's determinism). Conceptually: rats don't archive their language, so 'in the moment' is the baseline; 'on record' is opt-in.
+Sound art piece, NOT a website with audio. The interactive interface is the score. Playback is generative by default: different sample selection on every play. A footer toggle switches between two modes:
+
+- **'in the moment'** (default) — generative, never the same twice. Rats don't archive their language, so this is the baseline.
+- **'in their tongue'** — the syllabic voice: words render as syllable-core USV runs, the same word squeaks identically everywhere, and the remaining randomness is seeded, so a review replays exactly. (It replaced the old 'on record' mode in V72; a saved 'record' preference migrates to 'tongue'.)
+
+Live at **https://bushwick.shoro.space**. Its portfolio record is https://shoro.space/records/bushwick-nightcrawlers.
 
 ## Authoritative spec
 
@@ -17,125 +22,184 @@ For full project context, read `docs/STRATEGY.md`. Most decisions and rationale 
 - §10 Tech stack and implementation patterns (code patterns, file structure)
 - §12 Build plan (per-task scoping)
 
-For the asset checklist and citations: `docs/ASSETS.md`.
+For the asset checklist and citations: `docs/ASSETS.md`. Some of its planning notes are out of date (pitch-variance and time-stretch features that were never built, a `CREDITS.md` that doesn't exist); where it disagrees with the code or this file, the code and this file win.
 
 ## Stack
 
 - Vanilla HTML/CSS/JS, ES modules, no framework
-- Tone.js v15 via unpkg CDN (no npm install for v1)
-- Vercel for hosting (static deployment)
+- Tone.js 15.1.22 from unpkg, loaded `defer` before `src/main.js` (no npm install)
+- Vercel: static site plus one serverless function (`api/reactions.js`)
 - No bundler, no transpilation, no build step
 
 ## Project structure
 
 ```
 /
-├── index.html              # Entry, page structure (map, pins, footer, modals mount)
-├── styles.css              # Design tokens, modal, oscilloscope, layout
-├── about.html              # Epigraph, project copy, full credits + citations
+├── index.html              # The map page: header, map + pins, footer controls, modal mount
+├── about.html              # Project copy, credits and citations
+├── 404.html                # Not-found page (served by Vercel; root-absolute asset paths)
+├── styles.css              # Design tokens and every page's styles
+├── vercel.json             # Asset cache headers, /about → /about.html redirect
+├── robots.txt, sitemap.xml
+├── api/
+│   └── reactions.js        # Shared reaction counters (Upstash Redis over REST)
 ├── src/
-│   ├── main.js             # Bootstrap, pin click handlers, pin tooltips
-│   ├── audio/              # engine.js, rat-generator.js, rat-profiles.js,
-│   │                       # beds.js (ambient + train + venue beds),
-│   │                       # keyword-effects.js (keyword → sample table),
-│   │                       # keyword-processors.js (keyword → voice processing),
-│   │                       # master-controls.js, playback-mode.js,
-│   │                       # manifest.js (generated — see scripts/)
-│   ├── components/         # modal.js (incl. word-highlight rendering), oscilloscope.js,
-│   │                       # headphones-tag.js, loading-screen.js
-│   ├── content/            # rats.js, reviews.js, venues.js,
-│   │                       # alley-oneliners.js, loading-narrative.js
-│   └── debug/              # viewport-readout.js (?debug=viewport)
-├── scripts/                # Asset-pipeline shell/python scripts +
-│                           # generate-audio-manifest.js (regenerates src/audio/manifest.js)
+│   ├── main.js             # Bootstrap: pins, peek tooltips, modal wiring, footer, audio boot
+│   ├── storage.js          # Every localStorage/sessionStorage key + safe read/write + forgetVisitor()
+│   ├── framed.js           # Behaviour when the portfolio embeds the piece in an iframe
+│   ├── audio/
+│   │   ├── engine.js           # Singleton: preload, start, cumulative-voicing registry, visit tracking
+│   │   ├── rat-generator.js    # One rat speaking one review (tokenize, schedule, keyword effects)
+│   │   ├── rat-profiles.js     # Per-rat voice fingerprints (cocaine ratio, tiers, processors)
+│   │   ├── beds.js             # JMZ rumble, traffic floor, train passes, per-venue beds
+│   │   ├── keyword-effects.js  # keyword → sample played alongside the voice
+│   │   ├── keyword-processors.js # keyword → processing on the voice (kHole, timeGlitch)
+│   │   ├── syllables.js        # Syllable estimator for the 'in their tongue' voice
+│   │   ├── spatial.js          # Stereo pan from each venue's map position
+│   │   ├── master-controls.js  # Volume and mute
+│   │   ├── playback-mode.js    # 'moment' / 'tongue'
+│   │   ├── load-buffer.js      # Tolerant single-file loading (one retry, then null)
+│   │   ├── ramp.js             # Click-free parameter ramps
+│   │   ├── normalize.js        # Shared keyword normalisation
+│   │   ├── manifest.js         # GENERATED — scripts/generate-audio-manifest.js
+│   │   └── usv-features.js     # GENERATED — scripts/analyze_usv_features.py
+│   ├── components/
+│   │   ├── modal.js            # Review, alley and tombstone cards; word highlighting; reactions
+│   │   ├── reactions-client.js # Browser side of api/reactions.js
+│   │   ├── oscilloscope.js     # The waveform player surface
+│   │   ├── loading-screen.js   # Field-note cards, readiness, the Enter gesture
+│   │   ├── rat-crew.js         # The scuttling rat crew (loading screen + About page)
+│   │   ├── about-rats.js       # Mounts the crew on the About page
+│   │   ├── rat-silhouette.js   # The rat path (CC BY 3.0, credited on About)
+│   │   └── redacted-photo.js   # Placeholder frame for a venue with no usable photo
+│   ├── content/            # CREATIVE CONTENT — Shoro's lane (see "Don't")
+│   │   ├── venues.js           # Every pin: kind, name, photo, map position, optional behaviour
+│   │   ├── reviews.js, rats.js, alley-oneliners.js, loading-narrative.js
+│   └── debug/
+│       └── viewport-readout.js # ?debug=viewport overlay
+├── scripts/                # Asset pipeline (ffmpeg/Pillow/sox) + dev-server.py
 ├── assets/
 │   ├── map.mp4             # Animated map background (silent, looping)
-│   ├── pins/               # 10 venues, animated WebP (alpha), + alley-gray variant
-│   ├── source-pins/        # GIF originals the WebP pins are converted from
-│   ├── grain.png
-│   ├── selfies/, photos/   # WebP
-│   └── sounds/             # ambient/ (jmz-rumble.webm, myrtle-broadway-traffic.webm),
-│                           # usvs/, usvs-cocaine/, effects/ — all WebM/Opus
+│   ├── pins/               # Animated WebP pins (alpha); alley has a grey variant
+│   ├── photos/, selfies/   # WebP
+│   ├── sounds/             # ambient/, effects/, usvs/, usvs-cocaine/ — all WebM/Opus
+│   └── og.jpg, favicon.svg, apple-touch-icon.png
 └── docs/                   # STRATEGY.md, ASSETS.md
 ```
 
-## Map and pin layering pattern
+`assets/source-pins/` (the GIF originals for the pins) is local-only and gitignored.
 
-The map is a silent looping MP4 background. Pins are separate animated WebP assets (alpha-capable, converted from the GIF originals in `assets/source-pins/` via `scripts/convert-pin-gifs.sh`) layered on top via absolute positioning.
+## Venues: kinds and data
 
-```html
-<div class="map-wrapper">
-  <video autoplay loop muted playsinline aria-hidden="true" class="map-bg">
-    <source src="assets/map.mp4" type="video/mp4">
-  </video>
-  <div class="pin-layer">
-    <img src="assets/pins/market-hotel.webp" class="pin" data-pin-id="market-hotel" aria-label="Market Hotel">
-    <!-- ...10 pins total, positioned absolutely with percentage-based top/left -->
-  </div>
-</div>
-```
+`src/content/venues.js` drives behaviour. Code reads venue fields; it does not test venue ids.
 
-The `muted` attribute is required for autoplay; `playsinline` prevents iOS Safari from launching the video to fullscreen. MP4 has no transparency, so pin overlays must use formats that do (animated WebP here). Don't try to overlay video on video.
+- `kind: 'review'` — opens a rat's review card (text in `reviews.js`, keyed by venue).
+- `kind: 'gathering'` — the alley: a card of every rat's one-liner. No pin label.
+- `kind: 'memorial'` — a closed venue's tombstone (Rash). Takes a pay-respects reaction keyed by the venue id; the API derives its valid targets from this.
+- `unlockAfterVisits` + `lockedMessage` — the pin is greyed out (`data-lock-state`) until that many review venues have been opened; the message shows in the desktop tooltip and the mobile toast.
+- `closedNote` — the stamp across a memorial's photo.
+- `trainOnOpen` — opening the pin fires a train pass (the JMZ platform).
+- `photoPath`, or `photoRedacted: { stamp, note }` for a venue with no usable photo.
+- `mapCoordinates` (percent of the map) and optional `labelPosition`.
 
-## Mobile sheet sizing (V23)
+Per-venue ambient beds (files and gains) live in `VENUE_BED_MAP` in `src/audio/beds.js`. The `bedComponents`, `bedPersistent`, `bedAmbient` and `address` fields in `venues.js` are not read by any code.
 
-The map page locks body to `100dvh` with `overflow: hidden`, so iOS Safari keeps the URL bar in its expanded floating-pill state for the session (no scroll signal to collapse it). `100dvh` resolves to the smaller viewport (~695 on iPhone 14 Pro); the URL-bar pill occupies the ~40px strip from `innerHeight` to `100lvh`.
+## Map and pin layering
 
-Full-extending mobile sheets (review, alley) extend visually into that strip via `100lvh` height and `:has()` scoping on the modal: `.modal:not(:has(.modal-card-tombstone)) { height: 100lvh }` and `.modal-card { height: 100lvh; max-height: 100lvh }`. To prevent end-of-scroll content from rendering under the pill, `.modal-card:not(.modal-card-tombstone) { padding-bottom: calc(100lvh - 100dvh) }` adds an inert scrollable zone at the card bottom — the pill covers only padding, never content. On viewports without a floating URL bar (chromium, desktop, PWA standalone) `lvh === dvh`, the calc resolves to 0, and the rules behave identically to a plain `100dvh` sheet.
+The map is a silent looping MP4. Pins are separate animated WebP images layered on top and positioned from `mapCoordinates` at startup. MP4 has no transparency, so pin overlays must use a format that does (animated WebP). Don't overlay video on video.
 
-The Rash tombstone variant (`.modal-card.modal-card-tombstone`) is content-sized (`height: auto; max-height: 100dvh`) and stays bottom-anchored at `innerHeight`. The `:not(.modal-card-tombstone)` scoping above keeps it out of the lvh extension so its short last line doesn't get pushed into the URL-bar zone.
-
-V24 update: V22/V23's lvh extension didn't visibly help on iOS — Safari clips `position: fixed` element paint to `innerHeight` (= dvh) regardless of declared height (MUI #46953, Apple radar 158055568, Safari 26.1 release notes; persists through 26.4.2). V24 added a `mask-image` gradient that fades the card's visible bottom 32px into body bg, dissolving the hard line at the paint-clip boundary. V24 is camouflage — paint still stops at dvh. The architectural fix ("Option A": switch `.modal` from `position: fixed` to `position: absolute`, pin `.map-wrapper` instead, add `position: sticky` on the card, unwind the body lock) is deferred pending evaluation of whether the ~40px paint gain justifies undoing V20's body lock.
+`<video autoplay loop muted playsinline>`: `muted` is required for autoplay; `playsinline` stops iOS Safari from going fullscreen. While the loading screen is up the video is paused; Enter starts it.
 
 ## Audio rules (load-bearing)
 
-- `Tone.start()` must be called inside a user-gesture handler before any audio plays. The headphones tag at the top of the page is the gesture target. Until clicked, no AudioContext.
-- Default playback is generative ('in the moment' mode). The 'in their tongue' mode is the syllabic voice AND the deterministic mode (it replaced 'on record' in V72): RatGenerator reads playback mode via `getMode()` at `start()` time and routes all randomness through `this.rng` — `Math.random` for moment, `mulberry32(fnv1a(reviewerId + text))` for tongue; syllable sequences are additionally word-seeded.
-- Drug-effect events fire on keyword matches in the review text, not probabilistically. Keyword matching happens in RatGenerator's tokenizer against two tables: `src/audio/keyword-effects.js` (keyword → sample played alongside the voice) and `src/audio/keyword-processors.js` (keyword → processing applied to the voice itself, e.g. kHole, timeGlitch). Examples: "ketamine" fires kHole; "diet" fires fizz; "tagged" or "for the gram" fires notification ping; "Chase Sapphire" or "my mom" kicks up coffee-shop ambience; "viral" or "sniff" fires a small cough sample.
-- Pin audio persists after modal close (cumulative master mix). Do NOT dispose Tone nodes when modals close; lower their gain instead.
-- Subtitle reveal uses `Tone.Draw.schedule`, NOT `setTimeout` or `requestAnimationFrame`, so text and audio stay sample-accurate.
-- The JMZ rumble fires on a randomized 60-90s interval (recursive setTimeout, not Tone.Loop) and triggers sidechain compression on the master bus.
+- **Audio starts only inside a user gesture.** `Tone.start()` is called synchronously in the gesture handler. The gesture is the loading screen's Enter when it shows; when it's skipped (moving between the map and About in one session), `armGestureBoot()` in `main.js` boots audio on the next click, key or touch anywhere, except on elements marked `data-no-audio-boot` (the header's portfolio link).
+- **Preload before the gesture.** `engine.preload()` builds the node graph and decodes every buffer while the loading screen is up; it's idempotent and retries once on failure. Photos and selfies preload after the audio, so they never hold up "the rats are ready".
+- **Tolerant loading (V74).** Every file goes through `loadBufferWithRetry`: one retry, then the sample is skipped. One bad file costs one sound, never the whole piece.
+- **Cumulative mix.** Pin audio persists after its modal closes. Up to five rats speak at once (`RAT_CAP`); older rats step back on a recency ladder (quieter, duller, more reverb). Do NOT dispose a rat's Tone nodes when its modal closes; it fades and is disposed only when it finishes or is evicted.
+- **Keyword effects are triggered by words, not chance.** RatGenerator's tokenizer matches each word against `keyword-effects.js` (a sample alongside the voice) and `keyword-processors.js` (processing on the voice). Keys are lowercase letters only (`normalize.js`).
+- **Determinism in 'in their tongue'.** RatGenerator reads the mode at `start()` and routes all randomness through `this.rng`: `Math.random` for 'moment', a seed from reviewer id + review text for 'tongue'; syllable samples are additionally seeded per word. Don't add `Math.random` calls to the voice path.
+- **Word highlighting uses `Tone.Draw.schedule`**, never `setTimeout` or `requestAnimationFrame`, so text stays sample-accurate with the audio. The modal splits the review into words exactly as `tokenize()` does; keep the two splitters in step.
+- **Beds.** The JMZ rumble and the Myrtle-Broadway traffic floor loop from the moment audio starts. Train passes fire every 90–180 s (recursive `setTimeout`). Per-venue beds fade in on open and out on close; Rash's bed is persistent and stays as a faint layer.
+
+## Saved state
+
+All browser storage goes through `src/storage.js` (`KEYS`, `readFlag`/`writeFlag`, `readLocal`/`writeLocal`, `readSession`/`writeSession`). The footer's "forget the rats you've met" calls `forgetVisitor()`, which clears progress (venues visited, reactions, first-visit flags, the session flag) and keeps preferences (volume, mute, playback mode). A new key belongs in its `FORGETTABLE` list if it records progress rather than a preference.
+
+## Reactions
+
+`api/reactions.js` keeps shared counters per review (reviewer id) or memorial (venue id) in Upstash Redis via its REST API (env `UPSTASH_REDIS_REST_*` or the Marketplace's `KV_REST_API_*`). Types: helpful, thanks, love, ohno, respects, plus report (counted, never shown). Per-IP limit: 30 POSTs a minute. The browser side is `src/components/reactions-client.js`; localStorage remembers whether *you* reacted and stands in for the counts when the API is absent (the local static server, an outage).
+
+## Mobile sheet sizing (V23/V24)
+
+The map page locks `body` to `100dvh` with `overflow: hidden`, so iOS Safari keeps its URL bar as a floating pill for the whole session.
+
+Full-height mobile sheets (review and alley cards) are declared `100lvh` tall via `:has()` scoping on the modal: `.modal:not(:has(.modal-card-tombstone)) { height: 100lvh }` and `.modal-card { height: 100lvh; max-height: 100lvh }`. iOS Safari still clips `position: fixed` paint at `innerHeight` (= dvh) whatever the declared height (MUI #46953, Apple radar 158055568; unfixed through Safari 26.4.2). So V24:
+
+- fades the card's visible bottom 32px into the page background with a `mask-image` gradient stopped at `100dvh`, so the clip reads as content receding rather than a hard edge;
+- pads review cards' bottom by a fixed `calc(var(--space-md) + 48px)` (64px), so the last content sits clear of the fade. The alley list carries its own matching padding.
+
+The Rash tombstone (`.modal-card.modal-card-tombstone`) is content-sized (`height: auto; max-height: 100dvh`), anchored at `innerHeight`, and excluded from all of the above.
+
+V24 is camouflage, not a fix: paint still stops at dvh. The architectural fix (make `.modal` `position: absolute`, pin `.map-wrapper`, `position: sticky` on the card, undo the body lock) is deferred.
 
 ## Code style
 
-- ES module imports, named exports only
-- No default exports
-- Class-based for stateful audio objects (RatGenerator, JMZScheduler, MasterMix); pure functions for tokenizers and scanners
-- Vanilla CSS with custom properties for theme tokens
+- ES module imports, named exports only; no default exports
+- Classes for stateful audio objects (RatGenerator, Oscilloscope, Modal); pure functions for tokenizers and scanners
+- Vanilla CSS with custom properties for theme tokens (`--color-*`, `--font-*`, `--space-*`, `--chrome-*`)
 - 2-space indentation, single quotes for strings
+- Comments explain what the code does now. "V-numbers" refer to past iterations; don't add history notes about code that's gone.
 
 ## Don't
 
 - Don't introduce React, Vue, Svelte, or any framework
 - Don't add a bundler config (Webpack, Vite, esbuild) for v1
-- Don't use console.log in committed code; remove debug logs before committing
+- Don't use `console.log` in committed code; remove debug logs before committing (`console.error` for real failures is fine)
 - Don't generate audio events stochastically; effects are keyword-triggered
 - Don't try to "polish" or normalize the voice in reviews. The lowercase Pinky Mae, the run-on DJ Nibblers, the rat-POV throughout — all intentional. Voice is load-bearing.
-- Don't draft new review text, rat bios, or About-page copy without an explicit ask. Creative writing belongs to the user. Implementation code is your lane; voice and content are the user's.
-- Don't dispose Tone audio nodes on modal close — breaks the cumulative mix.
+- Don't draft new review text, rat bios, About-page copy or other visitor-facing wording without an explicit ask. Creative writing belongs to Shoro. Implementation code is your lane; voice and content are Shoro's. When copy is needed, propose it for approval.
+- Don't dispose Tone audio nodes on modal close — it breaks the cumulative mix.
+- Don't print a portfolio record number anywhere (link text, labels, aria-labels, titles). shoro.space numbers records by date and renumbers them; link to the record's URL (its slug) only.
+- Don't edit `manifest.js` or `usv-features.js` by hand; regenerate them with their scripts.
+
+## Deploying
+
+- The Vercel project (`bushwick-nightcrawlers`, team `ryo-67s-projects`) is linked to GitHub. **A push to `main` deploys to production** (bushwick.shoro.space). A push to any other branch builds a preview.
+- Work on a branch; ship to `main` only when Shoro says so. Changes to visitor-facing copy go to a preview first for Shoro's approval.
+- `bushwick-nightcrawlers.vercel.app` 308-redirects to bushwick.shoro.space with paths kept.
+- Previews sit behind Vercel's login; plain `curl` gets a redirect. Use the Vercel connector's authenticated fetch to read them.
+- Run `vercel api …` from outside the repo: inside it the CLI mistakes the `api/` folder for a subdirectory deploy.
+- Deleting deployments needs confirmation, which this environment can't give; Shoro removes old previews with `vercel rm <url> --scope ryo-67s-projects`.
+
+## Local preview
+
+Run `python3 scripts/dev-server.py <port>` (`.claude/launch.json` uses it). It sends `Cache-Control: no-store`; plain `python3 -m http.server` lets the browser cache JS modules, so reloads silently keep running old code. `/api/reactions` and Vercel Analytics 404 locally; that's expected.
 
 ## Verification
 
-- Test in Chrome desktop, Safari desktop, and Chrome iOS at minimum
-- Audio must work after first user click (the headphones tag)
+- Test in Chrome desktop, Safari desktop, and Chrome or Safari on iOS at minimum
+- Audio must start after the first gesture (Enter, or the first click when the loading screen is skipped)
 - Reviews must render the same way every play (pick one rat, play twice, compare)
-- Keyword effects must fire deterministically on their trigger words
+- In 'in their tongue', a review must sound the same on every play
+- Keyword effects must fire on their trigger words
+- A hidden or background browser tab pauses `requestAnimationFrame`, which freezes the loading-screen cards and `Tone.Draw` highlighting; test those in a visible tab
 
 ## Common pitfalls
 
-- Forgetting to `await Tone.start()` before scheduling — silent failure, no error
-- Using `setTimeout` for subtitle sync — drifts from audio over long reviews
-- Disposing Tone nodes on modal close — breaks cumulative mix
-- Calling `Tone.getTransport().start()` multiple times without checking state — schedules duplicate events
-- Case sensitivity in keyword matching — normalize tokens to lowercase and strip punctuation in the scanner
+- Calling `Tone.start()` outside a gesture handler, or after an `await` — silent failure, no error
+- Using `setTimeout` for subtitle sync — drifts from the audio over long reviews
+- Disposing Tone nodes on modal close — breaks the cumulative mix
+- Adding a `Math.random` call to the voice path — breaks 'in their tongue' determinism
+- Case and punctuation in keyword matching — use `lettersOnly()` from `normalize.js`
+- Writing to localStorage directly — use `src/storage.js` so the reset and private-mode fallbacks stay correct
 
 ## Debug flags
 
-Query-param-gated diagnostics. Production users see nothing unless the param is set.
+Query-param diagnostics; visitors see nothing unless the param is set.
 
-- `?voice=syllabic` — dev override forcing the syllabic voice regardless of the footer mode (the user-facing switch is the 'in their tongue' footer mode, V71). Cocaine-register words stay word-level in every mode. Implementation: `scheduleSyllabicWord` in `src/audio/rat-generator.js`, feature data in `src/audio/usv-features.js` (regenerate via `scripts/analyze_usv_features.py`).
-- `?debug=viewport` — attaches a live readout inside any open modal-card showing innerHeight/Width, visualViewport (height/offsetTop/scale), modal + modal-card bounding rects, computed heights, and safe-area inset values. Updates on window/visualViewport resize and scroll. Tap the readout to dismiss for the session. Used to capture iPhone Safari-specific layout state that chromium emulation can't reproduce. Implementation: `src/debug/viewport-readout.js`; wired into `src/main.js` at module top. Zero overhead when the param is absent.
+- `?voice=syllabic` — forces the syllabic voice regardless of the footer mode. Cocaine-register words stay word-level in every mode. Implementation: `scheduleSyllabicWord` in `src/audio/rat-generator.js`; feature data in `src/audio/usv-features.js` (regenerate with `scripts/analyze_usv_features.py`).
+- `?debug=viewport` — a live readout inside any open modal card: innerHeight/Width, visualViewport (height, offsetTop, scale), modal and card rects, computed heights, safe-area insets. Updates on resize and scroll; tap it to dismiss for the session. For capturing iPhone Safari layout that Chromium emulation can't reproduce. Implementation: `src/debug/viewport-readout.js`, installed at the top of `src/main.js`.
 
 ## When in doubt
 
-Read `docs/STRATEGY.md` first. If the answer isn't in §10 (Tech stack and implementation patterns), ask the user before guessing. Do not infer creative or content-related decisions from code patterns.
+Read `docs/STRATEGY.md` first. If the answer isn't in §10 (Tech stack and implementation patterns), ask Shoro before guessing. Don't infer creative or content decisions from code patterns.
