@@ -27,7 +27,7 @@ Visitors can react to reviews (helpful · leave crumb · love this · oh no, plu
 
 ## Stack
 
-- Vanilla HTML/CSS/JS, ES modules, no framework, no bundler, no build step
+- Vanilla HTML/CSS/JS, ES modules, no framework, no bundler; the deploy build only strips comments
 - [Tone.js](https://tonejs.github.io/) v15 via unpkg CDN
 - Vercel hosting; one serverless function (`api/reactions.js`) for the shared reaction counters
 
@@ -40,7 +40,7 @@ python3 -m http.server 8000
 # open http://localhost:8000
 ```
 
-No `npm install`, no transpilation. The site is plain static files; any static server works. Without the reactions API (it needs the Upstash credentials on Vercel), reaction counts silently fall back to per-browser local counts — everything else is fully functional offline.
+No `npm install` needed to run it, no transpilation. The site is plain static files; any static server works. Deploys run `npm install && npm run build`, which copies the public files into `dist/` with comments removed. Without the reactions API (it needs the Upstash credentials on Vercel), reaction counts silently fall back to per-browser local counts — everything else is fully functional offline.
 
 ## Structure
 

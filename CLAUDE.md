@@ -31,7 +31,7 @@ For the asset checklist and citations: `docs/ASSETS.md`. Some of its planning no
 - Vanilla HTML/CSS/JS, ES modules, no framework
 - Tone.js 15.1.22 from unpkg, loaded `defer` before `src/main.js` (no npm install)
 - Vercel: static site plus one serverless function (`api/reactions.js`)
-- No bundler, no transpilation, no build step
+- No bundler, no transpilation. The one build step, `scripts/build.js` (`npm run build`), copies the public files into `dist/` with every comment removed; Vercel serves only `dist/`. Its sole dependency is `acorn`, used to strip JS comments safely.
 
 ## Project structure
 
@@ -41,7 +41,8 @@ For the asset checklist and citations: `docs/ASSETS.md`. Some of its planning no
 ├── about.html              # Project copy, credits and citations
 ├── 404.html                # Not-found page (served by Vercel; root-absolute asset paths)
 ├── styles.css              # Design tokens and every page's styles
-├── vercel.json             # Asset cache headers, /about → /about.html redirect
+├── vercel.json             # Build command and dist/ output, asset cache headers, /about redirect
+├── package.json            # npm run build (acorn is the only dependency)
 ├── robots.txt, sitemap.xml
 ├── api/
 │   └── reactions.js        # Shared reaction counters (Upstash Redis over REST)
@@ -81,7 +82,7 @@ For the asset checklist and citations: `docs/ASSETS.md`. Some of its planning no
 │   │   ├── reviews.js, rats.js, alley-oneliners.js, loading-narrative.js
 │   └── debug/
 │       └── viewport-readout.js # ?debug=viewport overlay
-├── scripts/                # Asset pipeline (ffmpeg/Pillow/sox), generators, dev-server.py
+├── scripts/                # build.js (the deploy build), asset pipeline (ffmpeg/Pillow/sox), generators, dev-server.py
 ├── assets/
 │   ├── map.mp4             # Animated map background (silent, looping)
 │   ├── pins/               # Animated WebP pins (alpha); alley has a grey variant
@@ -89,7 +90,7 @@ For the asset checklist and citations: `docs/ASSETS.md`. Some of its planning no
 │   ├── sounds/             # ambient/, effects/, usvs/, usvs-cocaine/ — all WebM/Opus
 │   └── og.jpg, favicon.svg, apple-touch-icon.png
 ├── docs/                   # STRATEGY.md, ASSETS.md, BACKLOG.md (parked work)
-└── .vercelignore           # Keeps docs/, scripts/, CLAUDE.md, .claude/ off the live site
+└── dist/                   # Build output (gitignored); what the live site serves
 ```
 
 `assets/source-pins/` (the GIF originals for the pins) is local-only and gitignored.
@@ -161,7 +162,7 @@ Write maintainable, human-readable, clean code, and leave the code you touch cle
 - **Fix the cause, at the right depth.** Don't layer overrides, `!important`, or another `:not()` on top of a rule to patch a symptom; change the rule or the mechanism underneath.
 - **Simple over general.** Write the plainest code that does today's job. No speculative options, hooks or abstraction layers for needs that don't exist yet; small, named functions with shallow nesting; named constants and CSS tokens instead of magic numbers and colour literals.
 - **No leftover dead code or debug logs.** Delete unused functions, exports, selectors, state, parameters and files rather than keeping them "just in case" (git history keeps them). No commented-out code, no `console.log`, no unreachable guards.
-- **Comments say why, for the code as it is now.** No history notes about code that's gone; update or delete a comment when the code under it changes.
+- **Comments say why, for the code as it is now.** No history notes about code that's gone; update or delete a comment when the code under it changes. Comments are for maintainers only: the deploy build strips them, so they never reach visitors. Anything visitors should read belongs in the page itself.
 - **Refactors must not change output, and must prove it when they touch rendering.** A refactor changes structure, not behaviour. When it touches CSS, markup or anything that renders, capture the rendered result before and after (computed styles and element boxes for the key states, or screenshots) at desktop and phone widths, and show they match. Audio refactors must keep timing, the cumulative mix and 'in their tongue' determinism (same order and number of `rng` calls).
 - **Verify before shipping.** `node --check` every changed JS file and exercise the change in a local preview (`scripts/dev-server.py`).
 
@@ -191,14 +192,15 @@ Write maintainable, human-readable, clean code, and leave the code you touch cle
 - The Vercel project (`bushwick-nightcrawlers`, team `ryo-67s-projects`) is linked to GitHub. **A push to `main` deploys to production** (bushwick.shoro.space). A push to any other branch builds a preview.
 - Work on a branch; ship to `main` only when Shoro says so. Changes to visitor-facing copy go to a preview first for Shoro's approval.
 - `bushwick-nightcrawlers.vercel.app` 308-redirects to bushwick.shoro.space with paths kept.
-- `.vercelignore` keeps `docs/`, `scripts/`, `CLAUDE.md` and `.claude/` out of the deployed site (they stay on GitHub). Anything else in the repo root is publicly served, so don't commit private notes outside those paths.
+- Vercel runs `npm run build` and serves only `dist/`: the files listed in `PUBLIC` in `scripts/build.js`, with comments removed. Everything else in the repo (docs, scripts, CLAUDE.md, README) stays on GitHub only. A new public file or folder must be added to `PUBLIC`. The build fails if removing a JS file's comments would change its code.
+- `api/reactions.js` deploys as a serverless function straight from the repo, not from `dist/`.
 - Previews sit behind Vercel's login; plain `curl` gets a redirect. Use the Vercel connector's authenticated fetch to read them.
 - Run `vercel api …` from outside the repo: inside it the CLI mistakes the `api/` folder for a subdirectory deploy.
 - Deleting deployments needs confirmation, which this environment can't give; Shoro removes old previews with `vercel rm <url> --scope ryo-67s-projects`.
 
 ## Local preview
 
-Run `python3 scripts/dev-server.py <port>` (`.claude/launch.json` uses it). It sends `Cache-Control: no-store`; plain `python3 -m http.server` lets the browser cache JS modules, so reloads silently keep running old code. `/api/reactions` and Vercel Analytics 404 locally; that's expected.
+Run `python3 scripts/dev-server.py <port>` (`.claude/launch.json` uses it). It serves the commented source. To check the deployed form, run `npm run build` and open `/dist/index.html` on the same server. It sends `Cache-Control: no-store`; plain `python3 -m http.server` lets the browser cache JS modules, so reloads silently keep running old code. `/api/reactions` and Vercel Analytics 404 locally; that's expected.
 
 ## Verification
 

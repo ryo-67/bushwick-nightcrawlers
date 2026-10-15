@@ -1,8 +1,0 @@
-# Kept in the repo (GitHub), left out of the deployed site:
-# planning docs, agent instructions and the local asset pipeline
-# aren't part of the piece. api/ and src/ must stay — the reactions
-# function imports src/content/*.
-docs/
-scripts/
-CLAUDE.md
-.claude/
