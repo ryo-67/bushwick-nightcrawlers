@@ -39,6 +39,7 @@ For the asset checklist and citations: `docs/ASSETS.md`. Some of its planning no
 /
 ├── index.html              # The map page: header, map + pins, footer controls, modal mount
 ├── about.html              # Project copy, credits and citations
+├── reviews.html            # Every review as text, for crawlers and readers; the build fills it from src/content/
 ├── 404.html                # Not-found page (served by Vercel; root-absolute asset paths)
 ├── styles.css              # Design tokens and every page's styles
 ├── vercel.json             # Build command and dist/ output, asset cache headers, /about redirect
@@ -53,6 +54,7 @@ For the asset checklist and citations: `docs/ASSETS.md`. Some of its planning no
 │   ├── framed.js           # Behaviour when the portfolio embeds the piece in an iframe
 │   ├── device.js           # Touch-screen and reduced-motion media queries
 │   ├── validate-content.js # Startup check that venues, reviews and rats agree (console errors only)
+│   ├── review-lookup.js    # findReviewsForVenue, shared by the browser and the build
 │   ├── audio/
 │   │   ├── engine.js           # Singleton: preload, start, cumulative-voicing registry, visit tracking
 │   │   ├── rat-generator.js    # One rat speaking one review (tokenize, schedule, keyword effects)
@@ -157,7 +159,7 @@ Write maintainable, human-readable, clean code, and leave the code you touch cle
 
 - **Readable without the original author.** Someone new should understand a file from its names, structure and comments alone, without the conversation or commit that produced it. Name things for what they do; say why in a comment when the code can't.
 - **One source of truth.** Every constant, list, threshold and piece of logic lives in exactly one place, and everything else reads it. No copied constants (e.g. a JS timer that repeats a CSS duration, an HTML attribute that repeats a JS limit, two lists of the same names) and no copied logic (e.g. two word splitters that must agree). Derive instead of duplicating.
-- **Reuse existing helpers.** Use the shared modules instead of re-implementing them: `src/storage.js` (browser storage), `src/components/reactions-client.js` (the reactions API), `src/audio/ramp.js` (gain/parameter fades), `src/audio/normalize.js` (text keys and word splitting), `src/audio/load-buffer.js` (audio loading), `src/device.js` (touch and reduced-motion checks), `src/components/rat-crew.js` (the rat crew), `buildStarRow`/`formatCount`/`findReviewsForVenue` in `modal.js`. If you need something twice, extract it once.
+- **Reuse existing helpers.** Use the shared modules instead of re-implementing them: `src/storage.js` (browser storage), `src/components/reactions-client.js` (the reactions API), `src/audio/ramp.js` (gain/parameter fades), `src/audio/normalize.js` (text keys and word splitting), `src/audio/load-buffer.js` (audio loading), `src/device.js` (touch and reduced-motion checks), `src/components/rat-crew.js` (the rat crew), `buildStarRow`/`formatCount` in `modal.js`, `findReviewsForVenue` in `src/review-lookup.js`. If you need something twice, extract it once.
 - **One concern per file.** A module owns one job (storage, the reactions API, one card type's building, one audio layer). Don't grow a file with an unrelated responsibility because it's open; give the new concern its own module.
 - **Data, not special cases.** Behaviour that belongs to a venue goes in `venues.js` as a field and the code reads it; never branch on a specific venue, rat or review id.
 - **Fix the cause, at the right depth.** Don't layer overrides, `!important`, or another `:not()` on top of a rule to patch a symptom; change the rule or the mechanism underneath.
@@ -203,7 +205,7 @@ Write maintainable, human-readable, clean code, and leave the code you touch cle
 
 ## Local preview
 
-Run `python3 scripts/dev-server.py <port>` (`.claude/launch.json` uses it). It serves the commented source. To check the deployed form, run `npm run build` and open `/dist/index.html` on the same server. It sends `Cache-Control: no-store`; plain `python3 -m http.server` lets the browser cache JS modules, so reloads silently keep running old code. `/api/reactions` and Vercel Analytics 404 locally; that's expected.
+Run `python3 scripts/dev-server.py <port>` (`.claude/launch.json` uses it). It serves the commented source. To check the deployed form, run `npm run build` and open `/dist/index.html` on the same server; `reviews.html` only has its reviews there, since the build fills them in. It sends `Cache-Control: no-store`; plain `python3 -m http.server` lets the browser cache JS modules, so reloads silently keep running old code. `/api/reactions` and Vercel Analytics 404 locally; that's expected.
 
 ## Verification
 

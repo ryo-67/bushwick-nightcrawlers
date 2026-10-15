@@ -9,6 +9,7 @@ Concept, design and sonification by Shoro Roy; map and pin art by Madhura Redij.
 ## Pages
 
 - [The map](https://bushwick.shoro.space/): the piece itself. Requires JavaScript and sound.
+- [The reviews](https://bushwick.shoro.space/reviews.html): every rat's review as text, grouped by venue.
 - [About](https://bushwick.shoro.space/about.html): why The Bushwick Nightcrawlers exists, how its rat voices were made, some slowed from ultrasound into human hearing, and full credits and sources.
 
 ## Related

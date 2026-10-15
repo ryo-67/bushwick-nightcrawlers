@@ -7,7 +7,8 @@
  * removed from HTML, SVG, CSS and JS, so the live site's sources carry no
  * maintainer notes. Nothing else changes: code, file names and the
  * spacing between tokens stay as written. The repo keeps its comments.
- * It also writes dist/sitemap.xml, dating each page by its last commit.
+ * It also fills reviews.html with every review (scripts/render-reviews.js)
+ * and writes dist/sitemap.xml, dating each page by its last commit.
  *
  * Each stripped JS file is parsed again and its syntax tree compared
  * with the original's; any difference fails the build.
@@ -21,6 +22,7 @@ const { execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const acorn = require('acorn');
+const { renderReviewList } = require('./render-reviews');
 
 const ROOT = path.join(__dirname, '..');
 const OUT = path.join(ROOT, 'dist');
@@ -30,6 +32,7 @@ const OUT = path.join(ROOT, 'dist');
 const PUBLIC = [
   'index.html',
   'about.html',
+  'reviews.html',
   '404.html',
   'styles.css',
   'robots.txt',
@@ -135,17 +138,39 @@ const STRIPPERS = {
   '.svg': stripMarkup,
 };
 
-function build(relative) {
+// reviews.html marks where the reviews go; the marker's indentation
+// is kept for every line put in its place.
+const REVIEWS_MARKER = /^([ \t]*)<!-- reviews:list -->$/m;
+
+function fillReviews(html, reviewList) {
+  const match = html.match(REVIEWS_MARKER);
+  if (!match) throw new Error('reviews.html: no <!-- reviews:list --> marker');
+  const indented = reviewList
+    .split('\n')
+    .map((line) => (line ? match[1] + line : line))
+    .join('\n');
+  // A function, so "$" in the review text isn't read as a pattern.
+  return html.replace(REVIEWS_MARKER, () => indented);
+}
+
+// Copies one public file or folder into dist/. fills maps a file to a
+// function that completes its source before comments are stripped.
+function build(relative, fills) {
   const from = path.join(ROOT, relative);
   const to = path.join(OUT, relative);
   if (fs.statSync(from).isDirectory()) {
-    for (const entry of fs.readdirSync(from)) build(path.join(relative, entry));
+    for (const entry of fs.readdirSync(from)) build(path.join(relative, entry), fills);
     return;
   }
   fs.mkdirSync(path.dirname(to), { recursive: true });
   const strip = STRIPPERS[path.extname(relative)];
-  if (strip) fs.writeFileSync(to, strip(fs.readFileSync(from, 'utf8'), relative));
-  else fs.copyFileSync(from, to);
+  const fill = fills[relative];
+  if (!strip) {
+    fs.copyFileSync(from, to);
+    return;
+  }
+  const source = fs.readFileSync(from, 'utf8');
+  fs.writeFileSync(to, strip(fill ? fill(source) : source, relative));
 }
 
 // Pages in the sitemap, each with the files whose changes count as
@@ -155,6 +180,7 @@ const SITE = 'https://bushwick.shoro.space';
 const PAGES = [
   { path: '/', sources: ['index.html', 'src/content'] },
   { path: '/about.html', sources: ['about.html'] },
+  { path: '/reviews.html', sources: ['reviews.html', 'src/content'] },
 ];
 
 function lastCommitDate(sources) {
@@ -185,7 +211,16 @@ function writeSitemap() {
   );
 }
 
-fs.rmSync(OUT, { recursive: true, force: true });
-for (const entry of PUBLIC) build(entry);
-writeSitemap();
-console.log(`dist/: ${PUBLIC.join(', ')} (comments removed), sitemap.xml`);
+async function main() {
+  const reviewList = await renderReviewList(ROOT);
+  const fills = { 'reviews.html': (html) => fillReviews(html, reviewList) };
+  fs.rmSync(OUT, { recursive: true, force: true });
+  for (const entry of PUBLIC) build(entry, fills);
+  writeSitemap();
+  console.log(`dist/: ${PUBLIC.join(', ')} (comments removed), sitemap.xml`);
+}
+
+main().catch((error) => {
+  console.error(error.message);
+  process.exit(1);
+});

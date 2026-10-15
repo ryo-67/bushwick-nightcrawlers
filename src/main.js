@@ -1,5 +1,6 @@
 import { LoadingScreen } from './components/loading-screen.js';
-import { Modal, buildStarRow, formatCount, findReviewsForVenue } from './components/modal.js';
+import { Modal, buildStarRow, formatCount } from './components/modal.js';
+import { findReviewsForVenue } from './review-lookup.js';
 import { buildRedactedPhoto } from './components/redacted-photo.js';
 import { getReactionCounts, onReactionCounts } from './components/reactions-client.js';
 import { rats } from './content/rats.js';

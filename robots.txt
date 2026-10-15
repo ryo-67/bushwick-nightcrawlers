@@ -10,6 +10,9 @@ User-agent: meta-externalagent
 User-agent: Bytespider
 User-agent: cohere-training-data-crawler
 User-agent: Diffbot
+User-agent: omgili
+User-agent: omgilibot
+User-agent: PanguBot
 Disallow: /
 
 Sitemap: https://bushwick.shoro.space/sitemap.xml

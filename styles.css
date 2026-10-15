@@ -2477,6 +2477,12 @@ main {
   margin-bottom: var(--space-lg);
 }
 
+/* Linked sections (reviews.html#<venue>) land below the sticky
+   header instead of under it. */
+.about-section[id] {
+  scroll-margin-top: calc(var(--chrome-bar-h) + env(safe-area-inset-top) + var(--space-md));
+}
+
 /* The About page ends with the loading screen's scuttle —
    a strip the rat crew crosses periodically (about-rats.js reuses
    the .loading-rat classes and keyframes). */

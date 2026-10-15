@@ -5,6 +5,7 @@ import { KEYS, readFlag, writeFlag, readLocal, writeLocal } from '../storage.js'
 import { getReactionCounts, postReaction } from './reactions-client.js';
 import { prefersReducedMotion } from '../device.js';
 import { splitTokens, isSpace } from '../audio/normalize.js';
+import { findReviewsForVenue } from '../review-lookup.js';
 
 // Alley modal framing line — describes the alley's social function,
 // not its location. Edit this single line to change the framing copy.
@@ -261,10 +262,6 @@ function buildReactionBar(targetId, specs, className) {
 
 // Returns all reviews for a venue in reviews.js insertion order
 // (primary first by convention — reviews.js was authored that way).
-export function findReviewsForVenue(venueId, reviews) {
-  return Object.values(reviews).filter((r) => r.venueId === venueId);
-}
-
 function buildVenuePhoto(venue) {
   if (!venue.photoPath) {
     return venue.photoRedacted
