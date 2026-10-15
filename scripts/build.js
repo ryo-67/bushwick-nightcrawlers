@@ -4,7 +4,7 @@
  * and serves only what it writes to dist/.
  *
  * Copies the public files (PUBLIC below) into dist/ with every comment
- * removed from HTML, CSS and JS, so the live site's sources carry no
+ * removed from HTML, SVG, CSS and JS, so the live site's sources carry no
  * maintainer notes. Nothing else changes: code, file names and the
  * spacing between tokens stay as written. The repo keeps its comments.
  *
@@ -114,8 +114,8 @@ function stripCss(source) {
   return removeRanges(source, ranges);
 }
 
-// HTML comments, leaving <script> contents untouched.
-function stripHtml(source) {
+// HTML and SVG comments, leaving <script> contents untouched.
+function stripMarkup(source) {
   const ranges = [];
   const re = /<script\b[\s\S]*?<\/script>|<!--[\s\S]*?-->/gi;
   for (const match of source.matchAll(re)) {
@@ -126,7 +126,12 @@ function stripHtml(source) {
   return removeRanges(source, ranges);
 }
 
-const STRIPPERS = { '.js': stripJs, '.css': stripCss, '.html': stripHtml };
+const STRIPPERS = {
+  '.js': stripJs,
+  '.css': stripCss,
+  '.html': stripMarkup,
+  '.svg': stripMarkup,
+};
 
 function build(relative) {
   const from = path.join(ROOT, relative);
