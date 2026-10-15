@@ -1,4 +1,15 @@
 User-agent: *
 Allow: /
 
+User-agent: GPTBot
+User-agent: ClaudeBot
+User-agent: anthropic-ai
+User-agent: Applebot-Extended
+User-agent: CCBot
+User-agent: meta-externalagent
+User-agent: Bytespider
+User-agent: cohere-training-data-crawler
+User-agent: Diffbot
+Disallow: /
+
 Sitemap: https://bushwick.shoro.space/sitemap.xml

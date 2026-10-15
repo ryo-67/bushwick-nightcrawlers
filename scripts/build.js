@@ -7,6 +7,7 @@
  * removed from HTML, SVG, CSS and JS, so the live site's sources carry no
  * maintainer notes. Nothing else changes: code, file names and the
  * spacing between tokens stay as written. The repo keeps its comments.
+ * It also writes dist/sitemap.xml, dating each page by its last commit.
  *
  * Each stripped JS file is parsed again and its syntax tree compared
  * with the original's; any difference fails the build.
@@ -16,6 +17,7 @@
  * Preview the result: cd dist && python3 ../scripts/dev-server.py 4178
  */
 
+const { execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const acorn = require('acorn');
@@ -31,7 +33,7 @@ const PUBLIC = [
   '404.html',
   'styles.css',
   'robots.txt',
-  'sitemap.xml',
+  'llms.txt',
   'assets',
   'src',
 ];
@@ -146,6 +148,44 @@ function build(relative) {
   else fs.copyFileSync(from, to);
 }
 
+// Pages in the sitemap, each with the files whose changes count as
+// the page changing: its lastmod is the date of the latest commit
+// that touched them.
+const SITE = 'https://bushwick.shoro.space';
+const PAGES = [
+  { path: '/', sources: ['index.html', 'src/content'] },
+  { path: '/about.html', sources: ['about.html'] },
+];
+
+function lastCommitDate(sources) {
+  return execFileSync('git', ['log', '-1', '--format=%cs', '--', ...sources], {
+    cwd: ROOT,
+    encoding: 'utf8',
+  }).trim();
+}
+
+function writeSitemap() {
+  const urls = PAGES.map(({ path: page, sources }) => {
+    const date = lastCommitDate(sources);
+    // A checkout without the history leaves the date out rather
+    // than claiming a wrong one.
+    if (!date) console.warn(`sitemap: no commit date for ${page}`);
+    const lastmod = date ? `<lastmod>${date}</lastmod>` : '';
+    return `  <url><loc>${SITE}${page}</loc>${lastmod}</url>`;
+  });
+  fs.writeFileSync(
+    path.join(OUT, 'sitemap.xml'),
+    [
+      '<?xml version="1.0" encoding="UTF-8"?>',
+      '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+      ...urls,
+      '</urlset>',
+      '',
+    ].join('\n')
+  );
+}
+
 fs.rmSync(OUT, { recursive: true, force: true });
 for (const entry of PUBLIC) build(entry);
-console.log(`dist/: ${PUBLIC.join(', ')} (comments removed)`);
+writeSitemap();
+console.log(`dist/: ${PUBLIC.join(', ')} (comments removed), sitemap.xml`);

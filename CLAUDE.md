@@ -31,7 +31,7 @@ For the asset checklist and citations: `docs/ASSETS.md`. Some of its planning no
 - Vanilla HTML/CSS/JS, ES modules, no framework
 - Tone.js 15.1.22 from unpkg, loaded `defer` before `src/main.js` (no npm install)
 - Vercel: static site plus one serverless function (`api/reactions.js`)
-- No bundler, no transpilation. The one build step, `scripts/build.js` (`npm run build`), copies the public files into `dist/` with every comment removed; Vercel serves only `dist/`. Its sole dependency is `acorn`, used to strip JS comments safely.
+- No bundler, no transpilation. The one build step, `scripts/build.js` (`npm run build`), copies the public files into `dist/` with every comment removed and writes `dist/sitemap.xml`, dating each page by its last commit; Vercel serves only `dist/`. Its sole dependency is `acorn`, used to strip JS comments safely.
 
 ## Project structure
 
@@ -43,7 +43,8 @@ For the asset checklist and citations: `docs/ASSETS.md`. Some of its planning no
 ├── styles.css              # Design tokens and every page's styles
 ├── vercel.json             # Build command and dist/ output, asset cache headers, /about redirect
 ├── package.json            # npm run build (acorn is the only dependency)
-├── robots.txt, sitemap.xml
+├── robots.txt              # Allows search and AI answer crawlers; blocks AI training crawlers
+├── llms.txt                # Plain-language summary and links for AI tools (llmstxt.org)
 ├── api/
 │   └── reactions.js        # Shared reaction counters (Upstash Redis over REST)
 ├── src/
@@ -194,6 +195,8 @@ Write maintainable, human-readable, clean code, and leave the code you touch cle
 - `bushwick-nightcrawlers.vercel.app` 308-redirects to bushwick.shoro.space with paths kept.
 - Vercel runs `npm run build` and serves only `dist/`: the files listed in `PUBLIC` in `scripts/build.js`, with comments removed. Everything else in the repo (docs, scripts, CLAUDE.md, README) stays on GitHub only. A new public file or folder must be added to `PUBLIC`. The build fails if removing a JS file's comments would change its code.
 - `api/reactions.js` deploys as a serverless function straight from the repo, not from `dist/`.
+- Crawlers: `robots.txt` lets search engines and AI answer engines (Googlebot, Bingbot, OAI-SearchBot, Claude-SearchBot, PerplexityBot, Google-Extended) crawl and cite the site, and disallows crawlers that only collect AI training data (GPTBot, ClaudeBot, CCBot and the rest listed there). Keep it that way when adding user agents. `robots.txt` and `llms.txt` are served as written, so they carry no comments.
+- A new page goes in `PAGES` in `scripts/build.js` (for the sitemap) as well as in `PUBLIC`.
 - Previews sit behind Vercel's login; plain `curl` gets a redirect. Use the Vercel connector's authenticated fetch to read them.
 - Run `vercel api …` from outside the repo: inside it the CLI mistakes the `api/` folder for a subdirectory deploy.
 - Deleting deployments needs confirmation, which this environment can't give; Shoro removes old previews with `vercel rm <url> --scope ryo-67s-projects`.

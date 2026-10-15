@@ -1,0 +1,18 @@
+# The Bushwick Nightcrawlers
+
+> An interactive sound piece: a hand-drawn map of Myrtle-Broadway in Bushwick, Brooklyn, where rats review the venues in Yelp form, voiced in real rat calls.
+
+A sound piece scored for the corner of Myrtle and Broadway at night, narrated as Yelp reviews by the rats who live there. Click any pin on the map to read a review and hear it spoken in rat vocalizations, some slowed from ultrasound into human hearing range.
+
+Concept, design and sonification by Shoro Roy; map and pin art by Madhura Redij. Real Bushwick venue names are used. Reviews and rat personae are fictional.
+
+## Pages
+
+- [The map](https://bushwick.shoro.space/): the piece itself. Requires JavaScript and sound.
+- [About](https://bushwick.shoro.space/about.html): why The Bushwick Nightcrawlers exists, how its rat voices were made, some slowed from ultrasound into human hearing, and full credits and sources.
+
+## Related
+
+- [Portfolio record](https://shoro.space/records/bushwick-nightcrawlers): the piece on Shoro Roy's portfolio.
+- [Tachibana, R. O. (2019). Dataset for USVSEG performance test. Zenodo.](https://doi.org/10.5281/zenodo.3428024): the laboratory rat recordings (CC BY 4.0).
+- [Scientists Map the Nightlife and Communication of NYC Rats (Scientific American, 2025)](https://www.scientificamerican.com/article/scientists-map-nightlife-and-communication-of-nyc-rats-to-help-urban/): the inspiration.
