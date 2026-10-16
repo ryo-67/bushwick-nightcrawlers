@@ -721,12 +721,11 @@ export class Modal {
     const card = this.buildCardShell(`${venue.displayName} — ${ALLEY_MEET_FRAMING}`);
     card.classList.add('alley-modal');
 
-    // Sticky title bar: headline + close + (mobile) drag handle,
-    // direct child of card so position:sticky pins it across the
-    // full scroll range. Photo + framing live in .alley-header
-    // below. On mobile they scroll out with the rest of the body (a
-    // single scroll context, only the title anchored); on desktop
-    // CSS keeps them fixed and scrolls only the card list.
+    // Title bar: headline + close + (mobile) drag handle, a direct
+    // child of the card so the mobile sheet's position:sticky pins
+    // it across the full scroll range. Photo + framing live in
+    // .alley-header below and scroll with the card list, one scroll
+    // context at every width.
     const name = this.buildModalHeadline(venue.displayName);
     card.appendChild(name);
 
